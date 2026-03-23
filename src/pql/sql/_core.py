@@ -112,12 +112,12 @@ def _glot_into_duckdb(expr: exp.Expr) -> duckdb.Expression:  # noqa: C901
             return duckdb.LambdaExpression(param, _glot_into_duckdb(lambda_expr.this))  # pyright: ignore[reportAny]
         case exp.Ordered() as ordered_expr:
             ordered = _glot_into_duckdb(ordered_expr.this)  # pyright: ignore[reportAny]
-            match ordered_expr.args.get("desc", None) is not None:
+            match ordered_expr.args.get("desc", False):  # pyright: ignore[reportMatchNotExhaustive]
                 case True:
                     ordered = ordered.desc()
                 case False:
                     ordered = ordered.asc()
-            match ordered_expr.args.get("nulls_first", None) is not None:
+            match ordered_expr.args.get("nulls_first", False):  # pyright: ignore[reportMatchNotExhaustive]
                 case True:
                     ordered = ordered.nulls_first()
                 case False:
