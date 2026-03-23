@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Self
 
 import pyochain as pc
+from sqlglot import exp
 
 from . import sql
 from ._funcs import col
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
     from _duckdb._enums import (  # pyright: ignore[reportMissingModuleSource]
         ExplainTypeLiteral,
     )
+    from pyochain.traits import PyoIterable
 
     from ._datatypes import DataType
     from ._expr import Expr
@@ -69,6 +71,10 @@ class LazyFrame(sql.CoreHandler[sql.Frame]):
     def __init__(self, data: IntoRel, orient: Orientation = "col") -> None:
         self._cached_schema = pc.NONE
         self._inner = sql.Frame(data, orient)
+
+    def _from_sql_expr(self, expr: exp.Expr, **kwargs: IntoRel) -> Self:
+        qry = sql.from_query(expr.sql(dialect="duckdb"), **kwargs)
+        return self.__class__(qry)
 
     def _filter(
         self, preds: Iterable[IntoExprColumn], *more_preds: IntoExprColumn
@@ -640,13 +646,15 @@ class LazyFrame(sql.CoreHandler[sql.Frame]):
             builder.left.iter()
             .map(builder.lhs)
             .chain(other.columns.iter().filter_map(builder.for_inner_left))
+            .map(lambda c: c.inner())
+        )
+        qry = (
+            exp.select(*selected)  # pyright: ignore[reportUnknownMemberType]
+            .from_("lhs")
+            .join("rhs", on=by_cond.inner(), join_type="asof left")
         )
 
-        return (
-            self.inner()
-            .join_asof(other.inner(), by_cond, selected, "left")
-            .pipe(self._new)
-        )
+        return self._from_sql_expr(qry, lhs=self.inner(), rhs=other)
 
     def unique(
         self,
@@ -754,16 +762,46 @@ class LazyFrame(sql.CoreHandler[sql.Frame]):
             expr = sql.col(col).pipe(agg)
             return expr.alias(col) if multi else expr
 
-        def _pivoted(lf: sql.Frame) -> sql.Frame:
-            return lf.pivot(
-                on_cols,
-                val_cols.iter().map(_aliased),
-                idx_cols,
-                pc.Some(on_columns),
-                idx_cols if maintain_order else None,
+        def _pivoted() -> Self:
+
+            def _on_exprs(
+                on_iter: pc.Seq[str],
+            ) -> PyoIterable[exp.Expr] | PyoIterable[str]:
+                converted = pc.Iter(on_columns).map(exp.convert).collect()
+                expr = exp.In(this=on_iter.first(), expressions=converted)
+                return pc.Iter.once(expr)
+
+            def _group() -> exp.Group | None:
+                group = idx_cols.then(
+                    lambda cols: exp.Group(expressions=cols.into(list))
+                )
+                return group.unwrap() if group.is_some() else None
+
+            def _pivot() -> exp.Expr:
+                return exp.Pivot(
+                    this=exp.to_table("rel"),  # pyright: ignore[reportUnknownMemberType]
+                    expressions=try_iter(on).collect().into(_on_exprs),
+                    using=val_cols.iter().map(_aliased).map(lambda c: c.inner()),
+                    group=_group(),
+                )
+
+            def _select_ordered(cols: Iterable[str]) -> exp.Expr:
+                return (
+                    exp.select("*")  # pyright: ignore[reportUnknownMemberType]
+                    .from_(exp.Subquery(this=_pivot()))
+                    .order_by(*cols)
+                )
+
+            qry = (
+                try_iter(idx_cols if maintain_order else None)
+                .collect()
+                .then(_select_ordered)
+                .unwrap_or_else(_pivot)
             )
 
-        def _handle_multi(lf: sql.Frame) -> sql.Frame:
+            return self._from_sql_expr(qry, rel=self.inner())
+
+        def _handle_multi(lf: Self) -> Self:
             match multi:
                 case True:
 
@@ -785,7 +823,7 @@ class LazyFrame(sql.CoreHandler[sql.Frame]):
                 case False:
                     return lf
 
-        return self.inner().pipe(_pivoted).pipe(_handle_multi).pipe(self._new)
+        return _pivoted().pipe(_handle_multi)
 
     def unpivot(
         self,
@@ -793,11 +831,37 @@ class LazyFrame(sql.CoreHandler[sql.Frame]):
         index: TryIter[str] = None,
         variable_name: str = "variable",
         value_name: str = "value",
+        order_by: TryIter[str] = None,
     ) -> Self:
         """Unpivot from wide to long format."""
-        return (
-            self.inner().unpivot(on, index, variable_name, value_name).pipe(self._new)
+        index_cols = try_iter(index).collect(dict.fromkeys)
+        unpivot_cols = (
+            try_iter(on)
+            .then_some()
+            .unwrap_or_else(
+                lambda: self.columns.iter().filter(lambda name: name not in index_cols)
+            )
         )
+
+        def _unpivot() -> exp.Pivot:
+            return exp.Pivot(
+                this=exp.to_table("rel"),  # pyright: ignore[reportUnknownMemberType]
+                expressions=unpivot_cols,
+                unpivot=True,
+                into=exp.UnpivotColumns(this=variable_name, expressions=(value_name,)),
+            )
+
+        def _select() -> exp.Select:
+            sub_qry = exp.Subquery(this=_unpivot())
+            return exp.select(*index_cols, variable_name, value_name).from_(sub_qry)  # pyright: ignore[reportUnknownMemberType]
+
+        qry = (
+            try_iter(order_by)
+            .then(lambda cols: _select().order_by(*cols))  # pyright: ignore[reportUnknownMemberType]
+            .unwrap_or_else(_select)
+        )
+
+        return self._from_sql_expr(qry, rel=self.inner())
 
     def with_row_index(self, name: str, *, order_by: TrySeq[str]) -> Self:
         """Insert row index based on order_by."""

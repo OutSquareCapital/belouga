@@ -42,6 +42,7 @@ def _unnest(k: str) -> duckdb.Expression:
 def into_relation(  # noqa: PLR0911
     data: IntoRel, orient: Orientation = "col"
 ) -> duckdb.DuckDBPyRelation:
+    from .._frame import LazyFrame
     from ._core import DuckHandler
     from ._frame import Frame
 
@@ -50,6 +51,8 @@ def into_relation(  # noqa: PLR0911
             return data
         case Frame():
             return data.inner()
+        case LazyFrame():
+            return data.inner().inner()
         case exp.Expr():
             return duckdb.values(DuckHandler(data).into_duckdb())
         case DuckHandler():
