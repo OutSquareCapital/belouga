@@ -96,6 +96,20 @@ def _glot_into_duckdb(expr: exp.Expr) -> duckdb.Expression:  # noqa: C901
                 .map(lambda name: _glot_into_duckdb(alias_expr.this).alias(name))  # pyright: ignore[reportAny]
                 .unwrap()
             )
+        case exp.Column() as col_expr:
+            parts = pc.Iter(col_expr.parts).map(lambda part: part.name)
+            return duckdb.ColumnExpression(*parts)
+        case exp.Anonymous() as anon_expr:
+            args = pc.Iter(anon_expr.expressions).map(_glot_into_duckdb)
+            return duckdb.FunctionExpression(anon_expr.name, *args)
+        case exp.Lambda() as lambda_expr:
+            match lambda_expr.expressions[0]:
+                case exp.Identifier() as identifier:
+                    param = identifier.name
+                case _ as item:  # pyright: ignore[reportAny]
+                    param = str(item)  # pyright: ignore[reportAny]
+
+            return duckdb.LambdaExpression(param, _glot_into_duckdb(lambda_expr.this))  # pyright: ignore[reportAny]
         case exp.Ordered() as ordered_expr:
             ordered = _glot_into_duckdb(ordered_expr.this)  # pyright: ignore[reportAny]
             match ordered_expr.args.get("desc", None) is not None:
