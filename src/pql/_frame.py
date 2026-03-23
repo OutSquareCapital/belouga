@@ -640,7 +640,6 @@ class LazyFrame(sql.CoreHandler[sql.Frame]):
             builder.left.iter()
             .map(builder.lhs)
             .chain(other.columns.iter().filter_map(builder.for_inner_left))
-            .map(sql.SqlExpr.to_sql)
         )
 
         return (
@@ -751,9 +750,9 @@ class LazyFrame(sql.CoreHandler[sql.Frame]):
         multi = val_cols.length() > 1
         agg = PIVOT_AGG[aggregate_function]
 
-        def _aliased(col: str) -> str:
+        def _aliased(col: str) -> sql.SqlExpr:
             expr = sql.col(col).pipe(agg)
-            return expr.alias(col).to_sql() if multi else expr.get_name()
+            return expr.alias(col) if multi else expr
 
         def _pivoted(lf: sql.Frame) -> sql.Frame:
             return lf.pivot(

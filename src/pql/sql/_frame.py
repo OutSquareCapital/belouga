@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from duckdb import DuckDBPyRelation
     from pyochain.traits import PyoIterable
 
-    from .typing import IntoExpr, IntoRel, Orientation, PythonLiteral
+    from .typing import IntoExpr, IntoExprColumn, IntoRel, Orientation, PythonLiteral
 
 
 class Frame(Relation):
@@ -33,14 +33,14 @@ class Frame(Relation):
         self,
         other: IntoRel,
         condition: IntoExpr,
-        select_cols: PyoIterable[str],
+        select_cols: Iterable[IntoExprColumn],
         how: Literal["left", "inner"],
     ) -> Self:
         join_type = "asof left" if how == "left" else "asof"
         qry = (
-            exp.select(*select_cols)  # pyright: ignore[reportUnknownMemberType]
+            exp.select(*pc.Iter(select_cols).map(into_expr).map(lambda c: c.inner()))  # pyright: ignore[reportUnknownMemberType]
             .from_("lhs")
-            .join("rhs", on=into_expr(condition).to_sql(), join_type=join_type)
+            .join("rhs", on=into_expr(condition).inner(), join_type=join_type)
         )
 
         return self._from_sql_expr(qry, lhs=self.inner(), rhs=other)
@@ -48,7 +48,7 @@ class Frame(Relation):
     def pivot(
         self,
         on: TryIter[str],
-        using: TryIter[str],
+        using: TryIter[IntoExprColumn],
         group_by: TryIter[str],
         in_values: pc.Option[Sequence[PythonLiteral]],
         order_by: TryIter[str],
@@ -73,7 +73,7 @@ class Frame(Relation):
             return exp.Pivot(
                 this=exp.to_table("rel"),  # pyright: ignore[reportUnknownMemberType]
                 expressions=try_iter(on).collect().into(_on_exprs),
-                using=try_iter(using),
+                using=try_iter(using).map(into_expr).map(lambda c: c.inner()),
                 group=_group(),
             )
 

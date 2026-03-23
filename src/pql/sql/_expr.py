@@ -246,44 +246,28 @@ class SqlExpr(Fns):  # noqa: PLW1641
         )
 
     def cast(self, dtype: IntoPyType) -> Self:
-        return self._new(
-            exp.Cast(
-                this=self.inner(),
-                to=exp.DataType.build(str(dtype), dialect="duckdb"),  # pyright: ignore[reportUnknownMemberType]
-            )
-        )
+        dtype = exp.DataType.build(str(dtype), dialect="duckdb")  # pyright: ignore[reportUnknownMemberType, reportAssignmentType]
+        return self._new(exp.Cast(this=self.inner(), to=dtype))
 
     def collate(self, collation: str) -> Self:
-        return self._new(
-            exp.Collate(this=self.inner(), expression=exp.to_identifier(collation))
-        )
+        expr = exp.Collate(this=self.inner(), expression=exp.to_identifier(collation))
+        return self._new(expr)
 
     def desc(self) -> Self:
         return self._new(exp.Ordered(this=self.inner(), desc=True))
 
     def get_name(self) -> str:
-        return self.inner().output_name or str(self.inner())
+        return self.inner().output_name
 
     def is_in(self, *args: IntoExpr) -> Self:
-        return self._new(
-            exp.In(
-                this=self.inner(),
-                expressions=pc.Iter(args).map(into_glot).collect(),
-            )
-        )
+        exprs = pc.Iter(args).map(into_glot).collect()
+        return self._new(exp.In(this=self.inner(), expressions=exprs))
 
     def is_not_in(self, *args: IntoExpr) -> Self:
-        return self._new(
-            exp.Not(
-                this=exp.In(
-                    this=self.inner(),
-                    expressions=pc.Iter(args).map(into_glot).collect(),
-                )
-            )
-        )
+        return self._new(exp.Not(this=self.is_in(*args).inner()))
 
     def is_not_null(self) -> Self:
-        return self._new(exp.Not(this=exp.Is(this=self.inner(), expression=exp.Null())))
+        return self._new(exp.Not(this=self.is_null().inner()))
 
     def is_null(self) -> Self:
         return self._new(exp.Is(this=self.inner(), expression=exp.Null()))
@@ -296,12 +280,6 @@ class SqlExpr(Fns):  # noqa: PLW1641
 
     def show(self) -> None:
         print(self.inner().sql(dialect="duckdb"))
-
-    def to_sql(self) -> str:
-        """Serialize expression to a SQL fragment, including AS alias when needed."""
-        base = str(self)
-        name = self.get_name()
-        return base if name == base else f"{base} AS {name}"
 
     def _reversed(self, expr: Self, *, reverse: bool = False) -> Self:
         match reverse:
