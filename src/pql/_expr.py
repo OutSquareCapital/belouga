@@ -410,9 +410,9 @@ class Expr(sql.CoreHandler[sql.SqlExpr]):
         *,
         center: bool = False,
     ) -> Self:
-        """Compute rolling mean."""
+        """Compute rolling max."""
         return self._rolling_agg(
-            lambda expr: expr.max(), window_size, min_samples, center=center
+            sql.SqlExpr.max, window_size, min_samples, center=center
         )
 
     def rolling_min(
@@ -424,7 +424,7 @@ class Expr(sql.CoreHandler[sql.SqlExpr]):
     ) -> Self:
         """Compute rolling mean."""
         return self._rolling_agg(
-            lambda expr: expr.min(), window_size, min_samples, center=center
+            sql.SqlExpr.min, window_size, min_samples, center=center
         )
 
     def rolling_mean(
@@ -436,7 +436,7 @@ class Expr(sql.CoreHandler[sql.SqlExpr]):
     ) -> Self:
         """Compute rolling mean."""
         return self._rolling_agg(
-            lambda expr: expr.mean(), window_size, min_samples, center=center
+            sql.SqlExpr.mean, window_size, min_samples, center=center
         )
 
     def rolling_median(
@@ -448,7 +448,7 @@ class Expr(sql.CoreHandler[sql.SqlExpr]):
     ) -> Self:
         """Compute rolling mean."""
         return self._rolling_agg(
-            lambda expr: expr.median(), window_size, min_samples, center=center
+            sql.SqlExpr.median, window_size, min_samples, center=center
         )
 
     def rolling_sum(
@@ -460,7 +460,7 @@ class Expr(sql.CoreHandler[sql.SqlExpr]):
     ) -> Self:
         """Compute rolling sum."""
         return self._rolling_agg(
-            lambda expr: expr.sum(), window_size, min_samples, center=center
+            sql.SqlExpr.sum, window_size, min_samples, center=center
         )
 
     def rolling_std(

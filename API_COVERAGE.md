@@ -150,7 +150,7 @@ Each summary cell is relative to Polars.
   - **pql**: (`columns: TryIter[IntoExprColumn]`, *more_columns: IntoExprColumn) -> Self
 - `unpivot`
   - **Polars**: (`on: ColumnNameOrSelector | Sequence[ColumnNameOrSelector] | None`, `index: ColumnNameOrSelector | Sequence[ColumnNameOrSelector] | None`, `variable_name: str | None`, `value_name: str | None`, `streamable: bool`) -> LazyFrame
-  - **pql**: (`on: TryIter[str]`, `index: TryIter[str]`, variable_name: str, value_name: str) -> Self
+  - **pql**: (`on: TryIter[str]`, `index: TryIter[str]`, variable_name: str, value_name: str, `order_by: TryIter[str]`) -> Self
 - `with_row_index`
   - **Polars**: (name: str, `offset: int`) -> LazyFrame
   - **pql**: (name: str, `order_by: TrySeq[str]`) -> Self
