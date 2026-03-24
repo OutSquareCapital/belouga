@@ -31,6 +31,10 @@ if TYPE_CHECKING:
     from .utils import TryIter
 
 
+def _args_into_glot(args: Iterable[IntoExpr]) -> list[exp.Expr]:
+    return pc.Iter(args).filter_map(lambda x: pc.Option(x).map(into_glot)).collect(list)
+
+
 @cache
 def _fill_strategy() -> pc.Dict[FillNullStrategy, Callable[[SqlExpr], SqlExpr]]:
     from ._funcs import coalesce
@@ -653,7 +657,8 @@ class SqlExpr(Fns):  # noqa: PLW1641
         Returns:
             Self
         """
-        return self._new(func("greatest", self.inner(), *args))
+        expr = exp.Greatest(this=self.inner(), expressions=_args_into_glot(args))
+        return self._new(expr)
 
     def least(self, *args: IntoExpr) -> Self:
         """Returns the smallest value.
@@ -670,7 +675,8 @@ class SqlExpr(Fns):  # noqa: PLW1641
         Returns:
             Self
         """
-        return self._new(func("least", self.inner(), *args))
+        expr = exp.Least(this=self.inner(), expressions=_args_into_glot(args))
+        return self._new(expr)
 
     def over(  # noqa: PLR0913
         self,
@@ -732,7 +738,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
         Returns:
             Self
         """
-        return self._new(func("dense_rank"))
+        return self._new(exp.DenseRank())
 
     def cume_dist(
         self,
@@ -750,7 +756,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
             Self
         """
         return self._new(
-            OverBuilder(func("cume_dist")).build_fn(
+            OverBuilder(exp.CumeDist()).build_fn(
                 fn_order_by=pc.Option(order_by),
                 ignore_nulls=ignore_nulls,
                 fn_descending=descending,
@@ -774,7 +780,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
             Self
         """
         return self._new(
-            OverBuilder(func("percent_rank")).build_fn(
+            OverBuilder(exp.PercentRank()).build_fn(
                 fn_order_by=pc.Option(order_by),
                 ignore_nulls=ignore_nulls,
                 fn_descending=descending,
@@ -798,7 +804,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
             Self
         """
         return self._new(
-            OverBuilder(func("rank")).build_fn(
+            OverBuilder(exp.Rank()).build_fn(
                 fn_order_by=pc.Option(order_by),
                 ignore_nulls=ignore_nulls,
                 fn_descending=descending,
@@ -822,7 +828,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
             Self
         """
         return self._new(
-            OverBuilder(func("row_number")).build_fn(
+            OverBuilder(exp.RowNumber()).build_fn(
                 fn_order_by=pc.Option(order_by),
                 ignore_nulls=ignore_nulls,
                 fn_descending=descending,

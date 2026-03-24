@@ -76,7 +76,7 @@ class DuckHandler(CoreHandler[exp.Expr]):
         return _glot_into_duckdb(self.inner())
 
 
-def _glot_into_duckdb(expr: exp.Expr) -> duckdb.Expression:  # noqa: C901
+def _glot_into_duckdb(expr: exp.Expr) -> duckdb.Expression:  # noqa: C901, PLR0912
     def _alias_name(value: exp.Expr | str | None) -> pc.Result[str, ValueError]:
         match value:
             case exp.Identifier() as ident:
@@ -99,9 +99,17 @@ def _glot_into_duckdb(expr: exp.Expr) -> duckdb.Expression:  # noqa: C901
         case exp.Column() as col_expr:
             parts = pc.Iter(col_expr.parts).map(lambda part: part.name)
             return duckdb.ColumnExpression(*parts)
-        case exp.Anonymous() as anon_expr:
-            args = pc.Iter(anon_expr.expressions).map(_glot_into_duckdb)
-            return duckdb.FunctionExpression(anon_expr.name, *args)
+        case exp.Anonymous() | exp.Greatest() | exp.Least() as func_expr:
+            match func_expr:
+                case exp.Anonymous() as anon_expr:
+                    name = anon_expr.name
+                    exprs = anon_expr.expressions
+                case _ as func_expr:
+                    name = func_expr.sql_name()
+                    exprs = func_expr.iter_expressions()
+            args = pc.Iter(exprs).map(_glot_into_duckdb)
+            return duckdb.FunctionExpression(name, *args)
+
         case exp.Lambda() as lambda_expr:
             match lambda_expr.expressions[0]:
                 case exp.Identifier() as identifier:
