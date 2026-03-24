@@ -4,7 +4,7 @@ import pytest
 
 import pql
 
-from ._utils import Fns, assert_eq, assert_eq_pl, assert_lf_eq_pl
+from ._utils import Fns, FnsCat, assert_eq, assert_eq_pl, assert_lf_eq_pl
 
 
 def test_all_add() -> None:
@@ -23,27 +23,28 @@ def test_all_chained() -> None:
     )
 
 
-_MULTI_FNS = [
-    Fns(pql.sum, pl.sum),
-    Fns(pql.mean, pl.mean),
-    Fns(pql.median, pl.median),
-    Fns(pql.min, pl.min),
-    Fns(pql.max, pl.max),
-    Fns(pql.sum_horizontal, pl.sum_horizontal),
-    Fns(pql.min_horizontal, pl.min_horizontal),
-    Fns(pql.max_horizontal, pl.max_horizontal),
-    Fns(pql.mean_horizontal, pl.mean_horizontal),
-    Fns(pql.coalesce, pl.coalesce),
-]
-_SIMPLE_FNS = [Fns(pql.all, pl.all), Fns(pql.len, pl.len)]
+_MULTI_FNS = FnsCat(
+    (pql.sum, pl.sum),
+    (pql.mean, pl.mean),
+    (pql.median, pl.median),
+    (pql.min, pl.min),
+    (pql.max, pl.max),
+    (pql.sum_horizontal, pl.sum_horizontal),
+    (pql.min_horizontal, pl.min_horizontal),
+    (pql.max_horizontal, pl.max_horizontal),
+    (pql.mean_horizontal, pl.mean_horizontal),
+    (pql.coalesce, pl.coalesce),
+)
+
+_SIMPLE_FNS = FnsCat((pql.all, pl.all), (pql.len, pl.len))
 
 
-@pytest.mark.parametrize("fns", _SIMPLE_FNS)
+@pytest.mark.parametrize("fns", _SIMPLE_FNS, ids=_SIMPLE_FNS.into_ids())
 def test_simple_fn(fns: Fns) -> None:
     assert_eq_pl(*fns.call())
 
 
-@pytest.mark.parametrize("fns", _MULTI_FNS)
+@pytest.mark.parametrize("fns", _MULTI_FNS, ids=_MULTI_FNS.into_ids())
 def test_multi_col(fns: Fns) -> None:
     assert_eq_pl(*fns.call("x", "n"))
 

@@ -1,11 +1,13 @@
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Iterator
+from dataclasses import dataclass
 from types import TracebackType
-from typing import NamedTuple
+from typing import NamedTuple, override
 
 import narwhals as nw
 import polars as pl
 import pyochain as pc
 from polars.testing import assert_frame_equal
+from pyochain.traits import PyoIterable
 
 import pql
 
@@ -23,6 +25,21 @@ class Fns(NamedTuple):
 
     def call(self, *args: object, **kwargs: object) -> tuple[pql.Expr, pl.Expr]:
         return self.pql_fn(*args, **kwargs), self.pl_fn(*args, **kwargs)
+
+
+@dataclass(slots=True, init=False)
+class FnsCat(PyoIterable[Fns]):
+    fns: pc.Seq[Fns]
+
+    def __init__(self, *fns: tuple[PqlFn, PlFn]) -> None:
+        self.fns = pc.Iter(fns).map_star(Fns).collect()
+
+    @override
+    def __iter__(self) -> Iterator[Fns]:
+        return self.fns.iter()
+
+    def into_ids(self) -> pc.Iter[str]:
+        return self.fns.iter().map(lambda x: x.pql_fn.__name__)
 
 
 def _capture[T](
