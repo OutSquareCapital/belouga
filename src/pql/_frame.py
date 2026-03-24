@@ -318,21 +318,17 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         )
         is_single_explode = to_explode.length() == 1
 
-        def _explode_expr(name: str, replace: sql.SqlExpr) -> sql.SqlExpr:
-            match is_single_explode:
-                case True:
-                    return replace.alias(name)
-                case False:
-                    return replace.struct.extract(
-                        zipped_index.get_item(name).unwrap()
-                    ).alias(name)
-
         def _project_col(
             name: str, *, unnest: bool, replace: sql.SqlExpr
         ) -> sql.SqlExpr:
             match (unnest, name in to_explode_names):
                 case (True, True):
-                    return _explode_expr(name, replace)
+                    match is_single_explode:
+                        case True:
+                            return replace.alias(name)
+                        case False:
+                            field = zipped_index.get_item(name).unwrap()
+                            return replace.struct.extract(field).alias(name)
                 case (False, True):
                     return sql.lit(None).alias(name)
                 case _:
