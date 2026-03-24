@@ -65,11 +65,13 @@ class Marker(StrEnum):
                 return result
 
     @classmethod
-    def empty_frame(cls) -> sql.Frame:
-        return sql.Frame({cls.EMPTY: ()})
+    def empty_frame(cls) -> sql.Relation:
+        return sql.Relation(sql.into_relation({cls.EMPTY: ()}))
 
     @classmethod
-    def windowed(cls, lf: sql.Frame, cols: PyoIterable[ResolvedExpr]) -> sql.Frame:
+    def windowed(
+        cls, lf: sql.Relation, cols: PyoIterable[ResolvedExpr]
+    ) -> sql.Relation:
         def _uses_temp(expr: sql.SqlExpr) -> bool:
             return pc.Iter(expr.inner().find_all(exp.Column)).any(
                 lambda col: (
@@ -242,8 +244,10 @@ class ExprPlan:
     def aliased_sql(self) -> pc.Iter[sql.SqlExpr]:
         return self.projections.iter().map(ResolvedExpr.as_aliased)
 
-    def select_context(self, lf: sql.Frame) -> sql.Frame:
-        def _non_empty_slct(projs: pc.Seq[ResolvedExpr], lf: sql.Frame) -> sql.Frame:
+    def select_context(self, lf: sql.Relation) -> sql.Relation:
+        def _non_empty_slct(
+            projs: pc.Seq[ResolvedExpr], lf: sql.Relation
+        ) -> sql.Relation:
             match projs.all(lambda r: r.kind == ExprKind.UNIQUE):
                 case True:
                     return self.aliased_sql().into(
@@ -262,8 +266,8 @@ class ExprPlan:
             lambda projs: _non_empty_slct(projs, Marker.windowed(lf, projs))
         ).unwrap_or_else(Marker.empty_frame)
 
-    def with_columns_context(self, lf: sql.Frame) -> sql.Frame:
-        def _resolve(lf: sql.Frame) -> sql.Frame:
+    def with_columns_context(self, lf: sql.Relation) -> sql.Relation:
+        def _resolve(lf: sql.Relation) -> sql.Relation:
             match self.projections.any(lambda r: r.kind == ExprKind.SCALAR):
                 case True:
                     return self.resolve().into(lf.aggregate)
@@ -275,14 +279,14 @@ class ExprPlan:
     def with_fields_context(self, expr: sql.SqlExpr) -> sql.SqlExpr:
         return self.aliased_sql().into(lambda args: expr.struct.insert(*args))
 
-    def group_by_all_context(self, lf: sql.Frame) -> sql.Frame:
+    def group_by_all_context(self, lf: sql.Relation) -> sql.Relation:
         return self.aliased_sql().into(lf.aggregate, "ALL")
 
     def agg_context(
         self,
         keys: PyoIterable[sql.SqlExpr],
-        aggregator: Callable[[pc.Iter[sql.SqlExpr]], sql.Frame],
-    ) -> sql.Frame:
+        aggregator: Callable[[pc.Iter[sql.SqlExpr]], sql.Relation],
+    ) -> sql.Relation:
         plan = self.projections.iter().map(lambda p: p.implode_or_scalar())
 
         return keys.iter().chain(plan).into(aggregator)

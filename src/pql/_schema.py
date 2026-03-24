@@ -12,7 +12,7 @@ from ._datatypes import DataType
 @dataclass(slots=True, init=False)
 class Schema(pc.Dict[str, DataType]):
     @classmethod
-    def from_frame(cls, frame: sql.Frame) -> Self:
+    def from_frame(cls, frame: sql.Relation) -> Self:
         dtypes = frame.dtypes.iter().map(
             lambda d: DataType.__from_sql__(sql.DType.parse(d))
         )

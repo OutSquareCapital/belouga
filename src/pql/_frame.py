@@ -62,15 +62,15 @@ PIVOT_AGG: dict[PivotAgg, Callable[[sql.SqlExpr], sql.SqlExpr]] = {
 
 
 @dataclass(slots=True, init=False, repr=False)
-class LazyFrame(sql.CoreHandler[sql.Frame]):
+class LazyFrame(sql.CoreHandler[sql.Relation]):
     """LazyFrame providing Polars-like API over DuckDB relations."""
 
-    _inner: sql.Frame
+    _inner: sql.Relation
     _cached_schema: pc.Option[Schema]
 
     def __init__(self, data: IntoRel, orient: Orientation = "col") -> None:
         self._cached_schema = pc.NONE
-        self._inner = sql.Frame(data, orient)
+        self._inner = sql.Relation(sql.into_relation(data, orient))
 
     def _from_sql_expr(self, expr: exp.Expr, **kwargs: IntoRel) -> Self:
         qry = sql.from_query(expr.sql(dialect="duckdb"), **kwargs)
