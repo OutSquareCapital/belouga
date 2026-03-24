@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, NamedTuple, Self, override
 
 import narwhals as nw
 import pyochain as pc
-from _duckdb._expression import Expression
 from sqlglot import exp
 
 from . import sql
