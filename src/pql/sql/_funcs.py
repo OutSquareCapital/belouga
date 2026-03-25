@@ -6,7 +6,7 @@ import sqlglot
 from duckdb import Expression
 from sqlglot import exp
 
-from ._core import DuckHandler, args_into_glot, func, into_glot
+from ._core import DuckHandler, args_into_glot, into_glot
 from ._expr import SqlExpr
 from .typing import IntoExpr, IntoExprColumn, PythonLiteral
 from .utils import TryIter, try_chain, try_iter
@@ -50,6 +50,9 @@ def unnest(
 
     Empty and `NULL` lists both unnest to zero rows.
 
+    Note:
+        We use `exp.Explode` altough `DuckDB` document `UNNEST`. `Exp.Unnest()` does not seem to be equivalent when parsed.
+
     Args:
         col (SqlExpr): The column to unnest.
         max_depth (int | None): Maximum depth of recursive unnesting.
@@ -58,9 +61,8 @@ def unnest(
     Returns:
         SqlExpr: An expression representing the unnesting operation.
     """
-    rec = "recursive:=True" if recursive else None
-    depth = f"max_depth:={max_depth}" if max_depth is not None else None
-    return SqlExpr(func("unnest", col, depth, rec))
+    expr = exp.Explode(this=into_glot(col), max_depth=max_depth, recursive=recursive)
+    return SqlExpr(expr)
 
 
 @final
