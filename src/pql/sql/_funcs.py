@@ -26,7 +26,7 @@ def reduce(
 
 def row_number() -> SqlExpr:
     """Create a ROW_NUMBER() expression."""
-    return SqlExpr(func("row_number"))
+    return SqlExpr(exp.RowNumber())
 
 
 def unnest(
@@ -70,8 +70,8 @@ class Col:
     def __call__(self, name: str, table: str | None = None) -> SqlExpr:
         return SqlExpr(exp.column(name, table=table))
 
-    def __getattr__(self, name: str, table: str | None = None) -> SqlExpr:
-        return self(name, table=table)
+    def __getattr__(self, name: str) -> SqlExpr:
+        return self(name)
 
 
 col = Col()
