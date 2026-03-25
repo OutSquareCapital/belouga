@@ -2,6 +2,7 @@ from collections.abc import Callable, Iterable
 from typing import final
 
 import pyochain as pc
+from sqlglot import exp
 
 from . import sql
 from ._expr import Expr
@@ -39,19 +40,20 @@ def _agg_expr(
     cols: TryIter[str],
     more_cols: Iterable[str],
 ) -> Expr:
-    meta = (
-        try_chain(cols, more_cols)
-        .collect()
-        .then_some()
-        .into(
-            lambda cols: MultiMeta(
-                cols.map(lambda c: c.first()).unwrap_or(Marker.EMPTY),
-                kind=ExprKind.SCALAR,
-                resolver=Resolver.agg_expr(cols),
-            )
-        )
+
+    def _columns_expr(inner_cols: pc.Seq[str]) -> sql.SqlExpr:
+        expr = exp.Columns(this=inner_cols.iter().map(exp.convert).collect(list))
+        return sql.SqlExpr(expr)
+
+    names = try_chain(cols, more_cols).collect().then_some()
+    root_name = names.and_then(lambda cols: cols.iter().next()).unwrap_or(Marker.EMPTY)
+    meta = MultiMeta(root_name, kind=ExprKind.SCALAR, resolver=Resolver.agg_expr(names))
+    inner_expr = (
+        names.map(_columns_expr)
+        .unwrap_or_else(lambda: sql.SqlExpr(exp.Columns(this=exp.Star())))
+        .pipe(agg)
     )
-    return Expr(Marker.MULTI.to_expr().pipe(agg), meta)
+    return Expr(inner_expr, meta)
 
 
 def sum(cols: TryIter[str], *more_cols: str) -> Expr:

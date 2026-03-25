@@ -157,10 +157,10 @@ class MultiMeta(ExprMeta):
             output_names = self.get_output_names(base_names, alias_override)
             return NamesBuilder(base_names, output_names, template, resolved_fn)
 
-        is_native_multi = (
-            self.alias_name.is_none() and isinstance(template.inner(), exp.Columns)
-        ) or template.inner().is_star
-        match (alias_override.is_none(), is_native_multi):
+        is_multi = self.alias_name.is_none() and (
+            isinstance(template.inner(), exp.Columns) or template.inner().is_star
+        )
+        match (alias_override.is_none(), is_multi):
             case (True, True):
                 return resolved_fn(template, template.get_name()).into_iter()
             case (True, _):
