@@ -7,7 +7,7 @@ from ._frame import LazyFrame
 def approx_database_count(*args: object) -> LazyFrame:
     """SQL approx_database_count table function.
 
-    **SQL name**: *approx_database_count*
+    **SQL name**: *duckdb_approx_database_count*
 
     Args:
         *args (object): Variable arguments
@@ -21,7 +21,7 @@ def approx_database_count(*args: object) -> LazyFrame:
 def columns(*args: object) -> LazyFrame:
     """SQL columns table function.
 
-    **SQL name**: *columns*
+    **SQL name**: *duckdb_columns*
 
     Args:
         *args (object): Variable arguments
@@ -35,7 +35,7 @@ def columns(*args: object) -> LazyFrame:
 def connection_count(*args: object) -> LazyFrame:
     """SQL connection_count table function.
 
-    **SQL name**: *connection_count*
+    **SQL name**: *duckdb_connection_count*
 
     Args:
         *args (object): Variable arguments
@@ -49,7 +49,7 @@ def connection_count(*args: object) -> LazyFrame:
 def constraints(*args: object) -> LazyFrame:
     """SQL constraints table function.
 
-    **SQL name**: *constraints*
+    **SQL name**: *duckdb_constraints*
 
     Args:
         *args (object): Variable arguments
@@ -63,7 +63,7 @@ def constraints(*args: object) -> LazyFrame:
 def coordinate_systems(*args: object) -> LazyFrame:
     """SQL coordinate_systems table function.
 
-    **SQL name**: *coordinate_systems*
+    **SQL name**: *duckdb_coordinate_systems*
 
     Args:
         *args (object): Variable arguments
@@ -77,7 +77,7 @@ def coordinate_systems(*args: object) -> LazyFrame:
 def databases(*args: object) -> LazyFrame:
     """SQL databases table function.
 
-    **SQL name**: *databases*
+    **SQL name**: *duckdb_databases*
 
     Args:
         *args (object): Variable arguments
@@ -91,7 +91,7 @@ def databases(*args: object) -> LazyFrame:
 def dependencies(*args: object) -> LazyFrame:
     """SQL dependencies table function.
 
-    **SQL name**: *dependencies*
+    **SQL name**: *duckdb_dependencies*
 
     Args:
         *args (object): Variable arguments
@@ -105,7 +105,7 @@ def dependencies(*args: object) -> LazyFrame:
 def extensions(*args: object) -> LazyFrame:
     """SQL extensions table function.
 
-    **SQL name**: *extensions*
+    **SQL name**: *duckdb_extensions*
 
     Args:
         *args (object): Variable arguments
@@ -119,7 +119,7 @@ def extensions(*args: object) -> LazyFrame:
 def external_file_cache(*args: object) -> LazyFrame:
     """SQL external_file_cache table function.
 
-    **SQL name**: *external_file_cache*
+    **SQL name**: *duckdb_external_file_cache*
 
     Args:
         *args (object): Variable arguments
@@ -133,7 +133,7 @@ def external_file_cache(*args: object) -> LazyFrame:
 def functions(*args: object) -> LazyFrame:
     """SQL functions table function.
 
-    **SQL name**: *functions*
+    **SQL name**: *duckdb_functions*
 
     Args:
         *args (object): Variable arguments
@@ -147,7 +147,7 @@ def functions(*args: object) -> LazyFrame:
 def indexes(*args: object) -> LazyFrame:
     """SQL indexes table function.
 
-    **SQL name**: *indexes*
+    **SQL name**: *duckdb_indexes*
 
     Args:
         *args (object): Variable arguments
@@ -161,7 +161,7 @@ def indexes(*args: object) -> LazyFrame:
 def keywords(*args: object) -> LazyFrame:
     """SQL keywords table function.
 
-    **SQL name**: *keywords*
+    **SQL name**: *duckdb_keywords*
 
     Args:
         *args (object): Variable arguments
@@ -175,7 +175,7 @@ def keywords(*args: object) -> LazyFrame:
 def log_contexts(*args: object) -> LazyFrame:
     """SQL log_contexts table function.
 
-    **SQL name**: *log_contexts*
+    **SQL name**: *duckdb_log_contexts*
 
     Args:
         *args (object): Variable arguments
@@ -189,7 +189,7 @@ def log_contexts(*args: object) -> LazyFrame:
 def logs(denormalized_table: bool | None = None, *args: object) -> LazyFrame:  # noqa: FBT001
     """SQL logs table function.
 
-    **SQL name**: *logs*
+    **SQL name**: *duckdb_logs*
 
     Args:
         denormalized_table (bool | None): Parameter
@@ -204,7 +204,7 @@ def logs(denormalized_table: bool | None = None, *args: object) -> LazyFrame:  #
 def memory(*args: object) -> LazyFrame:
     """SQL memory table function.
 
-    **SQL name**: *memory*
+    **SQL name**: *duckdb_memory*
 
     Args:
         *args (object): Variable arguments
@@ -218,7 +218,7 @@ def memory(*args: object) -> LazyFrame:
 def optimizers(*args: object) -> LazyFrame:
     """SQL optimizers table function.
 
-    **SQL name**: *optimizers*
+    **SQL name**: *duckdb_optimizers*
 
     Args:
         *args (object): Variable arguments
@@ -232,7 +232,7 @@ def optimizers(*args: object) -> LazyFrame:
 def prepared_statements(*args: object) -> LazyFrame:
     """SQL prepared_statements table function.
 
-    **SQL name**: *prepared_statements*
+    **SQL name**: *duckdb_prepared_statements*
 
     Args:
         *args (object): Variable arguments
@@ -246,7 +246,7 @@ def prepared_statements(*args: object) -> LazyFrame:
 def schemas(*args: object) -> LazyFrame:
     """SQL schemas table function.
 
-    **SQL name**: *schemas*
+    **SQL name**: *duckdb_schemas*
 
     Args:
         *args (object): Variable arguments
@@ -260,7 +260,7 @@ def schemas(*args: object) -> LazyFrame:
 def secret_types(*args: object) -> LazyFrame:
     """SQL secret_types table function.
 
-    **SQL name**: *secret_types*
+    **SQL name**: *duckdb_secret_types*
 
     Args:
         *args (object): Variable arguments
@@ -274,7 +274,7 @@ def secret_types(*args: object) -> LazyFrame:
 def secrets(redact: bool | None = None, *args: object) -> LazyFrame:  # noqa: FBT001
     """SQL secrets table function.
 
-    **SQL name**: *secrets*
+    **SQL name**: *duckdb_secrets*
 
     Args:
         redact (bool | None): Parameter
@@ -289,7 +289,7 @@ def secrets(redact: bool | None = None, *args: object) -> LazyFrame:  # noqa: FB
 def sequences(*args: object) -> LazyFrame:
     """SQL sequences table function.
 
-    **SQL name**: *sequences*
+    **SQL name**: *duckdb_sequences*
 
     Args:
         *args (object): Variable arguments
@@ -303,7 +303,7 @@ def sequences(*args: object) -> LazyFrame:
 def settings(*args: object) -> LazyFrame:
     """SQL settings table function.
 
-    **SQL name**: *settings*
+    **SQL name**: *duckdb_settings*
 
     Args:
         *args (object): Variable arguments
@@ -317,7 +317,7 @@ def settings(*args: object) -> LazyFrame:
 def tables(*args: object) -> LazyFrame:
     """SQL tables table function.
 
-    **SQL name**: *tables*
+    **SQL name**: *duckdb_tables*
 
     Args:
         *args (object): Variable arguments
@@ -331,7 +331,7 @@ def tables(*args: object) -> LazyFrame:
 def temporary_files(*args: object) -> LazyFrame:
     """SQL temporary_files table function.
 
-    **SQL name**: *temporary_files*
+    **SQL name**: *duckdb_temporary_files*
 
     Args:
         *args (object): Variable arguments
@@ -345,7 +345,7 @@ def temporary_files(*args: object) -> LazyFrame:
 def types(*args: object) -> LazyFrame:
     """SQL types table function.
 
-    **SQL name**: *types*
+    **SQL name**: *duckdb_types*
 
     Args:
         *args (object): Variable arguments
@@ -359,7 +359,7 @@ def types(*args: object) -> LazyFrame:
 def variables(*args: object) -> LazyFrame:
     """SQL variables table function.
 
-    **SQL name**: *variables*
+    **SQL name**: *duckdb_variables*
 
     Args:
         *args (object): Variable arguments
@@ -373,7 +373,7 @@ def variables(*args: object) -> LazyFrame:
 def views(*args: object) -> LazyFrame:
     """SQL views table function.
 
-    **SQL name**: *views*
+    **SQL name**: *duckdb_views*
 
     Args:
         *args (object): Variable arguments
