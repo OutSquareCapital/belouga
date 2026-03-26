@@ -381,6 +381,17 @@ class ExprPlan:
                         .filter(lambda name: name not in excluded)
                         .map(_into_duck)
                     )
+                case exp.Explode(this=exp.Expr() as inner):
+                    match proj.kind:
+                        case ExprKind.SCALAR:
+                            expr = SqlExpr(inner)
+                        case ExprKind.UNIQUE:
+                            expr = SqlExpr(inner).implode().list.distinct()
+                        case _:
+                            expr = SqlExpr(inner).implode()
+                    return pc.Iter.once(
+                        expr.list.flatten().alias(proj.name).into_duckdb()
+                    )
                 case _:
                     return pc.Iter.once(proj.implode_or_scalar().into_duckdb())
 

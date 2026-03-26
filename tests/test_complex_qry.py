@@ -189,6 +189,38 @@ def test_frame_explode_then_reaggregate() -> None:
     )
 
 
+def test_expr_list_explode_in_agg() -> None:
+    data = pl.DataFrame(
+        {
+            "grp": ["a", "a", "b"],
+            "vals": [[1, 2], [2, 3], [4, 5]],
+            "arr": [[10, 20], [20, 30], [40, 50]],
+        }
+    )
+    assert_lf_eq_pl(
+        pql.LazyFrame(data)
+        .group_by("grp")
+        .agg(
+            pql.col("vals").list.sort().list.explode(),
+            pql.col("arr")
+            .cast(pql.Array(pql.Int64(), size=2))
+            .arr.sort()
+            .arr.explode(),
+        )
+        .sort("grp", "vals"),
+        data.lazy()
+        .group_by("grp")
+        .agg(
+            pl.col("vals").list.sort().list.explode(),
+            pl.col("arr")
+            .cast(pl.Array(pl.Int64(), shape=(2,)))
+            .arr.sort()
+            .arr.explode(),
+        )
+        .sort("grp", "vals"),
+    )
+
+
 def test_window_diff_pct_change_over_partition() -> None:
     """shift/diff/pct_change within department partition ordered by years_exp."""
     assert_lf_eq_pl(
