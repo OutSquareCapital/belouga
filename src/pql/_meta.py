@@ -17,10 +17,10 @@ from .sql.utils import TryIter, try_chain, try_iter
 
 if TYPE_CHECKING:
     from duckdb import DuckDBPyRelation, Expression
+    from narwhals.typing import IntoFrameT
     from pyochain.traits import PyoCollection, PyoIterable, PyoKeysView
 
     from ._datatypes import DataType
-    from ._frame import LazyFrame
     from .sql.typing import IntoExpr, IntoExprColumn
 
 
@@ -55,10 +55,12 @@ class Marker(StrEnum):
         return SqlExpr(template.inner().transform(_replacer))  # pyright: ignore[reportUnknownMemberType, reportAny]
 
     @classmethod
-    def drop_marker(cls, result: LazyFrame, cols: Collection[str]) -> LazyFrame:
+    def drop_marker(cls, result: IntoFrameT, cols: Collection[str]) -> IntoFrameT:
+        import narwhals as nw
+
         match cls.EMPTY in cols:
             case True:
-                return result.drop(cls.EMPTY)
+                return nw.from_native(result).drop(cls.EMPTY).to_native()
             case False:
                 return result
 

@@ -6,8 +6,6 @@ from collections.abc import Iterable, Iterator, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, Protocol, Self, runtime_checkable
 
 import duckdb
-from narwhals._native import NativeFrame
-from narwhals.typing import IntoFrame
 from sqlglot import exp
 
 if TYPE_CHECKING:
@@ -22,6 +20,7 @@ if TYPE_CHECKING:
         PyTypeIds as DuckPyTypeIds,
         StrIntoPyType as DuckStrIntoPyType,
     )
+    from narwhals.typing import IntoFrame
 
     from .._expr import Expr
     from ._core import DuckHandler
@@ -29,8 +28,12 @@ if TYPE_CHECKING:
 
 
 @runtime_checkable
-class FrameLike(NativeFrame, Protocol):
-    """Protocol to check if a type is indeed a narwhals `IntoFrame`."""
+class FrameLike(Protocol):
+    """Credits to `narwhals` for the Protocols definitions."""
+
+    @property
+    def columns(self) -> Any: ...  # noqa: ANN401, D102  # pyright: ignore[reportAny, reportExplicitAny]
+    def join(self, *args: Any, **kwargs: Any) -> Any: ...  # pyright: ignore[reportExplicitAny, reportAny]  # noqa: ANN401, D102
 
 
 class NPProtocol(Protocol):

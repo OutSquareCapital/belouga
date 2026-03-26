@@ -5,7 +5,6 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, cast
 
 import duckdb
-import narwhals as nw
 import pyochain as pc
 from sqlglot import exp
 
@@ -15,13 +14,7 @@ from .typing import FrameLike, NPArrayLike, PythonLiteral
 if TYPE_CHECKING:
     from narwhals.typing import IntoFrame
 
-    from .typing import (
-        AnyArray,
-        IntoDict,
-        IntoRel,
-        Orientation,
-        SeqIntoVals,
-    )
+    from .typing import AnyArray, IntoDict, IntoRel, Orientation, SeqIntoVals
 
 COL0 = "column_0"
 
@@ -136,6 +129,8 @@ def from_records(
 
 
 def from_df(data: IntoFrame) -> duckdb.DuckDBPyRelation:
+    import narwhals as nw
+
     match nw.from_native(data):
         case nw.DataFrame() as df:
             return df.lazy(backend="duckdb").to_native()  # pyright: ignore[reportAny]
