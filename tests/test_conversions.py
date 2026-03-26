@@ -171,3 +171,9 @@ def test_from_seq_of_vals() -> None:
     vals = pc.Iter(range(10)).map(lambda _: 42).collect()
     assert_eq(pql.LazyFrame(vals).collect(), pl.DataFrame(vals))
     assert_eq(pql.from_records(vals).collect(), pl.from_records(vals))
+
+
+def test_from_seq_of_str_vals() -> None:
+    vals = ("x", "y", "z")
+    assert_eq(pql.LazyFrame(vals).collect(), pl.DataFrame(vals))
+    assert_eq(pql.from_records(vals).collect(), pl.from_records(vals))

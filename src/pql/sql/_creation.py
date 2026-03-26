@@ -101,7 +101,7 @@ def from_records(
         case Mapping():
             vals = cast(Sequence[Mapping[str, Any]], data)  # pyright: ignore[reportExplicitAny]
             return from_dicts(vals)
-        case Sequence():
+        case Sequence() as value if not isinstance(value, str | bytes | bytearray):  # pyright: ignore[reportUnknownVariableType]
             vals = cast(Sequence[Sequence[PythonLiteral]], data)
 
             match orient:
