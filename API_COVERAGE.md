@@ -9,14 +9,14 @@ Each summary cell is relative to Polars.
 
 | Class               | Coverage                                                                                     | Implemented | Matched | Missing | Mismatched | Extra |
 | ------------------- | -------------------------------------------------------------------------------------------- | ----------- | ------- | ------- | ---------- | ----- |
-| LazyFrame           | <span style="color: #f39c12;">███</span><span style="color: #bdc3c7;">░░░░░░░</span> (37.5%) | 80          | 30      | 26      | 24         | 4     |
+| LazyFrame           | <span style="color: #f39c12;">███</span><span style="color: #bdc3c7;">░░░░░░░</span> (37.5%) | 80          | 30      | 26      | 24         | 6     |
 | Expr                | <span style="color: #f39c12;">████</span><span style="color: #bdc3c7;">░░░░░░</span> (43.0%) | 214         | 92      | 90      | 32         | 1     |
 | LazyGroupBy         | <span style="color: #27ae60;">██████</span><span style="color: #bdc3c7;">░░░░</span> (62.5%) | 16          | 10      | 4       | 2          | 0     |
 | ExprStrNameSpace    | <span style="color: #e74c3c;">██</span><span style="color: #bdc3c7;">░░░░░░░░</span> (29.8%) | 47          | 14      | 10      | 23         | 2     |
-| ExprListNameSpace   | <span style="color: #f39c12;">████</span><span style="color: #bdc3c7;">░░░░░░</span> (46.5%) | 43          | 20      | 20      | 3          | 2     |
+| ExprListNameSpace   | <span style="color: #f39c12;">████</span><span style="color: #bdc3c7;">░░░░░░</span> (46.5%) | 43          | 20      | 19      | 4          | 2     |
 | ExprStructNameSpace | <span style="color: #f39c12;">████</span><span style="color: #bdc3c7;">░░░░░░</span> (40.0%) | 5           | 2       | 2       | 1          | 2     |
 | ExprNameNameSpace   | <span style="color: #27ae60;">███████</span><span style="color: #bdc3c7;">░░░</span> (70.0%) | 10          | 7       | 3       | 0          | 2     |
-| ExprArrNameSpace    | <span style="color: #f39c12;">█████</span><span style="color: #bdc3c7;">░░░░░</span> (54.8%) | 31          | 17      | 10      | 4          | 4     |
+| ExprArrNameSpace    | <span style="color: #f39c12;">█████</span><span style="color: #bdc3c7;">░░░░░</span> (54.8%) | 31          | 17      | 9       | 5          | 4     |
 | ExprDtNameSpace     | <span style="color: #f39c12;">████</span><span style="color: #bdc3c7;">░░░░░░</span> (48.9%) | 45          | 22      | 18      | 5          | 2     |
 | ModuleFunctions     | <span style="color: #e74c3c;">█</span><span style="color: #bdc3c7;">░░░░░░░░░</span> (14.3%) | 168         | 24      | 119     | 25         | 13    |
 | selectors           | <span style="color: #f39c12;">█████</span><span style="color: #bdc3c7;">░░░░░</span> (54.3%) | 35          | 19      | 12      | 4          | 0     |
@@ -155,12 +155,14 @@ Each summary cell is relative to Polars.
   - **Polars**: (name: str, `offset: int`) -> LazyFrame
   - **pql**: (name: str, `order_by: TrySeq[str]`) -> Self
 
-### [+] Extra Methods (pql-only) (4)
+### [+] Extra Methods (pql-only) (6)
 
+- `fetch_all`
 - `group_by_all`
 - `inner`
 - `join_cross`
 - `sql_query`
+- `union`
 
 ## Expr
 
@@ -576,7 +578,7 @@ Each summary cell is relative to Polars.
 
 ## ExprListNameSpace
 
-### [x] Missing Methods (20)
+### [x] Missing Methods (19)
 
 - `agg`
   - **Polars**: (expr: Expr) -> Expr
@@ -588,8 +590,6 @@ Each summary cell is relative to Polars.
   - **Polars**: (other: list[Expr | str] | Expr | str | Series | list[Any]) -> Expr
 - `diff`
   - **Polars**: (n: int, null_behavior: NullBehavior) -> Expr
-- `explode`
-  - **Polars**: (empty_as_null: bool, keep_nulls: bool) -> Expr
 - `gather`
   - **Polars**: (indices: Expr | Series | list[int] | list[list[int]], null_on_oob: bool) -> Expr
 - `gather_every`
@@ -619,11 +619,14 @@ Each summary cell is relative to Polars.
 - `to_struct`
   - **Polars**: (n_field_strategy: ListToStructWidthStrategy | None, fields: Sequence[str] | Callable[[int], str] | None, upper_bound: int | None) -> Expr
 
-### [!] Signature Mismatches (3)
+### [!] Signature Mismatches (4)
 
 - `contains`
   - **Polars**: (item: IntoExpr, `nulls_equal: bool`) -> Expr
   - **pql**: (item: IntoExpr) -> Expr
+- `explode`
+  - **Polars**: (`empty_as_null: bool`, `keep_nulls: bool`) -> Expr
+  - **pql**: () -> Expr
 - `get`
   - **Polars**: (`index: int | Expr | str`, `null_on_oob: bool`) -> Expr
   - **pql**: (index: int) -> Expr
@@ -674,7 +677,7 @@ Each summary cell is relative to Polars.
 
 ## ExprArrNameSpace
 
-### [x] Missing Methods (10)
+### [x] Missing Methods (9)
 
 - `agg`
   - **Polars**: (expr: Expr) -> Expr
@@ -682,8 +685,6 @@ Each summary cell is relative to Polars.
   - **Polars**: () -> Expr
 - `arg_min`
   - **Polars**: () -> Expr
-- `explode`
-  - **Polars**: (empty_as_null: bool, keep_nulls: bool) -> Expr
 - `head`
   - **Polars**: (n: int | str | Expr, as_array: bool) -> Expr
 - `shift`
@@ -697,7 +698,7 @@ Each summary cell is relative to Polars.
 - `to_struct`
   - **Polars**: (fields: Sequence[str] | Callable[[int], str] | None) -> Expr
 
-### [!] Signature Mismatches (4)
+### [!] Signature Mismatches (5)
 
 - `contains`
   - **Polars**: (item: IntoExpr, `nulls_equal: bool`) -> Expr
@@ -705,6 +706,9 @@ Each summary cell is relative to Polars.
 - `eval`
   - **Polars**: (expr: Expr, `as_list: bool`) -> Expr
   - **pql**: (expr: Expr) -> Expr
+- `explode`
+  - **Polars**: (`empty_as_null: bool`, `keep_nulls: bool`) -> Expr
+  - **pql**: () -> Expr
 - `get`
   - **Polars**: (`index: int | IntoExprColumn`, `null_on_oob: bool`) -> Expr
   - **pql**: (index: int) -> Expr
