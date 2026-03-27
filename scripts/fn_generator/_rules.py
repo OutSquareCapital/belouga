@@ -110,6 +110,8 @@ SPECIAL_CASES = pc.Set(
         "variance",  # var_samp
         "stddev",  # stddev_samp
         "quantile",  # quantile_disc
+        # sqlglot issues
+        "xor",  # Actual match casing logic gives it `XOR` when really it should be `BitwiseXor`
     }
 )
 """Function to exclude by name, either because they require special handling or because they conflict with existing names."""

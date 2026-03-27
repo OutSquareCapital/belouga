@@ -842,3 +842,21 @@ class SqlExpr(Fns):  # noqa: PLW1641
                 fn_nulls_last=nulls_last,
             )
         )
+
+    def xor(self, right: IntoExprColumn | bytes | bytearray | memoryview | int) -> Self:
+        """Bitwise XOR.
+
+        **SQL name**: *xor*
+
+        Args:
+            right (IntoExprColumn | bytes | bytearray | memoryview | int): `BIGINT | BIT | HUGEINT | INTEGER | SMALLINT | TINYINT | UBIGINT | UHUGEINT | UINTEGER | USMALLINT | UTINYINT` expression
+
+        Examples:
+            ```sql
+            xor(17, 5)
+            ```
+
+        Returns:
+            Self
+        """
+        return self._new(exp.BitwiseXor(this=self.inner(), expression=into_glot(right)))

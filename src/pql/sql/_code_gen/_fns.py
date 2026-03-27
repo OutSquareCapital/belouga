@@ -3303,24 +3303,6 @@ class Fns(DuckHandler):
         """
         return self._new(anon("write_log", self.inner(), *args))
 
-    def xor(self, right: IntoExprColumn | bytes | bytearray | memoryview | int) -> Self:
-        """Bitwise XOR.
-
-        **SQL name**: *xor*
-
-        Args:
-            right (IntoExprColumn | bytes | bytearray | memoryview | int): `BIGINT | BIT | HUGEINT | INTEGER | SMALLINT | TINYINT | UBIGINT | UHUGEINT | UINTEGER | USMALLINT | UTINYINT` expression
-
-        Examples:
-            ```sql
-            xor(17, 5)
-            ```
-
-        Returns:
-            Self
-        """
-        return self._new(func(exp.Xor, self.inner(), right))
-
 
 class ListFns[T: Fns](NameSpaceHandler[T]):
     __slots__: ClassVar[Iterable[str]] = ()
