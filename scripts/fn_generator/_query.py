@@ -3,13 +3,13 @@ from collections.abc import Iterable
 
 import polars as pl
 import pyochain as pc
+from sqlglot import exp
 
 from .._utils import Pql, Typing
 from ._dtypes import DuckDbTypes, FuncTypes
 from ._format import to_func
 from ._rules import (
     CONVERTER,
-    GLOT_FUNC_NAMES,
     NAMESPACE_SPECS,
     PREFIXES,
     RENAME_RULES,
@@ -48,11 +48,9 @@ def run_qry(lf: pl.LazyFrame) -> pl.LazyFrame:
                 how="left",
             )
         )
+        .pipe(lambda lf: lf.join(lf.pipe(_glot_name_map, dk), on=dk.function_name))
         .with_columns(
             dk.function_name.alias(py.sql_name.meta.output_name()),
-            dk.function_name.replace_strict(
-                GLOT_FUNC_NAMES, default=None, return_dtype=pl.String
-            ).alias(py.glot_name.meta.output_name()),
             dk.function_name.replace_strict(
                 RENAME_RULES, default=dk.function_name, return_dtype=pl.String
             ).alias(py.raw_name.meta.output_name()),
@@ -162,6 +160,34 @@ def _alias_map(lf: pl.LazyFrame, dk: DuckCols) -> pl.LazyFrame:
             pl.col("alias_group")
             .list.set_difference(pl.concat_list(dk.function_name))
             .alias("aliases"),
+        )
+    )
+
+
+def _glot_name_map(lf: pl.LazyFrame, dk: DuckCols) -> pl.LazyFrame:
+    glot_name = pl.col("glot_name")
+    return (
+        lf.select(
+            dk.function_name,
+            pl.coalesce(dk.alias_of, dk.function_name).alias("alias_root"),
+        )
+        .unique()
+        .join(
+            pc.Iter(exp.FUNCTION_BY_NAME.items())
+            .map_star(lambda sql_name, fn: (sql_name.lower(), fn.__name__))
+            .into(
+                pl.LazyFrame,
+                schema={"function_name": pl.String, "glot_name": pl.String},
+            ),
+            on="function_name",
+            how="left",
+        )
+        .select(
+            dk.function_name,
+            pl.when(pl.col("alias_root").is_not_null())
+            .then(glot_name.drop_nulls().first().over("alias_root"))
+            .otherwise(glot_name)
+            .alias("glot_name"),
         )
     )
 

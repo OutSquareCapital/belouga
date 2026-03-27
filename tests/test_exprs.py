@@ -70,6 +70,14 @@ def test_repr() -> None:
     assert "Expr" in repr(pql.col("name"))
 
 
+def test_sql_list_sort_uses_array_sort_constructor() -> None:
+    list_sort = pql.sql.col("arr").list.sort().inner()
+    array_sort = pql.sql.col("arr").arr.sort().inner()
+
+    assert type(list_sort) is type(array_sort)
+    assert type(list_sort).__name__ == "ArraySort"
+
+
 def test_and() -> None:
     assert_eq((pql.col("a") & pql.col("b")), (nw.col("a") & nw.col("b")))
 
