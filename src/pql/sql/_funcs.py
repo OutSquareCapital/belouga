@@ -201,6 +201,6 @@ def into_expr(value: IntoExpr, *, as_col: bool = False) -> SqlExpr:  # noqa: PLR
         case exp.Expr():
             return SqlExpr(value)
         case Expression():
-            return SqlExpr(sqlglot.parse_one(str(value), dialect="duckdb"))  # pyright: ignore[reportUnknownMemberType]
+            return SqlExpr(sqlglot.parse_one(str(value), dialect="duckdb"))
         case _:
             return lit(value)

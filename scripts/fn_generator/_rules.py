@@ -11,9 +11,9 @@ from ._dtypes import Categories, DuckDbTypes
 CONVERTER = pc.Iter(DuckDbTypes).map(lambda t: (t, t.into_py())).collect(dict)
 """DuckDB type -> Python type hint mapping."""
 
-GLOT_FUNC_NAMES: pc.Dict[str, str] = (  # pyright: ignore[reportUnknownVariableType]
-    pc.Iter(exp.FUNCTION_BY_NAME.items())  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
-    .map_star(lambda sql_name, fn: (sql_name.lower(), fn.__name__))  # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType]
+GLOT_FUNC_NAMES = (
+    pc.Iter(exp.FUNCTION_BY_NAME.items())
+    .map_star(lambda sql_name, fn: (sql_name.lower(), fn.__name__))
     .collect(pc.Dict)
 )
 """DuckDB SQL function name -> concrete sqlglot expression class name mapping."""

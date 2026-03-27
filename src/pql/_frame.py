@@ -631,7 +631,7 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
             .map(lambda c: c.inner())
         )
         qry = (
-            exp.select(*selected)  # pyright: ignore[reportUnknownMemberType]
+            exp.select(*selected)
             .from_("lhs")
             .join("rhs", on=by_cond.inner(), join_type="asof left")
         )
@@ -769,9 +769,7 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
 
             def _select_ordered(cols: Iterable[str]) -> exp.Expr:
                 return (
-                    exp.select("*")  # pyright: ignore[reportUnknownMemberType]
-                    .from_(exp.Subquery(this=_pivot()))
-                    .order_by(*cols)
+                    exp.select("*").from_(exp.Subquery(this=_pivot())).order_by(*cols)
                 )
 
             qry = (
@@ -835,11 +833,11 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
 
         def _select() -> exp.Select:
             sub_qry = exp.Subquery(this=_unpivot())
-            return exp.select(*index_cols, variable_name, value_name).from_(sub_qry)  # pyright: ignore[reportUnknownMemberType]
+            return exp.select(*index_cols, variable_name, value_name).from_(sub_qry)
 
         qry = (
             try_iter(order_by)
-            .then(lambda cols: _select().order_by(*cols))  # pyright: ignore[reportUnknownMemberType]
+            .then(lambda cols: _select().order_by(*cols))
             .unwrap_or_else(_select)
         )
 
