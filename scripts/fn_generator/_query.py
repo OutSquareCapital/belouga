@@ -55,12 +55,6 @@ def run_qry(lf: pl.LazyFrame) -> pl.LazyFrame:
             how="left",
         )
         .with_columns(
-            pl.when(pl.col("alias_root").is_not_null())
-            .then(py.glot_name.drop_nulls().first().over("alias_root"))
-            .otherwise(py.glot_name)
-            .alias("glot_name"),
-        )
-        .with_columns(
             dk.function_name.alias(py.sql_name.meta.output_name()),
             dk.function_name.replace_strict(
                 RENAME_RULES, default=dk.function_name, return_dtype=pl.String
