@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Concatenate, Self, overload, override
 import duckdb
 import pyochain as pc
 from sqlglot import exp
+from sqlglot.parsers.duckdb import DuckDBParser
 
 if TYPE_CHECKING:
     from .typing import (
@@ -193,6 +194,5 @@ def anon(name: str, *args: IntoExpr) -> exp.Expr:
     return exp.Anonymous(this=name, expressions=args_into_glot(args))
 
 
-def func(node: type[exp.Func], *args: IntoExpr) -> exp.Expr:
-    """Create a concrete sqlglot function expression from positional args."""
-    return node.from_arg_list(args_into_glot(args))  # pyright: ignore[reportUnknownMemberType]
+def func(name: str, *args: IntoExpr) -> exp.Expr:
+    return DuckDBParser.FUNCTIONS[name](args_into_glot(args))  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]

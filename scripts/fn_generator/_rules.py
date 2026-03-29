@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 
 import polars as pl
 import pyochain as pc
-from sqlglot import exp
+from sqlglot.parsers.duckdb import DuckDBParser
 
 from .._utils import Builtins, Pql, Typing
 from ._dtypes import Categories, DuckDbTypes
@@ -12,15 +12,8 @@ from ._dtypes import Categories, DuckDbTypes
 CONVERTER = pc.Iter(DuckDbTypes).map(lambda t: (t, t.into_py())).collect(dict)
 """DuckDB type -> Python type hint mapping."""
 
-GLOT_FUNC_NAMES = (
-    pc.Iter(exp.FUNCTION_BY_NAME.items())
-    .map_star(lambda sql_name, fn: (sql_name.lower(), fn.__name__))
-    .into(
-        pl.LazyFrame,
-        schema={"function_name": pl.String, "glot_name": pl.String},
-    )
-)
-"""DuckDB SQL function name -> concrete sqlglot expression class name mapping."""
+DK_FUNC_KEYS = pl.Series("glot_name", tuple(DuckDBParser.FUNCTIONS)).to_frame().lazy()  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
+"""DuckDBParser.FUNCTIONS keys as a single-column LazyFrame."""
 
 SHADOWERS = (
     Pql.into_iter()

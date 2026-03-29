@@ -11,8 +11,6 @@ from collections.abc import Iterable
 from datetime import date, datetime, time, timedelta
 from typing import TYPE_CHECKING, ClassVar, Self
 
-from sqlglot import exp
-
 from .._core import DuckHandler, NameSpaceHandler, anon, func
 
 if TYPE_CHECKING:
@@ -36,7 +34,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Abs, self.inner()))
+        return self._new(func("ABS", self.inner()))
 
     def acos(self) -> Self:
         """Computes the arccosine of x.
@@ -51,7 +49,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Acos, self.inner()))
+        return self._new(func("ACOS", self.inner()))
 
     def acosh(self) -> Self:
         """Computes the inverse hyperbolic cos of x.
@@ -66,7 +64,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Acosh, self.inner()))
+        return self._new(func("ACOSH", self.inner()))
 
     def age(self, timestamp: IntoExprColumn | datetime | None = None) -> Self:
         """Subtract arguments, resulting in the time difference between the two timestamps.
@@ -109,7 +107,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.LogicalAnd, self.inner()))
+        return self._new(func("BOOL_AND", self.inner()))
 
     def any(self) -> Self:
         """Returns TRUE if any input value is TRUE, otherwise FALSE.
@@ -124,7 +122,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.LogicalOr, self.inner()))
+        return self._new(func("BOOL_OR", self.inner()))
 
     def any_value(self) -> Self:
         """Returns the first non-NULL value from arg.
@@ -136,7 +134,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.AnyValue, self.inner()))
+        return self._new(func("ANY_VALUE", self.inner()))
 
     def approx_count_distinct(self) -> Self:
         """Computes the approximate count of distinct elements using HyperLogLog.
@@ -151,7 +149,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.ApproxDistinct, self.inner()))
+        return self._new(func("APPROX_COUNT_DISTINCT", self.inner()))
 
     def approx_quantile(self, pos: IntoExprColumn | SeqLiteral[float] | float) -> Self:
         """Computes the approximate quantile using T-Digest.
@@ -169,7 +167,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.ApproxQuantile, self.inner(), pos))
+        return self._new(func("APPROX_QUANTILE", self.inner(), pos))
 
     def approx_top_k(self, k: IntoExprColumn | int) -> Self:
         """Finds the k approximately most occurring values in the data set.
@@ -187,7 +185,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.ApproxTopK, self.inner(), k))
+        return self._new(func("APPROX_TOP_K", self.inner(), k))
 
     def arg_max(self, val: IntoExpr, col2: IntoExprColumn | int | None = None) -> Self:
         """Finds the row with the maximum val.
@@ -211,7 +209,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.ArgMax, self.inner(), val, col2))
+        return self._new(func("ARGMAX", self.inner(), val, col2))
 
     def arg_max_null(self, val: IntoExpr) -> Self:
         """Finds the row with the maximum val.
@@ -278,7 +276,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.ArgMin, self.inner(), val, col2))
+        return self._new(func("ARGMIN", self.inner(), val, col2))
 
     def arg_min_null(self, val: IntoExpr) -> Self:
         """Finds the row with the minimum val.
@@ -345,7 +343,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.ArgMax, self.inner(), val, col2))
+        return self._new(func("ARGMAX", self.inner(), val, col2))
 
     def argmin(self, val: IntoExpr, col2: IntoExprColumn | int | None = None) -> Self:
         """Finds the row with the minimum val.
@@ -369,7 +367,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.ArgMin, self.inner(), val, col2))
+        return self._new(func("ARGMIN", self.inner(), val, col2))
 
     def asin(self) -> Self:
         """Computes the arcsine of x.
@@ -384,7 +382,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Asin, self.inner()))
+        return self._new(func("ASIN", self.inner()))
 
     def asinh(self) -> Self:
         """Computes the inverse hyperbolic sin of x.
@@ -399,7 +397,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Asinh, self.inner()))
+        return self._new(func("ASINH", self.inner()))
 
     def atan(self) -> Self:
         """Computes the arctangent of x.
@@ -414,7 +412,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Atan, self.inner()))
+        return self._new(func("ATAN", self.inner()))
 
     def atan2(self, x: IntoExprColumn | float) -> Self:
         """Computes the arctangent (y, x).
@@ -432,7 +430,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Atan2, self.inner(), x))
+        return self._new(func("ATAN2", self.inner(), x))
 
     def atanh(self) -> Self:
         """Computes the inverse hyperbolic tan of x.
@@ -447,7 +445,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Atanh, self.inner()))
+        return self._new(func("ATANH", self.inner()))
 
     def bin(self) -> Self:
         """Converts the `value` to binary representation.
@@ -465,7 +463,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.ToBinary, self.inner()))
+        return self._new(func("TO_BINARY", self.inner()))
 
     def bit_and(self) -> Self:
         """Returns the bitwise AND of all bits in a given expression.
@@ -480,7 +478,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(anon("bit_and", self.inner()))
+        return self._new(func("BIT_AND", self.inner()))
 
     def bit_count(self) -> Self:
         """Returns the number of bits that are set.
@@ -510,7 +508,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.BitLength, self.inner()))
+        return self._new(func("BIT_LENGTH", self.inner()))
 
     def bit_or(self) -> Self:
         """Returns the bitwise OR of all bits in a given expression.
@@ -525,7 +523,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(anon("bit_or", self.inner()))
+        return self._new(func("BIT_OR", self.inner()))
 
     def bit_position(
         self, bitstring: IntoExprColumn | bytes | bytearray | memoryview
@@ -562,7 +560,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(anon("bit_xor", self.inner()))
+        return self._new(func("BIT_XOR", self.inner()))
 
     def bitstring(self, length: IntoExprColumn | int) -> Self:
         """Pads the bitstring until the specified length.
@@ -672,7 +670,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Cbrt, self.inner()))
+        return self._new(func("CBRT", self.inner()))
 
     def ceil(self) -> Self:
         """Rounds the number up.
@@ -690,7 +688,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Ceil, self.inner()))
+        return self._new(func("CEIL", self.inner()))
 
     def ceiling(self) -> Self:
         """Rounds the number up.
@@ -708,7 +706,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Ceil, self.inner()))
+        return self._new(func("CEIL", self.inner()))
 
     def char_length(self) -> Self:
         """Returns the bit-length of the `bit` argument.
@@ -726,7 +724,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Length, self.inner()))
+        return self._new(func("CHARACTER_LENGTH", self.inner()))
 
     def character_length(self) -> Self:
         """Returns the bit-length of the `bit` argument.
@@ -744,7 +742,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Length, self.inner()))
+        return self._new(func("CHARACTER_LENGTH", self.inner()))
 
     def col_description(self, column_number: IntoExpr) -> Self:
         """SQL col_description function.
@@ -804,7 +802,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Contains, self.inner(), col1))
+        return self._new(func("CONTAINS", self.inner(), col1))
 
     def corr(self, x: IntoExprColumn | float) -> Self:
         """Returns the correlation coefficient for non-NULL pairs in a group.
@@ -822,7 +820,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Corr, self.inner(), x))
+        return self._new(func("CORR", self.inner(), x))
 
     def cos(self) -> Self:
         """Computes the cos of x.
@@ -837,7 +835,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Cos, self.inner()))
+        return self._new(func("COS", self.inner()))
 
     def cosh(self) -> Self:
         """Computes the hyperbolic cos of x.
@@ -852,7 +850,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Cosh, self.inner()))
+        return self._new(func("COSH", self.inner()))
 
     def cot(self) -> Self:
         """Computes the cotangent of x.
@@ -867,7 +865,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Cot, self.inner()))
+        return self._new(func("COT", self.inner()))
 
     def count(self) -> Self:
         """Returns the number of non-NULL values in arg.
@@ -882,7 +880,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Count, self.inner()))
+        return self._new(func("COUNT", self.inner()))
 
     def count_if(self) -> Self:
         """Counts the total number of TRUE values for a boolean column.
@@ -897,7 +895,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.CountIf, self.inner()))
+        return self._new(func("COUNT_IF", self.inner()))
 
     def covar_pop(self, x: IntoExprColumn | float) -> Self:
         """Returns the population covariance of input values.
@@ -915,7 +913,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.CovarPop, self.inner(), x))
+        return self._new(func("COVAR_POP", self.inner(), x))
 
     def covar_samp(self, x: IntoExprColumn | float) -> Self:
         """Returns the sample covariance for non-NULL pairs in a group.
@@ -933,7 +931,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.CovarSamp, self.inner(), x))
+        return self._new(func("COVAR_SAMP", self.inner(), x))
 
     def create_sort_key(self, *args: IntoExpr) -> Self:
         """Constructs a binary-comparable sort key based on a set of input parameters and sort qualifiers.
@@ -992,7 +990,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Decode, self.inner(), varchar))
+        return self._new(func("DECODE", self.inner(), varchar))
 
     def degrees(self) -> Self:
         """Converts radians to degrees.
@@ -1007,7 +1005,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Degrees, self.inner()))
+        return self._new(func("DEGREES", self.inner()))
 
     def element_at(self, key: IntoExprColumn) -> Self:
         """Returns a list containing the value for a given key or an empty list if the key is not contained in the map.
@@ -1047,7 +1045,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Encode, self.inner()))
+        return self._new(func("ENCODE", self.inner()))
 
     def entropy_shannon(self) -> Self:
         """Returns the log-2 entropy of count input-values.
@@ -1131,7 +1129,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Exp, self.inner()))
+        return self._new(func("EXP", self.inner()))
 
     def factorial(self) -> Self:
         """Factorial of x.
@@ -1148,7 +1146,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Factorial, self.inner()))
+        return self._new(func("FACTORIAL", self.inner()))
 
     def favg(self) -> Self:
         """Calculates the average using a more accurate floating point summation (Kahan Sum).
@@ -1213,7 +1211,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.First, self.inner()))
+        return self._new(func("FIRST", self.inner()))
 
     def first_value(self) -> Self:
         """SQL first_value function.
@@ -1223,7 +1221,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.FirstValue, self.inner()))
+        return self._new(func("FIRST_VALUE", self.inner()))
 
     def floor(self) -> Self:
         """Rounds the number down.
@@ -1238,7 +1236,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Floor, self.inner()))
+        return self._new(func("FLOOR", self.inner()))
 
     def fmod(self, y: IntoExpr) -> Self:
         """SQL fmod function.
@@ -1408,7 +1406,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Getbit, self.inner(), index))
+        return self._new(func("GET_BIT", self.inner(), index))
 
     def get_block_size(self) -> Self:
         """SQL get_block_size function.
@@ -1485,7 +1483,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.GroupConcat, self.inner(), arg))
+        return self._new(func("GROUP_CONCAT", self.inner(), arg))
 
     def hex(self) -> Self:
         """Converts the `value` to `VARCHAR` using hexadecimal representation.
@@ -1503,7 +1501,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Hex, self.inner()))
+        return self._new(func("HEX", self.inner()))
 
     def histogram(self, col1: IntoExpr | None = None) -> Self:
         """Returns a LIST of STRUCTs with the fields bucket and count.
@@ -1557,7 +1555,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.List, self.inner()))
+        return self._new(func("LIST", self.inner()))
 
     def in_search_path(self, schema_name: IntoExprColumn) -> Self:
         """Returns whether or not the database/schema are in the search path.
@@ -1620,7 +1618,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.IsInf, self.inner()))
+        return self._new(func("ISINF", self.inner()))
 
     def is_nan(self) -> Self:
         """Returns true if the floating point value is not a number, false otherwise.
@@ -1635,7 +1633,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.IsNan, self.inner()))
+        return self._new(func("ISNAN", self.inner()))
 
     def kahan_sum(self) -> Self:
         """Calculates the sum using a more accurate floating point summation (Kahan Sum).
@@ -1673,7 +1671,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Kurtosis, self.inner()))
+        return self._new(func("KURTOSIS", self.inner()))
 
     def lag(self, col1: IntoExprColumn | int, col2: IntoExpr) -> Self:
         """SQL lag function.
@@ -1687,7 +1685,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Lag, self.inner(), col1, col2))
+        return self._new(func("LAG", self.inner(), col1, col2))
 
     def last(self) -> Self:
         """Returns the last value of a column.
@@ -1704,7 +1702,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Last, self.inner()))
+        return self._new(func("LAST", self.inner()))
 
     def last_value(self) -> Self:
         """SQL last_value function.
@@ -1714,7 +1712,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.LastValue, self.inner()))
+        return self._new(func("LAST_VALUE", self.inner()))
 
     def lcm(self, y: IntoExprColumn | int) -> Self:
         """Computes the least common multiple of x and y.
@@ -1749,7 +1747,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Lead, self.inner(), col1, col2))
+        return self._new(func("LEAD", self.inner(), col1, col2))
 
     def least_common_multiple(self, y: IntoExprColumn | int) -> Self:
         """Computes the least common multiple of x and y.
@@ -1788,7 +1786,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Length, self.inner()))
+        return self._new(func("CHARACTER_LENGTH", self.inner()))
 
     def length(self) -> Self:
         """Returns the bit-length of the `bit` argument.
@@ -1806,7 +1804,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Length, self.inner()))
+        return self._new(func("CHARACTER_LENGTH", self.inner()))
 
     def lgamma(self) -> Self:
         """Computes the log of the gamma function.
@@ -1842,7 +1840,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.GroupConcat, self.inner(), arg))
+        return self._new(func("GROUP_CONCAT", self.inner(), arg))
 
     def ln(self) -> Self:
         """Computes the natural logarithm of x.
@@ -1857,7 +1855,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Ln, self.inner()))
+        return self._new(func("LN", self.inner()))
 
     def log10(self) -> Self:
         """Computes the 10-log of x.
@@ -1872,7 +1870,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(anon("log10", self.inner()))
+        return self._new(func("LOG10", self.inner()))
 
     def log2(self) -> Self:
         """Computes the 2-log of x.
@@ -1887,7 +1885,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(anon("log2", self.inner()))
+        return self._new(func("LOG2", self.inner()))
 
     def mad(self) -> Self:
         """Returns the median absolute deviation for the values within x.
@@ -1942,7 +1940,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Max, self.inner(), col1))
+        return self._new(func("MAX", self.inner(), col1))
 
     def max_by(self, val: IntoExpr, col2: IntoExprColumn | int | None = None) -> Self:
         """Finds the row with the maximum val.
@@ -1966,7 +1964,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.ArgMax, self.inner(), val, col2))
+        return self._new(func("ARGMAX", self.inner(), val, col2))
 
     def md5(self) -> Self:
         r"""Returns the MD5 hash of the `blob` as a `VARCHAR`.
@@ -1981,7 +1979,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.MD5, self.inner()))
+        return self._new(func("MD5", self.inner()))
 
     def md5_number(self) -> Self:
         r"""Returns the MD5 hash of the `blob` as a `HUGEINT`.
@@ -2052,7 +2050,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Median, self.inner()))
+        return self._new(func("MEDIAN", self.inner()))
 
     def min(self, col1: IntoExprColumn | int | None = None) -> Self:
         """Returns the minimum value present in arg.
@@ -2070,7 +2068,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Min, self.inner(), col1))
+        return self._new(func("MIN", self.inner(), col1))
 
     def min_by(self, val: IntoExpr, col2: IntoExprColumn | int | None = None) -> Self:
         """Finds the row with the minimum val.
@@ -2094,7 +2092,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.ArgMin, self.inner(), val, col2))
+        return self._new(func("ARGMIN", self.inner(), val, col2))
 
     def mode(self) -> Self:
         """Returns the most frequent value for the values within x.
@@ -2106,7 +2104,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Mode, self.inner()))
+        return self._new(func("MODE", self.inner()))
 
     def nextafter(self, y: IntoExprColumn | float) -> Self:
         """Returns the next floating point value after x in the direction of y.
@@ -2152,7 +2150,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.NthValue, self.inner(), col1))
+        return self._new(func("NTH_VALUE", self.inner(), col1))
 
     def ntile(self) -> Self:
         """SQL ntile function.
@@ -2162,7 +2160,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Ntile, self.inner()))
+        return self._new(func("NTILE", self.inner()))
 
     def nullif(self, b: IntoExpr) -> Self:
         """SQL nullif function.
@@ -2175,7 +2173,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Nullif, self.inner(), b))
+        return self._new(func("NULLIF", self.inner(), b))
 
     def obj_description(self, catalog_name: IntoExpr) -> Self:
         """SQL obj_description function.
@@ -2256,7 +2254,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(anon("quantile_cont", self.inner(), pos))
+        return self._new(func("QUANTILE_CONT", self.inner(), pos))
 
     def quantile_disc(
         self, pos: IntoExprColumn | SeqLiteral[float] | float | None = None
@@ -2278,7 +2276,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(anon("quantile_disc", self.inner(), pos))
+        return self._new(func("QUANTILE_DISC", self.inner(), pos))
 
     def radians(self) -> Self:
         """Converts degrees to radians.
@@ -2293,7 +2291,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Radians, self.inner()))
+        return self._new(func("RADIANS", self.inner()))
 
     def regr_avgx(self, x: IntoExprColumn | float) -> Self:
         """Returns the average of the independent variable for non-NULL pairs in a group, where x is the independent variable and y is the dependent variable.
@@ -2306,7 +2304,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.RegrAvgx, self.inner(), x))
+        return self._new(func("REGR_AVGX", self.inner(), x))
 
     def regr_avgy(self, x: IntoExprColumn | float) -> Self:
         """Returns the average of the dependent variable for non-NULL pairs in a group, where x is the independent variable and y is the dependent variable.
@@ -2319,7 +2317,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.RegrAvgy, self.inner(), x))
+        return self._new(func("REGR_AVGY", self.inner(), x))
 
     def regr_count(self, x: IntoExprColumn | float) -> Self:
         """Returns the number of non-NULL number pairs in a group.
@@ -2337,7 +2335,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.RegrCount, self.inner(), x))
+        return self._new(func("REGR_COUNT", self.inner(), x))
 
     def regr_intercept(self, x: IntoExprColumn | float) -> Self:
         """Returns the intercept of the univariate linear regression line for non-NULL pairs in a group.
@@ -2355,7 +2353,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.RegrIntercept, self.inner(), x))
+        return self._new(func("REGR_INTERCEPT", self.inner(), x))
 
     def regr_r2(self, x: IntoExprColumn | float) -> Self:
         """Returns the coefficient of determination for non-NULL pairs in a group.
@@ -2368,7 +2366,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.RegrR2, self.inner(), x))
+        return self._new(func("REGR_R2", self.inner(), x))
 
     def regr_slope(self, x: IntoExprColumn | float) -> Self:
         """Returns the slope of the linear regression line for non-NULL pairs in a group.
@@ -2386,7 +2384,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.RegrSlope, self.inner(), x))
+        return self._new(func("REGR_SLOPE", self.inner(), x))
 
     def regr_sxx(self, x: IntoExprColumn | float) -> Self:
         """SQL regr_sxx function.
@@ -2404,7 +2402,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.RegrSxx, self.inner(), x))
+        return self._new(func("REGR_SXX", self.inner(), x))
 
     def regr_sxy(self, x: IntoExprColumn | float) -> Self:
         """Returns the population covariance of input values.
@@ -2422,7 +2420,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.RegrSxy, self.inner(), x))
+        return self._new(func("REGR_SXY", self.inner(), x))
 
     def regr_syy(self, x: IntoExprColumn | float) -> Self:
         """SQL regr_syy function.
@@ -2440,7 +2438,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.RegrSyy, self.inner(), x))
+        return self._new(func("REGR_SYY", self.inner(), x))
 
     def remap_struct(
         self, target_type: IntoExpr, mapping: IntoExpr, defaults: IntoExpr
@@ -2482,7 +2480,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Repeat, self.inner(), count))
+        return self._new(func("REPEAT", self.inner(), count))
 
     def replace_type(self, type1: IntoExpr, type2: IntoExpr) -> Self:
         """Casts all fields of type1 to type2.
@@ -2557,7 +2555,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Round, self.inner(), precision))
+        return self._new(func("ROUND", self.inner(), precision))
 
     def roundbankers(self, n: IntoExpr) -> Self:
         """SQL roundbankers function.
@@ -2664,7 +2662,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.SHA, self.inner()))
+        return self._new(func("SHA1", self.inner()))
 
     def sha256(self) -> Self:
         r"""Returns a `VARCHAR` with the SHA-256 hash of the `blob`.
@@ -2679,7 +2677,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(anon("sha256", self.inner()))
+        return self._new(func("SHA256", self.inner()))
 
     def shobj_description(self, catalog_name: IntoExpr) -> Self:
         """SQL shobj_description function.
@@ -2707,7 +2705,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Sign, self.inner()))
+        return self._new(func("SIGN", self.inner()))
 
     def signbit(self) -> Self:
         """Returns whether the signbit is set or not.
@@ -2737,7 +2735,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Sin, self.inner()))
+        return self._new(func("SIN", self.inner()))
 
     def sinh(self) -> Self:
         """Computes the hyperbolic sin of x.
@@ -2752,7 +2750,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Sinh, self.inner()))
+        return self._new(func("SINH", self.inner()))
 
     def skewness(self) -> Self:
         """Returns the skewness of all input values.
@@ -2767,7 +2765,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Skewness, self.inner()))
+        return self._new(func("SKEWNESS", self.inner()))
 
     def sleep_ms(self) -> Self:
         """Sleeps for the specified number of milliseconds and returns NULL.
@@ -2796,7 +2794,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.SplitPart, self.inner(), delimiter, position))
+        return self._new(func("SPLIT_PART", self.inner(), delimiter, position))
 
     def sqrt(self) -> Self:
         """Returns the square root of x.
@@ -2811,7 +2809,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Sqrt, self.inner()))
+        return self._new(func("SQRT", self.inner()))
 
     def stats(self) -> Self:
         """Returns a string with statistics about the expression.
@@ -2843,7 +2841,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.StddevPop, self.inner()))
+        return self._new(func("STDDEV_POP", self.inner()))
 
     def stddev_samp(self) -> Self:
         """Returns the sample standard deviation.
@@ -2858,7 +2856,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.StddevSamp, self.inner()))
+        return self._new(func("STDDEV_SAMP", self.inner()))
 
     def sum(self) -> Self:
         """Calculates the sum value for all tuples in arg.
@@ -2873,7 +2871,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Sum, self.inner()))
+        return self._new(func("SUM", self.inner()))
 
     def sum_no_overflow(self) -> Self:
         """Internal only.
@@ -2944,7 +2942,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Tan, self.inner()))
+        return self._new(func("TAN", self.inner()))
 
     def tanh(self) -> Self:
         """Computes the hyperbolic tan of x.
@@ -2959,7 +2957,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Tanh, self.inner()))
+        return self._new(func("TANH", self.inner()))
 
     def to_binary(self) -> Self:
         """Converts the `value` to binary representation.
@@ -2977,7 +2975,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.ToBinary, self.inner()))
+        return self._new(func("TO_BINARY", self.inner()))
 
     def to_hex(self) -> Self:
         """Converts the `value` to `VARCHAR` using hexadecimal representation.
@@ -2995,7 +2993,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Hex, self.inner()))
+        return self._new(func("HEX", self.inner()))
 
     def to_json(self, *args: IntoExpr) -> Self:
         """SQL to_json function.
@@ -3026,7 +3024,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Map, self.inner(), values))
+        return self._new(func("MAP", self.inner(), values))
 
     def trunc(self, col1: IntoExprColumn | int | None = None) -> Self:
         """Truncates the number.
@@ -3044,7 +3042,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Trunc, self.inner(), col1))
+        return self._new(func("TRUNC", self.inner(), col1))
 
     def try_strptime(self, format_arg: IntoExprColumn | SeqLiteral[str]) -> Self:
         """Converts the `string` text to timestamp according to the format string.
@@ -3079,7 +3077,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Typeof, self.inner()))
+        return self._new(func("TYPEOF", self.inner()))
 
     def union_extract(self, tag: IntoExprColumn) -> Self:
         """Extract the value with the named tags from the union.
@@ -3174,7 +3172,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.VariancePop, self.inner()))
+        return self._new(func("VAR_POP", self.inner()))
 
     def var_samp(self) -> Self:
         """Returns the sample variance of all input values.
@@ -3189,7 +3187,7 @@ class Fns(DuckHandler):
         Returns:
             Self
         """
-        return self._new(func(exp.Variance, self.inner()))
+        return self._new(func("VAR_SAMP", self.inner()))
 
     def variant_extract(self, col1: IntoExprColumn | int) -> Self:
         """SQL variant_extract function.
@@ -3373,7 +3371,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("list_append", self.inner(), e))
+        return self._new(func("LIST_APPEND", self.inner(), e))
 
     def apply(self, lambda_arg: IntoExprColumn) -> T:
         """Returns a list that is the result of applying the `lambda` function to each element of the input `list`.
@@ -3396,7 +3394,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Apply, self.inner(), lambda_arg))
+        return self._new(func("APPLY", self.inner(), lambda_arg))
 
     def approx_count_distinct(self) -> T:
         """SQL list_approx_count_distinct function.
@@ -3491,7 +3489,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayConcat, self.inner(), *args))
+        return self._new(func("ARRAY_CAT", self.inner(), *args))
 
     def char_length(self) -> T:
         """Returns the length of the `list`.
@@ -3509,7 +3507,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Length, self.inner()))
+        return self._new(func("CHARACTER_LENGTH", self.inner()))
 
     def character_length(self) -> T:
         """Returns the length of the `list`.
@@ -3527,7 +3525,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Length, self.inner()))
+        return self._new(func("CHARACTER_LENGTH", self.inner()))
 
     def concat(self, *args: IntoExpr) -> T:
         """Concatenates lists.
@@ -3552,7 +3550,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayConcat, self.inner(), *args))
+        return self._new(func("ARRAY_CAT", self.inner(), *args))
 
     def contains(self, element: IntoExpr) -> T:
         """Returns true if the list contains the element.
@@ -3573,7 +3571,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayContains, self.inner(), element))
+        return self._new(func("ARRAY_CONTAINS", self.inner(), element))
 
     def cosine_distance(self, list2: IntoExprColumn | SeqLiteral[float]) -> T:
         """Computes the cosine distance between two same-sized lists.
@@ -3591,7 +3589,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("list_cosine_distance", self.inner(), list2))
+        return self._new(func("LIST_COSINE_DISTANCE", self.inner(), list2))
 
     def cosine_similarity(self, list2: IntoExprColumn | SeqLiteral[float]) -> T:
         """Computes the cosine similarity between two same-sized lists.
@@ -3637,7 +3635,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("list_distance", self.inner(), list2))
+        return self._new(func("LIST_DISTANCE", self.inner(), list2))
 
     def distinct(self) -> T:
         """Removes all duplicates and `NULL` values from a list.
@@ -3657,7 +3655,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayDistinct, self.inner()))
+        return self._new(func("ARRAY_DISTINCT", self.inner()))
 
     def dot_product(self, list2: IntoExprColumn | SeqLiteral[float]) -> T:
         """Computes the inner product between two same-sized lists.
@@ -3755,7 +3753,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Flatten, self.inner()))
+        return self._new(func("FLATTEN", self.inner()))
 
     def generate_series(
         self,
@@ -3778,7 +3776,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.GenerateSeries, self.inner(), stop, step))
+        return self._new(func("GENERATE_SERIES", self.inner(), stop, step))
 
     def grade_up(
         self, col1: IntoExprColumn | None = None, col2: IntoExprColumn | None = None
@@ -3823,7 +3821,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayContains, self.inner(), element))
+        return self._new(func("ARRAY_CONTAINS", self.inner(), element))
 
     def has_all(self, list2: IntoExpr) -> T:
         """Returns true if all elements of list2 are in list1.
@@ -3846,7 +3844,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayContainsAll, self.inner(), list2))
+        return self._new(func("ARRAY_HAS_ALL", self.inner(), list2))
 
     def has_any(self, list2: IntoExpr) -> T:
         """Returns true if the lists have any element in common.
@@ -3869,7 +3867,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("list_has_any", self.inner(), list2))
+        return self._new(func("LIST_HAS_ANY", self.inner(), list2))
 
     def histogram(self) -> T:
         """SQL list_histogram function.
@@ -3902,7 +3900,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayPosition, self.inner(), element))
+        return self._new(func("ARRAY_POSITION", self.inner(), element))
 
     def inner_product(self, list2: IntoExprColumn | SeqLiteral[float]) -> T:
         """Computes the inner product between two same-sized lists.
@@ -3944,7 +3942,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayIntersect, self.inner(), list2))
+        return self._new(func("ARRAY_INTERSECT", self.inner(), list2))
 
     def kurtosis(self) -> T:
         """SQL list_kurtosis function.
@@ -3992,7 +3990,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Length, self.inner()))
+        return self._new(func("CHARACTER_LENGTH", self.inner()))
 
     def length(self) -> T:
         """Returns the length of the `list`.
@@ -4010,7 +4008,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Length, self.inner()))
+        return self._new(func("CHARACTER_LENGTH", self.inner()))
 
     def mad(self) -> T:
         """SQL list_mad function.
@@ -4030,7 +4028,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("list_max", self.inner()))
+        return self._new(func("LIST_MAX", self.inner()))
 
     def median(self) -> T:
         """SQL list_median function.
@@ -4050,7 +4048,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("list_min", self.inner()))
+        return self._new(func("LIST_MIN", self.inner()))
 
     def mode(self) -> T:
         """SQL list_mode function.
@@ -4123,7 +4121,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("list_pack", self.inner(), *args))
+        return self._new(func("LIST_VALUE", self.inner(), *args))
 
     def position(self, element: IntoExpr) -> T:
         """Returns the index of the `element` if the `list` contains the `element`.
@@ -4146,7 +4144,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayPosition, self.inner(), element))
+        return self._new(func("ARRAY_POSITION", self.inner(), element))
 
     def prepend(self, l_arg: IntoExpr) -> T:
         """SQL list_prepend function.
@@ -4159,7 +4157,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("list_prepend", self.inner(), l_arg))
+        return self._new(func("LIST_PREPEND", self.inner(), l_arg))
 
     def product(self) -> T:
         """SQL list_product function.
@@ -4192,7 +4190,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("range", self.inner(), stop, step))
+        return self._new(func("RANGE", self.inner(), stop, step))
 
     def reduce(
         self, lambda_arg: IntoExprColumn, initial_value: IntoExpr | None = None
@@ -4218,7 +4216,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Reduce, self.inner(), lambda_arg, initial_value))
+        return self._new(func("REDUCE", self.inner(), lambda_arg, initial_value))
 
     def resize(self, size: IntoExpr, value: IntoExpr | None = None) -> T:
         """Resizes the `list` to contain `size` elements.
@@ -4273,7 +4271,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("list_reverse_sort", self.inner(), col1))
+        return self._new(func("ARRAY_REVERSE_SORT", self.inner(), col1))
 
     def select(self, index_list: IntoExprColumn | SeqLiteral[int]) -> T:
         """Returns a list based on the elements selected by the `index_list`.
@@ -4341,7 +4339,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArraySlice, self.inner(), begin, end, step))
+        return self._new(func("ARRAY_SLICE", self.inner(), begin, end, step))
 
     def sort(
         self, col1: IntoExprColumn | None = None, col2: IntoExprColumn | None = None
@@ -4365,7 +4363,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArraySort, self.inner(), col1, col2))
+        return self._new(func("ARRAY_SORT", self.inner(), col1, col2))
 
     def stddev_pop(self) -> T:
         """SQL list_stddev_pop function.
@@ -4428,7 +4426,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Apply, self.inner(), lambda_arg))
+        return self._new(func("APPLY", self.inner(), lambda_arg))
 
     def unique(self) -> T:
         """Counts the unique elements of a `list`.
@@ -4485,7 +4483,7 @@ class ListFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("list_value", self.inner(), *args))
+        return self._new(func("LIST_VALUE", self.inner(), *args))
 
     def var_pop(self) -> T:
         """SQL list_var_pop function.
@@ -4615,7 +4613,7 @@ class StructFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.StructExtract, self.inner(), entry))
+        return self._new(func("STRUCT_EXTRACT", self.inner(), entry))
 
     def extract_at(self, entry: IntoExprColumn | int) -> T:
         """Extract the entry from the STRUCT by position (starts at 1!).
@@ -4730,7 +4728,7 @@ class StructFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("struct_pack", self.inner(), *args))
+        return self._new(func("STRUCT_PACK", self.inner(), *args))
 
     def position(self, entry: IntoExpr) -> T:
         """Get the position of the entry in an unnamed STRUCT, starting at 1.
@@ -4837,7 +4835,7 @@ class RegexFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.RegexpExtract, self.inner(), regex, group, options))
+        return self._new(func("REGEXP_EXTRACT", self.inner(), regex, group, options))
 
     def extract_all(
         self,
@@ -4865,7 +4863,7 @@ class RegexFns[T: Fns](NameSpaceHandler[T]):
             T
         """
         return self._new(
-            func(exp.RegexpExtractAll, self.inner(), regex, group, options)
+            func("REGEXP_EXTRACT_ALL", self.inner(), regex, group, options)
         )
 
     def extract_name_list(
@@ -4894,7 +4892,7 @@ class RegexFns[T: Fns](NameSpaceHandler[T]):
             T
         """
         return self._new(
-            func(exp.RegexpExtract, self.inner(), regex, name_list, options)
+            func("REGEXP_EXTRACT", self.inner(), regex, name_list, options)
         )
 
     def full_match(
@@ -4918,7 +4916,7 @@ class RegexFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.RegexpFullMatch, self.inner(), regex, col2))
+        return self._new(func("REGEXP_FULL_MATCH", self.inner(), regex, col2))
 
     def matches(
         self, regex: IntoExprColumn, options: IntoExprColumn | None = None
@@ -4941,7 +4939,7 @@ class RegexFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("regexp_matches", self.inner(), regex, options))
+        return self._new(func("REGEXP_MATCHES", self.inner(), regex, options))
 
     def replace(
         self,
@@ -4969,7 +4967,7 @@ class RegexFns[T: Fns](NameSpaceHandler[T]):
             T
         """
         return self._new(
-            func(exp.RegexpReplace, self.inner(), regex, replacement, options)
+            func("REGEXP_REPLACE", self.inner(), regex, replacement, options)
         )
 
     def split_to_array(
@@ -4996,7 +4994,7 @@ class RegexFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("regexp_split_to_array", self.inner(), regex, options))
+        return self._new(func("STRING_SPLIT_REGEX", self.inner(), regex, options))
 
     def split_to_table(self, pattern: IntoExpr) -> T:
         """SQL regexp_split_to_table function.
@@ -5035,7 +5033,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.GroupConcat, self.inner(), arg))
+        return self._new(func("GROUP_CONCAT", self.inner(), arg))
 
     def ascii(self) -> T:
         """Returns an integer that represents the Unicode code point of the first character of the `string`.
@@ -5050,7 +5048,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Ascii, self.inner()))
+        return self._new(func("ASCII", self.inner()))
 
     def bar(
         self,
@@ -5095,7 +5093,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ToBase64, self.inner()))
+        return self._new(func("TO_BASE64", self.inner()))
 
     def bin(self) -> T:
         """Converts the `string` to binary representation.
@@ -5113,7 +5111,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ToBinary, self.inner()))
+        return self._new(func("TO_BINARY", self.inner()))
 
     def bit_length(self) -> T:
         """Number of bits in a `string`.
@@ -5128,7 +5126,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.BitLength, self.inner()))
+        return self._new(func("BIT_LENGTH", self.inner()))
 
     def char_length(self) -> T:
         """Number of characters in `string`.
@@ -5146,7 +5144,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Length, self.inner()))
+        return self._new(func("CHARACTER_LENGTH", self.inner()))
 
     def character_length(self) -> T:
         """Number of characters in `string`.
@@ -5164,7 +5162,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Length, self.inner()))
+        return self._new(func("CHARACTER_LENGTH", self.inner()))
 
     def chr(self) -> T:
         """Returns a character which is corresponding the ASCII code value or Unicode code point.
@@ -5179,7 +5177,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Chr, self.inner()))
+        return self._new(func("CHR", self.inner()))
 
     def concat_ws(self, string: IntoExpr, *args: IntoExpr) -> T:
         """Concatenates many strings, separated by `separator`.
@@ -5200,7 +5198,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ConcatWs, self.inner(), string, *args))
+        return self._new(func("CONCAT_WS", self.inner(), string, *args))
 
     def contains(self, search_string: IntoExprColumn) -> T:
         """Returns `true` if `search_string` is found within `string`.
@@ -5218,7 +5216,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Contains, self.inner(), search_string))
+        return self._new(func("CONTAINS", self.inner(), search_string))
 
     def damerau_levenshtein(self, s2: IntoExprColumn) -> T:
         """Extension of Levenshtein distance to also include transposition of adjacent characters as an allowed edit operation.
@@ -5263,7 +5261,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Levenshtein, self.inner(), s2))
+        return self._new(func("EDITDIST3", self.inner(), s2))
 
     def ends_with(self, search_string: IntoExprColumn) -> T:
         """Returns `true` if `string` ends with `search_string`.
@@ -5284,7 +5282,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.EndsWith, self.inner(), search_string))
+        return self._new(func("ENDS_WITH", self.inner(), search_string))
 
     def format(self, *args: IntoExpr) -> T:
         """Formats a string using the fmt syntax.
@@ -5302,7 +5300,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Format, self.inner(), *args))
+        return self._new(func("FORMAT", self.inner(), *args))
 
     def format_bytes(self) -> T:
         """Converts `integer` to a human-readable representation using units based on powers of 2 (KiB, MiB, GiB, etc.).
@@ -5368,7 +5366,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.FromBase64, self.inner()))
+        return self._new(func("FROM_BASE64", self.inner()))
 
     def from_binary(self) -> T:
         """Converts a `value` from binary representation to a blob.
@@ -5404,7 +5402,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Unhex, self.inner()))
+        return self._new(func("UNHEX", self.inner()))
 
     def hamming(self, s2: IntoExprColumn) -> T:
         """The Hamming distance between to strings, i.e., the number of positions with different characters for two strings of equal length.
@@ -5467,7 +5465,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Hex, self.inner()))
+        return self._new(func("HEX", self.inner()))
 
     def ilike_escape(
         self, like_specifier: IntoExprColumn, escape_character: IntoExprColumn
@@ -5515,7 +5513,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("instr", self.inner(), search_string))
+        return self._new(func("INSTR", self.inner(), search_string))
 
     def jaccard(self, s2: IntoExprColumn) -> T:
         """The Jaccard similarity between two strings.
@@ -5596,7 +5594,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
             T
         """
         return self._new(
-            anon("jaro_winkler_similarity", self.inner(), s2, score_cutoff)
+            func("JARO_WINKLER_SIMILARITY", self.inner(), s2, score_cutoff)
         )
 
     def lcase(self) -> T:
@@ -5615,7 +5613,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Lower, self.inner()))
+        return self._new(func("LCASE", self.inner()))
 
     def left(self, count: IntoExprColumn | int) -> T:
         """Extracts the left-most count characters.
@@ -5633,7 +5631,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Left, self.inner(), count))
+        return self._new(func("LEFT", self.inner(), count))
 
     def left_grapheme(self, count: IntoExprColumn | int) -> T:
         """Extracts the left-most count grapheme clusters.
@@ -5669,7 +5667,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Length, self.inner()))
+        return self._new(func("CHARACTER_LENGTH", self.inner()))
 
     def length(self) -> T:
         """Number of characters in `string`.
@@ -5687,7 +5685,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Length, self.inner()))
+        return self._new(func("CHARACTER_LENGTH", self.inner()))
 
     def length_grapheme(self) -> T:
         """Number of grapheme clusters in `string`.
@@ -5725,7 +5723,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Levenshtein, self.inner(), s2))
+        return self._new(func("EDITDIST3", self.inner(), s2))
 
     def like_escape(
         self, like_specifier: IntoExprColumn, escape_character: IntoExprColumn
@@ -5768,7 +5766,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Lower, self.inner()))
+        return self._new(func("LCASE", self.inner()))
 
     def lpad(self, count: IntoExprColumn | int, character: IntoExprColumn) -> T:
         """Pads the `string` with the `character` on the left until it has `count` characters.
@@ -5789,7 +5787,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("lpad", self.inner(), count, character))
+        return self._new(func("LPAD", self.inner(), count, character))
 
     def ltrim(self, characters: IntoExprColumn | None = None) -> T:
         """Removes any occurrences of any of the `characters` from the left side of the `string`.
@@ -5810,7 +5808,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("ltrim", self.inner(), characters))
+        return self._new(func("LTRIM", self.inner(), characters))
 
     def md5(self) -> T:
         """Returns the MD5 hash of the `string` as a `VARCHAR`.
@@ -5825,7 +5823,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.MD5, self.inner()))
+        return self._new(func("MD5", self.inner()))
 
     def md5_number(self) -> T:
         """Returns the MD5 hash of the `string` as a `HUGEINT`.
@@ -5950,7 +5948,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Unicode, self.inner()))
+        return self._new(func("UNICODE", self.inner()))
 
     def parse_dirname(self, separator: IntoExprColumn | None = None) -> T:
         """Returns the top-level directory name from the given `path`.
@@ -6077,7 +6075,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("position", self.inner(), search_string))
+        return self._new(func("INSTR", self.inner(), search_string))
 
     def prefix(self, search_string: IntoExprColumn) -> T:
         """Returns `true` if `string` starts with `search_string`.
@@ -6131,7 +6129,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Repeat, self.inner(), count))
+        return self._new(func("REPEAT", self.inner(), count))
 
     def replace(self, source: IntoExprColumn, target: IntoExprColumn) -> T:
         """Replaces any occurrences of the `source` with `target` in `string`.
@@ -6150,7 +6148,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Replace, self.inner(), source, target))
+        return self._new(func("REPLACE", self.inner(), source, target))
 
     def reverse(self) -> T:
         """Reverses the `string`.
@@ -6165,7 +6163,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Reverse, self.inner()))
+        return self._new(func("REVERSE", self.inner()))
 
     def right(self, count: IntoExprColumn | int) -> T:
         """Extract the right-most `count` characters.
@@ -6183,7 +6181,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Right, self.inner(), count))
+        return self._new(func("RIGHT", self.inner(), count))
 
     def right_grapheme(self, count: IntoExprColumn | int) -> T:
         """Extracts the right-most `count` grapheme clusters.
@@ -6222,7 +6220,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("rpad", self.inner(), count, character))
+        return self._new(func("RPAD", self.inner(), count, character))
 
     def rtrim(self, characters: IntoExprColumn | None = None) -> T:
         """Removes any occurrences of any of the `characters` from the right side of the `string`.
@@ -6243,7 +6241,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("rtrim", self.inner(), characters))
+        return self._new(func("RTRIM", self.inner(), characters))
 
     def sha1(self) -> T:
         """Returns a `VARCHAR` with the SHA-1 hash of the `value`.
@@ -6258,7 +6256,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.SHA, self.inner()))
+        return self._new(func("SHA1", self.inner()))
 
     def sha256(self) -> T:
         """Returns a `VARCHAR` with the SHA-256 hash of the `value`.
@@ -6273,7 +6271,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("sha256", self.inner()))
+        return self._new(func("SHA256", self.inner()))
 
     def split(self, separator: IntoExprColumn) -> T:
         """Splits the `string` along the `separator`.
@@ -6294,7 +6292,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Split, self.inner(), separator))
+        return self._new(func("SPLIT", self.inner(), separator))
 
     def split_regex(
         self, regex: IntoExprColumn, options: IntoExprColumn | None = None
@@ -6320,7 +6318,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("string_split_regex", self.inner(), regex, options))
+        return self._new(func("STRING_SPLIT_REGEX", self.inner(), regex, options))
 
     def starts_with(self, search_string: IntoExprColumn) -> T:
         """Returns `true` if `string` begins with `search_string`.
@@ -6338,7 +6336,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.StartsWith, self.inner(), search_string))
+        return self._new(func("STARTS_WITH", self.inner(), search_string))
 
     def strip_accents(self) -> T:
         """Strips accents from `string`.
@@ -6391,7 +6389,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("strpos", self.inner(), search_string))
+        return self._new(func("INSTR", self.inner(), search_string))
 
     def substr(
         self, start: IntoExprColumn | int, length: IntoExprColumn | int | None = None
@@ -6420,7 +6418,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Substring, self.inner(), start, length))
+        return self._new(func("SUBSTR", self.inner(), start, length))
 
     def substring(
         self, start: IntoExprColumn | int, length: IntoExprColumn | int | None = None
@@ -6449,7 +6447,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Substring, self.inner(), start, length))
+        return self._new(func("SUBSTR", self.inner(), start, length))
 
     def substring_grapheme(
         self, start: IntoExprColumn | int, length: IntoExprColumn | int | None = None
@@ -6496,7 +6494,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.EndsWith, self.inner(), search_string))
+        return self._new(func("ENDS_WITH", self.inner(), search_string))
 
     def to_array(self, separator: IntoExprColumn) -> T:
         """Splits the `string` along the `separator`.
@@ -6517,7 +6515,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Split, self.inner(), separator))
+        return self._new(func("SPLIT", self.inner(), separator))
 
     def to_base(
         self,
@@ -6558,7 +6556,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ToBase64, self.inner()))
+        return self._new(func("TO_BASE64", self.inner()))
 
     def to_binary(self) -> T:
         """Converts the `string` to binary representation.
@@ -6576,7 +6574,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ToBinary, self.inner()))
+        return self._new(func("TO_BINARY", self.inner()))
 
     def to_hex(self) -> T:
         """Converts the `string` to hexadecimal representation.
@@ -6594,7 +6592,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Hex, self.inner()))
+        return self._new(func("HEX", self.inner()))
 
     def translate(self, from_arg: IntoExprColumn, to: IntoExprColumn) -> T:
         """Replaces each character in `string` that matches a character in the `from` set with the corresponding character in the `to` set.
@@ -6615,7 +6613,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Translate, self.inner(), from_arg, to))
+        return self._new(func("TRANSLATE", self.inner(), from_arg, to))
 
     def trim(self, characters: IntoExprColumn | None = None) -> T:
         """Removes any occurrences of any of the `characters` from either side of the `string`.
@@ -6636,7 +6634,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Trim, self.inner(), characters))
+        return self._new(func("TRIM", self.inner(), characters))
 
     def ucase(self) -> T:
         """Converts `string` to upper case.
@@ -6654,7 +6652,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Upper, self.inner()))
+        return self._new(func("UCASE", self.inner()))
 
     def unbin(self) -> T:
         """Converts a `value` from binary representation to a blob.
@@ -6690,7 +6688,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Unhex, self.inner()))
+        return self._new(func("UNHEX", self.inner()))
 
     def unicode(self) -> T:
         """Returns an `INTEGER` representing the `unicode` codepoint of the first character in the `string`.
@@ -6708,7 +6706,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Unicode, self.inner()))
+        return self._new(func("UNICODE", self.inner()))
 
     def upper(self) -> T:
         """Converts `string` to upper case.
@@ -6726,7 +6724,7 @@ class StringFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Upper, self.inner()))
+        return self._new(func("UCASE", self.inner()))
 
     def url_decode(self) -> T:
         """Decodes a URL from a representation using Percent-Encoding.
@@ -6774,7 +6772,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.DateAdd, self.inner(), interval))
+        return self._new(func("DATE_ADD", self.inner(), interval))
 
     def century(self) -> T:
         """Extract the century component from a date or timestamp.
@@ -6804,7 +6802,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Day, self.inner()))
+        return self._new(func("DAY", self.inner()))
 
     def dayname(self) -> T:
         """The (English) name of the weekday.
@@ -6819,7 +6817,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Dayname, self.inner()))
+        return self._new(func("DAYNAME", self.inner()))
 
     def dayofmonth(self) -> T:
         """Extract the dayofmonth component from a date or timestamp.
@@ -6834,7 +6832,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.DayOfMonth, self.inner()))
+        return self._new(func("DAYOFMONTH", self.inner()))
 
     def dayofweek(self) -> T:
         """Extract the dayofweek component from a date or timestamp.
@@ -6849,7 +6847,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.DayOfWeek, self.inner()))
+        return self._new(func("DAYOFWEEK", self.inner()))
 
     def dayofyear(self) -> T:
         """Extract the dayofyear component from a date or timestamp.
@@ -6864,7 +6862,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.DayOfYear, self.inner()))
+        return self._new(func("DAYOFYEAR", self.inner()))
 
     def days_in_month(self) -> T:
         """SQL days_in_month function.
@@ -6912,7 +6910,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.DateDiff, self.inner(), startdate, enddate))
+        return self._new(func("DATEDIFF", self.inner(), startdate, enddate))
 
     def epoch(self) -> T:
         """Extract the epoch component from a temporal type.
@@ -6927,7 +6925,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("epoch", self.inner()))
+        return self._new(func("EPOCH", self.inner()))
 
     def epoch_ms(self) -> T:
         """Extract the epoch component in milliseconds from a temporal type.
@@ -6942,7 +6940,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("epoch_ms", self.inner()))
+        return self._new(func("EPOCH_MS", self.inner()))
 
     def epoch_ns(self) -> T:
         """Extract the epoch component in nanoseconds from a temporal type.
@@ -7002,7 +7000,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Hour, self.inner()))
+        return self._new(func("HOUR", self.inner()))
 
     def isodow(self) -> T:
         """Extract the isodow component from a date or timestamp.
@@ -7017,7 +7015,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.DayOfWeekIso, self.inner()))
+        return self._new(func("ISODOW", self.inner()))
 
     def isoyear(self) -> T:
         """Extract the isoyear component from a date or timestamp.
@@ -7062,7 +7060,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.LastDay, self.inner()))
+        return self._new(func("LAST_DAY", self.inner()))
 
     def make_date(self) -> T:
         """The date for the given struct.
@@ -7072,7 +7070,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("make_date", self.inner()))
+        return self._new(func("MAKE_DATE", self.inner()))
 
     def make_date_month_day(
         self,
@@ -7095,7 +7093,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("make_date", self.inner(), month, day))
+        return self._new(func("MAKE_DATE", self.inner(), month, day))
 
     def make_time(
         self, minute: IntoExprColumn | int, seconds: IntoExprColumn | float
@@ -7116,7 +7114,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("make_time", self.inner(), minute, seconds))
+        return self._new(func("MAKE_TIME", self.inner(), minute, seconds))
 
     def make_timestamp(
         self,
@@ -7146,7 +7144,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
             T
         """
         return self._new(
-            anon("make_timestamp", self.inner(), month, day, hour, minute, seconds)
+            func("MAKE_TIMESTAMP", self.inner(), month, day, hour, minute, seconds)
         )
 
     def make_timestamp_ms(self) -> T:
@@ -7265,7 +7263,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Minute, self.inner()))
+        return self._new(func("MINUTE", self.inner()))
 
     def month(self) -> T:
         """Extract the month component from a date or timestamp.
@@ -7280,7 +7278,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Month, self.inner()))
+        return self._new(func("MONTH", self.inner()))
 
     def monthname(self) -> T:
         """The (English) name of the month.
@@ -7295,7 +7293,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Monthname, self.inner()))
+        return self._new(func("MONTHNAME", self.inner()))
 
     def nanosecond(self) -> T:
         """Extract the nanosecond component from a date or timestamp.
@@ -7358,7 +7356,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Quarter, self.inner()))
+        return self._new(func("QUARTER", self.inner()))
 
     def second(self) -> T:
         """Extract the second component from a date or timestamp.
@@ -7373,7 +7371,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Second, self.inner()))
+        return self._new(func("SECOND", self.inner()))
 
     def sub(
         self,
@@ -7396,7 +7394,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.DateSub, self.inner(), startdate, enddate))
+        return self._new(anon("datesub", self.inner(), startdate, enddate))
 
     def time_bucket(
         self,
@@ -7423,7 +7421,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("time_bucket", self.inner(), timestamp, origin))
+        return self._new(func("TIME_BUCKET", self.inner(), timestamp, origin))
 
     def timetz_byte_comparable(self) -> T:
         """Converts a TIME WITH TIME ZONE to an integer sort key.
@@ -7516,7 +7514,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ToDays, self.inner()))
+        return self._new(func("TO_DAYS", self.inner()))
 
     def to_decades(self) -> T:
         """Construct a decade interval.
@@ -7666,7 +7664,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("to_timestamp", self.inner()))
+        return self._new(func("TO_TIMESTAMP", self.inner()))
 
     def to_weeks(self) -> T:
         """Construct a week interval.
@@ -7711,7 +7709,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Week, self.inner()))
+        return self._new(func("WEEK", self.inner()))
 
     def weekday(self) -> T:
         """Extract the weekday component from a date or timestamp.
@@ -7741,7 +7739,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.WeekOfYear, self.inner()))
+        return self._new(func("WEEKOFYEAR", self.inner()))
 
     def year(self) -> T:
         """Extract the year component from a date or timestamp.
@@ -7756,7 +7754,7 @@ class DateTimeFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Year, self.inner()))
+        return self._new(func("YEAR", self.inner()))
 
     def yearweek(self) -> T:
         """Extract the yearweek component from a date or timestamp.
@@ -7794,7 +7792,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.List, self.inner()))
+        return self._new(func("LIST", self.inner()))
 
     def aggr(self, function_name: IntoExprColumn, *args: IntoExpr) -> T:
         """Executes the aggregate function `function_name` on the elements of `list`.
@@ -7851,7 +7849,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayAppend, self.inner(), el))
+        return self._new(func("ARRAY_APPEND", self.inner(), el))
 
     def apply(self, lambda_arg: IntoExprColumn) -> T:
         """Returns a list that is the result of applying the `lambda` function to each element of the input `list`.
@@ -7874,7 +7872,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Apply, self.inner(), lambda_arg))
+        return self._new(func("APPLY", self.inner(), lambda_arg))
 
     def cat(self, *args: IntoExpr) -> T:
         """Concatenates lists.
@@ -7899,7 +7897,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayConcat, self.inner(), *args))
+        return self._new(func("ARRAY_CAT", self.inner(), *args))
 
     def concat(self, *args: IntoExpr) -> T:
         """Concatenates lists.
@@ -7924,7 +7922,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayConcat, self.inner(), *args))
+        return self._new(func("ARRAY_CAT", self.inner(), *args))
 
     def contains(self, element: IntoExpr) -> T:
         """Returns true if the list contains the element.
@@ -7945,7 +7943,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayContains, self.inner(), element))
+        return self._new(func("ARRAY_CONTAINS", self.inner(), element))
 
     def cosine_distance(self, array2: IntoExprColumn | float) -> T:
         """Computes the cosine distance between two arrays of the same size.
@@ -8051,7 +8049,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayDistinct, self.inner()))
+        return self._new(func("ARRAY_DISTINCT", self.inner()))
 
     def dot_product(self, array2: IntoExprColumn | float) -> T:
         """Computes the inner product between two arrays of the same size.
@@ -8134,7 +8132,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayContains, self.inner(), element))
+        return self._new(func("ARRAY_CONTAINS", self.inner(), element))
 
     def has_all(self, list2: IntoExpr) -> T:
         """Returns true if all elements of list2 are in list1.
@@ -8157,7 +8155,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayContainsAll, self.inner(), list2))
+        return self._new(func("ARRAY_HAS_ALL", self.inner(), list2))
 
     def has_any(self, list2: IntoExpr) -> T:
         """Returns true if the lists have any element in common.
@@ -8180,7 +8178,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("array_has_any", self.inner(), list2))
+        return self._new(func("LIST_HAS_ANY", self.inner(), list2))
 
     def indexof(self, element: IntoExpr) -> T:
         """Returns the index of the `element` if the `list` contains the `element`.
@@ -8203,7 +8201,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayPosition, self.inner(), element))
+        return self._new(func("ARRAY_POSITION", self.inner(), element))
 
     def inner_product(self, array2: IntoExprColumn | float) -> T:
         """Computes the inner product between two arrays of the same size.
@@ -8249,7 +8247,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayIntersect, self.inner(), list2))
+        return self._new(func("ARRAY_INTERSECT", self.inner(), list2))
 
     def length(self) -> T:
         """Returns the length of the `list`.
@@ -8264,7 +8262,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArraySize, self.inner()))
+        return self._new(func("ARRAY_LENGTH", self.inner()))
 
     def length_dimension(self, dimension: IntoExprColumn | int | None = None) -> T:
         """`array_length` for lists with dimensions other than 1 not implemented.
@@ -8282,7 +8280,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArraySize, self.inner(), dimension))
+        return self._new(func("ARRAY_LENGTH", self.inner(), dimension))
 
     def negative_dot_product(self, array2: IntoExprColumn | float) -> T:
         """Computes the negative inner product between two arrays of the same size.
@@ -8375,7 +8373,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayPosition, self.inner(), element))
+        return self._new(func("ARRAY_POSITION", self.inner(), element))
 
     def prepend(self, arr: IntoExpr) -> T:
         """SQL array_prepend function.
@@ -8388,7 +8386,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayPrepend, self.inner(), arr))
+        return self._new(func("ARRAY_PREPEND", self.inner(), arr))
 
     def push_back(self, e: IntoExpr) -> T:
         """SQL array_push_back function.
@@ -8440,7 +8438,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Reduce, self.inner(), lambda_arg, initial_value))
+        return self._new(func("REDUCE", self.inner(), lambda_arg, initial_value))
 
     def resize(self, size: IntoExpr, value: IntoExpr | None = None) -> T:
         """Resizes the `list` to contain `size` elements.
@@ -8474,7 +8472,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayReverse, self.inner()))
+        return self._new(func("ARRAY_REVERSE", self.inner()))
 
     def reverse_sort(self, col1: IntoExprColumn | None = None) -> T:
         """Sorts the elements of the list in reverse order.
@@ -8495,7 +8493,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("array_reverse_sort", self.inner(), col1))
+        return self._new(func("ARRAY_REVERSE_SORT", self.inner(), col1))
 
     def select(self, index_list: IntoExprColumn | SeqLiteral[int]) -> T:
         """Returns a list based on the elements selected by the `index_list`.
@@ -8545,7 +8543,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArraySlice, self.inner(), begin, end, step))
+        return self._new(func("ARRAY_SLICE", self.inner(), begin, end, step))
 
     def sort(
         self, col1: IntoExprColumn | None = None, col2: IntoExprColumn | None = None
@@ -8569,7 +8567,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArraySort, self.inner(), col1, col2))
+        return self._new(func("ARRAY_SORT", self.inner(), col1, col2))
 
     def to_json(self, *args: IntoExpr) -> T:
         """SQL array_to_json function.
@@ -8595,7 +8593,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.ArrayToString, self.inner(), sep))
+        return self._new(func("ARRAY_TO_STRING", self.inner(), sep))
 
     def to_string_comma_default(self, sep: IntoExpr) -> T:
         """SQL array_to_string_comma_default function.
@@ -8631,7 +8629,7 @@ class ArrayFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.Apply, self.inner(), lambda_arg))
+        return self._new(func("APPLY", self.inner(), lambda_arg))
 
     def unique(self) -> T:
         """Counts the unique elements of a `list`.
@@ -8795,7 +8793,7 @@ class JsonFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.JSONExtract, self.inner(), col1))
+        return self._new(func("JSON_EXTRACT", self.inner(), col1))
 
     def extract_path(self, col1: IntoExprColumn | SeqLiteral[str] | int) -> T:
         """SQL json_extract_path function.
@@ -8808,7 +8806,7 @@ class JsonFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("json_extract_path", self.inner(), col1))
+        return self._new(func("JSON_EXTRACT_PATH", self.inner(), col1))
 
     def extract_path_text(self, col1: IntoExprColumn | SeqLiteral[str] | int) -> T:
         """SQL json_extract_path_text function.
@@ -8821,7 +8819,7 @@ class JsonFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("json_extract_path_text", self.inner(), col1))
+        return self._new(func("JSON_EXTRACT_PATH_TEXT", self.inner(), col1))
 
     def extract_string(self, col1: IntoExprColumn | SeqLiteral[str] | int) -> T:
         """SQL json_extract_string function.
@@ -8834,7 +8832,7 @@ class JsonFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("json_extract_string", self.inner(), col1))
+        return self._new(func("JSON_EXTRACT_STRING", self.inner(), col1))
 
     def group_array(self) -> T:
         """SQL json_group_array function.
@@ -8880,7 +8878,7 @@ class JsonFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.JSONKeys, self.inner(), col1))
+        return self._new(func("JSON_KEYS", self.inner(), col1))
 
     def merge_patch(self, col1: IntoExprColumn, *args: IntoExprColumn) -> T:
         """SQL json_merge_patch function.
@@ -8917,7 +8915,7 @@ class JsonFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("json", self.inner()))
+        return self._new(func("JSON", self.inner()))
 
     def pretty(self) -> T:
         """SQL json_pretty function.
@@ -9037,7 +9035,7 @@ class JsonFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.JSONType, self.inner(), col1))
+        return self._new(func("JSON_TYPE", self.inner(), col1))
 
     def valid(self) -> T:
         """SQL json_valid function.
@@ -9201,7 +9199,7 @@ class MapFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.MapFromEntries, self.inner()))
+        return self._new(func("MAP_FROM_ENTRIES", self.inner()))
 
     def keys(self) -> T:
         """Returns the keys of a map as a list.
@@ -9216,7 +9214,7 @@ class MapFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(func(exp.MapKeys, self.inner()))
+        return self._new(func("MAP_KEYS", self.inner()))
 
     def to_pg_oid(self) -> T:
         """SQL map_to_pg_oid function.
@@ -10293,7 +10291,7 @@ class GeoSpatialFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("ST_Distance", self.inner(), point2))
+        return self._new(func("ST_DISTANCE", self.inner(), point2))
 
     def distance_geos(self, geom2: IntoExprColumn) -> T:
         """Returns the planar distance between two geometries.
@@ -11278,7 +11276,7 @@ class GeoSpatialFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("ST_MakePoint", self.inner(), y))
+        return self._new(func("ST_MAKEPOINT", self.inner(), y))
 
     def makepoint_z(
         self, y: IntoExprColumn | float, z: IntoExprColumn | float | None = None
@@ -11294,7 +11292,7 @@ class GeoSpatialFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("ST_MakePoint", self.inner(), y, z))
+        return self._new(func("ST_MAKEPOINT", self.inner(), y, z))
 
     def makepoint_z_m(
         self,
@@ -11314,7 +11312,7 @@ class GeoSpatialFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("ST_MakePoint", self.inner(), y, z, m))
+        return self._new(func("ST_MAKEPOINT", self.inner(), y, z, m))
 
     def makepolygon(self) -> T:
         """Create a POLYGON from a LINESTRING shell.
@@ -11614,7 +11612,7 @@ class GeoSpatialFns[T: Fns](NameSpaceHandler[T]):
         Returns:
             T
         """
-        return self._new(anon("ST_Point", self.inner(), y))
+        return self._new(func("ST_POINT", self.inner(), y))
 
     def point2d(self, y: IntoExprColumn | float) -> T:
         """Creates a POINT_2D.

@@ -9,7 +9,7 @@ from ._dtypes import DuckDbTypes, FuncTypes
 from ._format import to_func
 from ._rules import (
     CONVERTER,
-    GLOT_FUNC_NAMES,
+    DK_FUNC_KEYS,
     NAMESPACE_SPECS,
     PREFIXES,
     RENAME_RULES,
@@ -21,7 +21,6 @@ from ._str_builder import EMPTY_STR, format_kwords
 
 
 def run_qry(lf: pl.LazyFrame) -> pl.LazyFrame:
-    glot_name = pl.col("glot_name")
     py = PyCols()
     params = Params()
     dk = DuckCols()
@@ -49,11 +48,16 @@ def run_qry(lf: pl.LazyFrame) -> pl.LazyFrame:
                 how="left",
             )
         )
-        .join(GLOT_FUNC_NAMES, on="function_name", how="left")
+        .join(
+            DK_FUNC_KEYS,
+            left_on=dk.function_name.str.to_uppercase(),
+            right_on="glot_name",
+            how="left",
+        )
         .with_columns(
             pl.when(pl.col("alias_root").is_not_null())
-            .then(glot_name.drop_nulls().first().over("alias_root"))
-            .otherwise(glot_name)
+            .then(py.glot_name.drop_nulls().first().over("alias_root"))
+            .otherwise(py.glot_name)
             .alias("glot_name"),
         )
         .with_columns(

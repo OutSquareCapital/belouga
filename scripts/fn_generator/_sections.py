@@ -71,8 +71,6 @@ from __future__ import annotations
 {From(DateTime).import_(DateTime.DATE, DateTime.DATETIME, DateTime.TIME, DateTime.TIMEDELTA)}
 {From(Typing).import_(Typing.SELF, Typing.TYPE_CHECKING, Typing.CLASSVAR)}
 
-from sqlglot import exp
-
 from .._core import DuckHandler, NameSpaceHandler, anon, func
 
 if TYPE_CHECKING:

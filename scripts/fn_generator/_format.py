@@ -64,7 +64,7 @@ def _expr_call(
         pl.when(py.glot_name.is_not_null())
         .then(
             formatter(
-                "func(exp.{glot_name}, self.inner(){dk_args}{dk_varargs})",
+                'func("{glot_name}", self.inner(){dk_args}{dk_varargs})',
                 glot_name=py.glot_name,
             )
         )
