@@ -6,7 +6,8 @@ import sqlglot
 from duckdb import Expression
 from sqlglot import exp
 
-from ._core import DuckHandler, args_into_glot, into_glot
+from ._conversions import args_into_glot, pql_into_glot
+from ._core import DuckHandler
 from ._expr import SqlExpr
 from .typing import IntoExpr, IntoExprColumn, PythonLiteral
 from .utils import TryIter, try_chain, try_iter
@@ -61,7 +62,9 @@ def unnest(
     Returns:
         SqlExpr: An expression representing the unnesting operation.
     """
-    expr = exp.Explode(this=into_glot(col), max_depth=max_depth, recursive=recursive)
+    expr = exp.Explode(
+        this=pql_into_glot(col), max_depth=max_depth, recursive=recursive
+    )
     return SqlExpr(expr)
 
 
@@ -90,13 +93,13 @@ def element() -> SqlExpr:
 
 
 def fn_once(rhs: IntoExpr) -> SqlExpr:
-    return SqlExpr(exp.Lambda(this=into_glot(rhs), expressions=[_ELEM_ID]))
+    return SqlExpr(exp.Lambda(this=pql_into_glot(rhs), expressions=[_ELEM_ID]))
 
 
 def all(exclude: TryIter[IntoExprColumn] = None) -> SqlExpr:
     return (
         pc.Option(exclude)
-        .map(lambda x: try_iter(x).map(into_glot).collect())
+        .map(lambda x: try_iter(x).map(pql_into_glot).collect())
         .map(lambda exc: SqlExpr(exp.Star(except_=exc)))
         .unwrap_or_else(lambda: SqlExpr(exp.Star()))
     )

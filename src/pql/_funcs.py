@@ -8,7 +8,7 @@ from . import sql
 from ._expr import Expr
 from ._meta import ExprKind, Marker, MultiMeta, Resolver, SingleMeta
 from .sql import SqlExpr
-from .sql._core import args_into_glot
+from .sql._conversions import args_into_glot
 from .sql.typing import IntoExpr, IntoExprColumn, PythonLiteral
 from .sql.utils import TryIter, try_chain, try_iter
 

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from sqlglot import exp
 
-from ._core import into_glot
+from ._conversions import pql_into_glot
 from ._expr import SqlExpr
 from ._funcs import reduce
 from .utils import try_chain
@@ -29,7 +29,9 @@ class When:
     def then(self, value: IntoExpr) -> Then:
         """Attach the value for the initial WHEN condition."""
         return Then(
-            exp.Case(ifs=[exp.If(this=into_glot(self._when), true=into_glot(value))])
+            exp.Case(
+                ifs=[exp.If(this=pql_into_glot(self._when), true=pql_into_glot(value))]
+            )
         )
 
 
@@ -42,7 +44,7 @@ class Then(SqlExpr):
 
     def otherwise(self, statement: IntoExpr) -> SqlExpr:
         case = self.inner().copy()
-        case.set("default", into_glot(statement))
+        case.set("default", pql_into_glot(statement))
         return SqlExpr(case)
 
 
@@ -54,7 +56,8 @@ class ChainedWhen:
     def then(self, statement: IntoExpr) -> ChainedThen:
         case = self._chained_when.inner().copy()
         case.append(
-            "ifs", exp.If(this=into_glot(self._predicate), true=into_glot(statement))
+            "ifs",
+            exp.If(this=pql_into_glot(self._predicate), true=pql_into_glot(statement)),
         )
         return ChainedThen(case)
 
@@ -68,5 +71,5 @@ class ChainedThen(SqlExpr):
 
     def otherwise(self, statement: IntoExpr) -> SqlExpr:
         case = self.inner().copy()
-        case.set("default", into_glot(statement))
+        case.set("default", pql_into_glot(statement))
         return SqlExpr(case)

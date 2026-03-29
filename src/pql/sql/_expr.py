@@ -10,7 +10,8 @@ from sqlglot import exp
 from pql.sql.typing import IntoExprColumn
 
 from ._code_gen import Fns
-from ._core import anon, args_into_glot, into_glot
+from ._conversions import args_into_glot, pql_into_glot
+from ._core import anon
 from ._window import FrameBound, OverBuilder, get_order, get_partition, make_spec
 
 if TYPE_CHECKING:
@@ -73,10 +74,10 @@ class SqlExpr(Fns):  # noqa: PLW1641
         return self._new(expr)
 
     def _binop[T: exp.Binary](self, op: type[T], other: IntoExpr) -> Self:
-        return self._build_op(op, self.inner(), into_glot(other))
+        return self._build_op(op, self.inner(), pql_into_glot(other))
 
     def _rbinop[T: exp.Binary](self, op: type[T], other: IntoExpr) -> Self:
-        return self._build_op(op, into_glot(other), self.inner())
+        return self._build_op(op, pql_into_glot(other), self.inner())
 
     def __add__(self, other: IntoExpr) -> Self:
         return self._binop(exp.Add, other)
@@ -256,7 +257,9 @@ class SqlExpr(Fns):  # noqa: PLW1641
 
     def between(self, lower: IntoExpr, upper: IntoExpr) -> Self:
         return self._new(
-            exp.Between(this=self.inner(), low=into_glot(lower), high=into_glot(upper))
+            exp.Between(
+                this=self.inner(), low=pql_into_glot(lower), high=pql_into_glot(upper)
+            )
         )
 
     def cast(self, dtype: IntoPyType) -> Self:
@@ -859,4 +862,6 @@ class SqlExpr(Fns):  # noqa: PLW1641
         Returns:
             Self
         """
-        return self._new(exp.BitwiseXor(this=self.inner(), expression=into_glot(right)))
+        return self._new(
+            exp.BitwiseXor(this=self.inner(), expression=pql_into_glot(right))
+        )
