@@ -293,7 +293,7 @@ class Expr(sql.CoreHandler[SqlExpr]):
 
     def cast(self, dtype: DataType) -> Self:
         """Cast to a different data type."""
-        return self._new(self.inner().cast(dtype.raw.to_duckdb()))
+        return self._new(self.inner().cast(dtype.to_duckdb()))
 
     def is_in(self, other: TryIter[IntoExpr]) -> Self:
         """Check if value is in an iterable of values."""
