@@ -569,7 +569,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
 
     def is_first_distinct(self) -> Self:
         """Check if value is first occurrence."""
-        return self._new(self.row_number().over(pc.Some(self)).eq(1).inner())
+        return self.row_number().over(pc.Some(self)).eq(1)
 
     def is_last_distinct(self) -> Self:
         """Check if value is last occurrence."""
@@ -620,7 +620,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
 
     def dot(self, other: IntoExpr) -> Self:
         """Compute the dot product with another expression."""
-        return self._new(self.mul(other).sum().inner())
+        return self.mul(other).sum()
 
     def entropy(
         self, base: float = 2.718281828459045, *, normalize: bool = True
