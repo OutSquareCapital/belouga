@@ -97,13 +97,6 @@ SPECIAL_CASES = pc.Set(
         "greatest",  # Has 5 categories, same behavior across thoses, no namespace needed
         "least",  # Has 5 categories, same behavior across thoses, no namespace needed
         "concat",  # too much conflict with list_concat, array_concat, etc..
-        # basic aliases not really needed
-        "countif",  # count_if
-        "arbitrary",  # first
-        "avg",  # mean
-        "variance",  # var_samp
-        "stddev",  # stddev_samp
-        "quantile",  # quantile_disc
         # sqlglot issues
         "xor",  # Actual match casing logic gives it `XOR` when really it should be `BitwiseXor`
     }

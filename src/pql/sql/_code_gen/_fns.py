@@ -187,6 +187,26 @@ class Fns(DuckHandler):
         """
         return self._new(func("APPROX_TOP_K", self.inner(), k))
 
+    def arbitrary(self) -> Self:
+        """Returns the first value (NULL or non-NULL) from arg.
+
+        This function is affected by ordering.
+
+        **SQL name**: *arbitrary*
+
+        See Also:
+            first
+
+        Examples:
+            ```sql
+            arbitrary(A)
+            ```
+
+        Returns:
+            Self
+        """
+        return self._new(anon("arbitrary", self.inner()))
+
     def arg_max(self, val: IntoExpr, col2: IntoExprColumn | int | None = None) -> Self:
         """Finds the row with the maximum val.
 
@@ -446,6 +466,24 @@ class Fns(DuckHandler):
             Self
         """
         return self._new(func("ATANH", self.inner()))
+
+    def avg(self) -> Self:
+        """Calculates the average value for all tuples in x.
+
+        **SQL name**: *avg*
+
+        See Also:
+            mean
+
+        Examples:
+            ```sql
+            SUM(x) / COUNT(*)
+            ```
+
+        Returns:
+            Self
+        """
+        return self._new(func("AVG", self.inner()))
 
     def bin(self) -> Self:
         """Converts the `value` to binary representation.
@@ -887,6 +925,9 @@ class Fns(DuckHandler):
 
         **SQL name**: *count_if*
 
+        See Also:
+            countif
+
         Examples:
             ```sql
             count_if(A)
@@ -896,6 +937,24 @@ class Fns(DuckHandler):
             Self
         """
         return self._new(func("COUNT_IF", self.inner()))
+
+    def countif(self) -> Self:
+        """Counts the total number of TRUE values for a boolean column.
+
+        **SQL name**: *countif*
+
+        See Also:
+            count_if
+
+        Examples:
+            ```sql
+            countif(A)
+            ```
+
+        Returns:
+            Self
+        """
+        return self._new(func("COUNTIF", self.inner()))
 
     def covar_pop(self, x: IntoExprColumn | float) -> Self:
         """Returns the population covariance of input values.
@@ -1202,6 +1261,9 @@ class Fns(DuckHandler):
         This function is affected by ordering.
 
         **SQL name**: *first*
+
+        See Also:
+            arbitrary
 
         Examples:
             ```sql
@@ -2021,6 +2083,9 @@ class Fns(DuckHandler):
 
         **SQL name**: *mean*
 
+        See Also:
+            avg
+
         Examples:
             ```sql
             SUM(x) / COUNT(*)
@@ -2236,6 +2301,31 @@ class Fns(DuckHandler):
         """
         return self._new(anon("product", self.inner()))
 
+    def quantile(
+        self, pos: IntoExprColumn | SeqLiteral[float] | float | None = None
+    ) -> Self:
+        """Returns the exact quantile number between 0 and 1 .
+
+        If pos is a LIST of FLOATs, then the result is a LIST of the corresponding exact quantiles.
+
+        **SQL name**: *quantile*
+
+        See Also:
+            quantile_disc
+
+        Args:
+            pos (IntoExprColumn | SeqLiteral[float] | float | None): `DOUBLE | DOUBLE[]` expression
+
+        Examples:
+            ```sql
+            quantile_disc(x, 0.5)
+            ```
+
+        Returns:
+            Self
+        """
+        return self._new(func("QUANTILE", self.inner(), pos))
+
     def quantile_cont(self, pos: IntoExprColumn | SeqLiteral[float] | float) -> Self:
         """Returns the interpolated quantile number between 0 and 1 .
 
@@ -2264,6 +2354,9 @@ class Fns(DuckHandler):
         If pos is a LIST of FLOATs, then the result is a LIST of the corresponding exact quantiles.
 
         **SQL name**: *quantile_disc*
+
+        See Also:
+            quantile
 
         Args:
             pos (IntoExprColumn | SeqLiteral[float] | float | None): `DOUBLE | DOUBLE[]` expression
@@ -2828,6 +2921,24 @@ class Fns(DuckHandler):
         """
         return self._new(anon("stats", self.inner()))
 
+    def stddev(self) -> Self:
+        """Returns the sample standard deviation.
+
+        **SQL name**: *stddev*
+
+        See Also:
+            stddev_samp
+
+        Examples:
+            ```sql
+            sqrt(var_samp(x))
+            ```
+
+        Returns:
+            Self
+        """
+        return self._new(func("STDDEV", self.inner()))
+
     def stddev_pop(self) -> Self:
         """Returns the population standard deviation.
 
@@ -2847,6 +2958,9 @@ class Fns(DuckHandler):
         """Returns the sample standard deviation.
 
         **SQL name**: *stddev_samp*
+
+        See Also:
+            stddev
 
         Examples:
             ```sql
@@ -3179,6 +3293,9 @@ class Fns(DuckHandler):
 
         **SQL name**: *var_samp*
 
+        See Also:
+            variance
+
         Examples:
             ```sql
             (SUM(x^2) - SUM(x)^2 / COUNT(x)) / (COUNT(x) - 1)
@@ -3188,6 +3305,24 @@ class Fns(DuckHandler):
             Self
         """
         return self._new(func("VAR_SAMP", self.inner()))
+
+    def variance(self) -> Self:
+        """Returns the sample variance of all input values.
+
+        **SQL name**: *variance*
+
+        See Also:
+            var_samp
+
+        Examples:
+            ```sql
+            (SUM(x^2) - SUM(x)^2 / COUNT(x)) / (COUNT(x) - 1)
+            ```
+
+        Returns:
+            Self
+        """
+        return self._new(func("VARIANCE", self.inner()))
 
     def variant_extract(self, col1: IntoExprColumn | int) -> Self:
         """SQL variant_extract function.
