@@ -6,6 +6,7 @@ from pyochain import Dict
 
 
 def check_missing_sqlglot(output: Path) -> int:
+    _set_config()
     txt = _header(_run_qry())
     output.touch()
     return output.write_text(txt, encoding="utf-8")
@@ -34,8 +35,6 @@ def _run_qry() -> str:
         DuckCols,  # pyright: ignore[reportPrivateLocalImportUsage]
         _filters,  # pyright: ignore[reportPrivateUsage]
     )
-
-    _set_config()
 
     function_name = pl.col("function_name")
     alias_of = pl.col("alias_of")
