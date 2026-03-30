@@ -9,7 +9,6 @@ from enum import Enum as PyEnum
 from functools import partial
 from typing import TYPE_CHECKING, Any, Concatenate, Self, TypeIs, final, overload
 
-import duckdb
 import pyochain as pc
 from sqlglot import exp
 
@@ -113,14 +112,6 @@ class DataType(ABC):
     def is_nested(cls) -> bool:
         """Check whether the data type is a nested type."""
         return issubclass(cls, NestedType)
-
-    def to_sql(self) -> str:
-        """Convert this DataType to a SQL string."""
-        return self.raw.sql(dialect="duckdb")
-
-    def to_duckdb(self) -> DuckDBPyType:
-        """Convert this DataType to a DuckDBPyType."""
-        return duckdb.dtype(self.to_sql())
 
 
 @dataclass(slots=True, init=False, unsafe_hash=True)

@@ -882,14 +882,12 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
                 return self._iter_slct(
                     lambda c: (
                         dtype_map.get_item(c)
-                        .map(lambda dtype: sql.col(c).cast(dtype.to_duckdb()).alias(c))
+                        .map(lambda dtype: sql.col(c).cast(dtype.raw).alias(c))
                         .unwrap_or_else(lambda: sql.col(c))
                     )
                 )
             case _:
-                return self._iter_slct(
-                    lambda c: sql.col(c).cast(dtypes.to_duckdb()).alias(c)
-                )
+                return self._iter_slct(lambda c: sql.col(c).cast(dtypes.raw).alias(c))
 
     def sink_parquet(
         self, path: str | Path, *, compression: ParquetCompression = "zstd"

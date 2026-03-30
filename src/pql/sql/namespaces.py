@@ -6,6 +6,8 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, final
 
+from sqlglot import exp
+
 from ._code_gen import (
     ArrayFns,
     DateTimeFns,
@@ -215,19 +217,21 @@ class SqlExprDateTimeNameSpace(DateTimeFns[SqlExpr]):
 
     def to_datetime(self, format: IntoExprColumn | None = None) -> SqlExpr:  # noqa: A002
         """Parse string values as datetime."""
+        dtype = exp.DataType.build(exp.DType.TIMESTAMP)  # pyright: ignore[reportUnknownMemberType]
         match format:
             case None:
-                return self.inner().cast("timestamp")
+                return self.inner().cast(dtype)
             case _:
-                return self.inner().str.strptime(format).cast("timestamp")
+                return self.inner().str.strptime(format).cast(dtype)
 
     def to_time(self, format: IntoExprColumn | None = None) -> SqlExpr:  # noqa: A002
         """Parse string values as time."""
+        dtype = exp.DataType.build(exp.DType.TIME)  # pyright: ignore[reportUnknownMemberType]
         match format:
             case None:
-                return self.inner().cast("time")
+                return self.inner().cast(dtype)
             case _:
-                return self.inner().str.strptime(format).cast("time")
+                return self.inner().str.strptime(format).cast(dtype)
 
 
 @dataclass(slots=True)

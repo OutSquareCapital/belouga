@@ -171,7 +171,11 @@ def mean_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
                 .reduce(SqlExpr.add)
                 .truediv(
                     vals.iter()
-                    .map(lambda value: value.is_not_null().cast("BIGINT"))
+                    .map(
+                        lambda value: value.is_not_null().cast(
+                            exp.DataType.build(exp.DType.BIGINT)  # pyright: ignore[reportUnknownMemberType]
+                        )
+                    )
                     .reduce(SqlExpr.add)
                 )
             )

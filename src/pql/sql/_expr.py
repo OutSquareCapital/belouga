@@ -15,10 +15,6 @@ from ._core import func
 from ._window import FrameBound, OverBuilder, get_order, get_partition, make_spec
 
 if TYPE_CHECKING:
-    from _duckdb._typing import (  # pyright: ignore[reportMissingModuleSource]
-        IntoPyType,
-    )
-
     from . import namespaces as nm
     from .typing import (
         ClosedInterval,
@@ -262,8 +258,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
             )
         )
 
-    def cast(self, dtype: IntoPyType) -> Self:
-        dtype = exp.DataType.build(str(dtype), dialect="duckdb")  # pyright: ignore[reportUnknownMemberType, reportAssignmentType]
+    def cast(self, dtype: exp.DataType) -> Self:
         return self._new(exp.Cast(this=self.inner(), to=dtype))
 
     def collate(self, collation: str) -> Self:
