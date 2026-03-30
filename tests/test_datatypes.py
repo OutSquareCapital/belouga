@@ -280,7 +280,7 @@ def test_datetime_all_time_units(cast_schema: pc.Dict[str, pql.DataType]) -> Non
 
     datetime_us: pql.Datetime = cast_schema["datetime_us"]  # pyright: ignore[reportAssignmentType]
     assert isinstance(datetime_us, pql.Datetime)
-    assert datetime_us.time_unit in ("us", "ns")
+    assert datetime_us.time_unit in {"us", "ns"}
 
     datetime_ns: pql.Datetime = cast_schema["datetime_ns"]  # pyright: ignore[reportAssignmentType]
     assert isinstance(datetime_ns, pql.Datetime)

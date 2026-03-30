@@ -289,7 +289,7 @@ def _type_name(node: ast.expr) -> pc.Option[str]:
 
 
 def _type_accepts(target_name: str, reference_name: str) -> bool:
-    return target_name in (reference_name, Typing.ANY) or TYPE_SUPERTYPES.get_item(
+    return target_name in {reference_name, Typing.ANY} or TYPE_SUPERTYPES.get_item(
         target_name
     ).map(lambda accepted: accepted.contains(reference_name)).unwrap_or(default=False)
 

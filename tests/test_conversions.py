@@ -41,12 +41,12 @@ def data() -> TestData:
 
 
 def test_from_query(data: TestData) -> None:
-    _df = pl.DataFrame(data)
+    df = pl.DataFrame(data)
     qry = """--sql
     SELECT *
-    FROM _df
+    FROM df
     """
-    pql_df = pql.from_query(qry, _df=_df).collect()
+    pql_df = pql.from_query(qry, df=df).collect()
     pl_df = duckdb.from_query(qry).pl()
     assert_eq(pql_df, pl_df)
 

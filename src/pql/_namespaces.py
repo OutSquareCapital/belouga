@@ -57,34 +57,62 @@ class ExprNameSpaceBase(sql.CoreHandler[Expr]):
 
 @dataclass(slots=True)
 class ExprStringNameSpace(ExprNameSpaceBase):
-    """String operations namespace (equivalent to pl.Expr.str)."""
+    """String operations namespace (equivalent to pl.Expr.str).
+
+    Returns:
+        Expr
+    """
 
     def join(
         self, delimiter: IntoExprColumn = Lit.EMPTY_STR, *, ignore_nulls: bool = True
     ) -> Expr:
-        """Vertically concatenate string values into a single string."""
+        """Vertically concatenate string values into a single string.
+
+        Returns:
+            Expr
+        """
         return self.inner()._as_scalar(  # pyright: ignore[reportPrivateUsage]
             self.inner().inner().str.join(delimiter, ignore_nulls=ignore_nulls)
         )
 
     def escape_regex(self) -> Expr:
-        """Escape all regex meta characters in the string."""
+        """Escape all regex meta characters in the string.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().str.escape_regex())
 
     def to_uppercase(self) -> Expr:
-        """Convert to uppercase."""
+        """Convert to uppercase.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().str.upper())
 
     def to_lowercase(self) -> Expr:
-        """Convert to lowercase."""
+        """Convert to lowercase.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().str.lower())
 
     def len_chars(self) -> Expr:
-        """Get the length in characters."""
+        """Get the length in characters.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().str.length())
 
     def contains(self, pattern: IntoExprColumn, *, literal: bool = False) -> Expr:
-        """Check if string contains a pattern."""
+        """Check if string contains a pattern.
+
+        Returns:
+            Expr
+        """
         match literal:
             case True:
                 return self._new(self.inner().inner().str.contains(pattern))
@@ -92,17 +120,29 @@ class ExprStringNameSpace(ExprNameSpaceBase):
                 return self._new(self.inner().inner().re.matches(pattern))
 
     def starts_with(self, prefix: IntoExprColumn) -> Expr:
-        """Check if string starts with prefix."""
+        """Check if string starts with prefix.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().str.starts_with(prefix))
 
     def ends_with(self, suffix: IntoExprColumn) -> Expr:
-        """Check if string ends with suffix."""
+        """Check if string ends with suffix.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().str.ends_with(suffix))
 
     def replace(
         self, pattern: str, value: IntoExprColumn, *, literal: bool = False, n: int = 1
     ) -> Expr:
-        """Replace first matching substring with a new string value."""
+        """Replace first matching substring with a new string value.
+
+        Returns:
+            Expr
+        """
         pattern_expr = sql.lit(re.escape(pattern) if literal else pattern)
 
         def _replace_once(expr: SqlExpr) -> SqlExpr:
@@ -124,47 +164,91 @@ class ExprStringNameSpace(ExprNameSpaceBase):
                 )
 
     def strip_chars(self, characters: IntoExprColumn | None = None) -> Expr:
-        """Strip leading and trailing characters."""
+        """Strip leading and trailing characters.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().str.trim(characters))
 
     def strip_chars_start(self, characters: IntoExprColumn | None = None) -> Expr:
-        """Strip leading characters."""
+        """Strip leading characters.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().str.ltrim(characters))
 
     def strip_chars_end(self, characters: IntoExprColumn | None = None) -> Expr:
-        """Strip trailing characters."""
+        """Strip trailing characters.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().str.rtrim(characters))
 
     def slice(self, offset: int, length: int | None = None) -> Expr:
-        """Extract a substring."""
+        """Extract a substring.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().str.substring(offset + 1, length))
 
     def len_bytes(self) -> Expr:
-        """Get the length in bytes."""
+        """Get the length in bytes.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().encode().octet_length())
 
     def split(self, by: IntoExprColumn) -> Expr:
-        """Split string by separator."""
+        """Split string by separator.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().str.split(by))
 
     def extract_all(self, pattern: IntoExprColumn) -> Expr:
-        """Extract all regex matches."""
+        """Extract all regex matches.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().re.extract_all(pattern))
 
     def extract(self, pattern: IntoExprColumn, group_index: int = 1) -> Expr:
-        """Extract a regex capture group."""
+        """Extract a regex capture group.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().re.extract(pattern, group_index))
 
     def find(self, pattern: IntoExprColumn, *, literal: bool = False) -> Expr:
-        """Return the first match offset as a zero-based index."""
+        """Return the first match offset as a zero-based index.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().str.find(pattern, literal=literal))
 
     def json_path_match(self, json_path: IntoExprColumn) -> Expr:
-        """Extract first JSONPath match from string JSON values."""
+        """Extract first JSONPath match from string JSON values.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().json.extract_string(json_path))
 
     def to_date(self, format: IntoExprColumn | None = None) -> Expr:  # noqa: A002
-        """Parse string values as date."""
+        """Parse string values as date.
+
+        Returns:
+            Expr
+        """
         match format:
             case None:
                 return self.inner().cast(dt.Date())
@@ -174,19 +258,35 @@ class ExprStringNameSpace(ExprNameSpaceBase):
                 )
 
     def to_datetime(self, format: IntoExprColumn | None = None) -> Expr:  # noqa: A002
-        """Parse string values as datetime."""
+        """Parse string values as datetime.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().dt.to_datetime(format))
 
     def to_time(self, format: IntoExprColumn | None = None) -> Expr:  # noqa: A002
-        """Parse string values as time."""
+        """Parse string values as time.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().dt.to_time(format))
 
     def strptime(self, format: IntoExprColumn) -> Expr:  # noqa: A002
-        """Parse string values into datetime using one or more formats."""
+        """Parse string values into datetime using one or more formats.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().str.strptime(format))
 
     def encode(self, encoding: TransferEncoding = "base64") -> Expr:
-        """Encode UTF-8 strings as binary values."""
+        """Encode UTF-8 strings as binary values.
+
+        Returns:
+            Expr
+        """
         match encoding:
             case "base64":
                 return self._new(self.inner().inner().encode().str.to_base64())
@@ -194,37 +294,69 @@ class ExprStringNameSpace(ExprNameSpaceBase):
                 return self._new(self.inner().inner().encode().str.to_hex().str.lower())
 
     def normalize(self) -> Expr:
-        """Normalize strings using NFC normalization."""
+        """Normalize strings using NFC normalization.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().str.nfc_normalize())
 
     def to_decimal(self, scale: int) -> Expr:
-        """Parse string values as decimal with the requested scale."""
+        """Parse string values as decimal with the requested scale.
+
+        Returns:
+            Expr
+        """
         return self.inner().cast(dt.Decimal(scale=scale))
 
     def count_matches(self, pattern: IntoExprColumn, *, literal: bool = False) -> Expr:
-        """Count pattern matches."""
+        """Count pattern matches.
+
+        Returns:
+            Expr
+        """
         return self._new(
             self.inner().inner().str.count_matches(pattern, literal=literal)
         )
 
     def strip_prefix(self, prefix: IntoExpr) -> Expr:
-        """Strip prefix from string."""
+        """Strip prefix from string.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().str.strip_prefix(prefix))
 
     def strip_suffix(self, suffix: IntoExpr) -> Expr:
-        """Strip suffix from string."""
+        """Strip suffix from string.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().str.strip_suffix(suffix))
 
     def head(self, n: int) -> Expr:
-        """Get first n characters."""
+        """Get first n characters.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().str.left(n))
 
     def tail(self, n: int) -> Expr:
-        """Get last n characters."""
+        """Get last n characters.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().str.right(n))
 
     def reverse(self) -> Expr:
-        """Reverse the string."""
+        """Reverse the string.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().str.reverse())
 
     def pad_start(self, length: int, fill_char: IntoExprColumn = Lit.ESCAPE) -> Expr:
@@ -239,13 +371,21 @@ class ExprStringNameSpace(ExprNameSpaceBase):
     def replace_all(
         self, pattern: IntoExprColumn, value: IntoExprColumn, *, literal: bool = False
     ) -> Expr:
-        """Replace all occurrences."""
+        """Replace all occurrences.
+
+        Returns:
+            Expr
+        """
         return self._new(
             self.inner().inner().str.replace_all(pattern, value, literal=literal)
         )
 
     def to_titlecase(self) -> Expr:
-        """Convert to title case."""
+        """Convert to title case.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().str.to_titlecase())
 
 
@@ -253,7 +393,11 @@ class ExprStringNameSpace(ExprNameSpaceBase):
 class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
     ExprNameSpaceBase, ABC
 ):
-    """Common list/array operations namespace."""
+    """Common list/array operations namespace.
+
+    Returns:
+        Expr
+    """
 
     @property
     @abstractmethod
@@ -261,42 +405,78 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         raise NotImplementedError
 
     def eval(self, expr: Expr) -> Expr:
-        """Run an expression against each array element."""
+        """Run an expression against each array element.
+
+        Returns:
+            Expr
+        """
         return self._new(self._vec.eval(expr.inner()))
 
     def filter(self, predicate: Expr) -> Expr:
         return self._new(self._vec.filter(predicate.inner()))
 
     def drop_nulls(self) -> Expr:
-        """Drop null values in each list."""
+        """Drop null values in each list.
+
+        Returns:
+            Expr
+        """
         return self._new(self._vec.filter(sql.element().is_not_null()))
 
     def contains(self, item: IntoExpr) -> Expr:
-        """Check if subarrays contain the given item."""
+        """Check if subarrays contain the given item.
+
+        Returns:
+            Expr
+        """
         return self._new(self._vec.contains(item))
 
     def all(self) -> Expr:
-        """Return whether all values in the list are true."""
+        """Return whether all values in the list are true.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().list.bool_and())
 
     def any(self) -> Expr:
-        """Return whether any value in the listis true."""
+        """Return whether any value in the listis true.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().list.bool_or())
 
     def len(self) -> Expr:
-        """Return the number of elements in each array."""
+        """Return the number of elements in each array.
+
+        Returns:
+            Expr
+        """
         return self._new(self._vec.length())
 
     def unique(self) -> Expr:
-        """Return unique values in each array."""
+        """Return unique values in each array.
+
+        Returns:
+            Expr
+        """
         return self._new(self._vec.distinct())
 
     def reverse(self) -> Expr:
-        """Reverse the arrays of the expression."""
+        """Reverse the arrays of the expression.
+
+        Returns:
+            Expr
+        """
         return self._new(self._vec.reverse())
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Expr:
-        """Sort the lists of the column."""
+        """Sort the lists of the column.
+
+        Returns:
+            Expr
+        """
         return self._new(
             self._vec.sort(
                 sql.lit(sql.SortClause.order(desc=descending)),
@@ -305,43 +485,83 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         )
 
     def first(self) -> Expr:
-        """Get the first element of each array."""
+        """Get the first element of each array.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().list.first())
 
     def last(self) -> Expr:
-        """Get the last element of each array."""
+        """Get the last element of each array.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().list.last())
 
     def min(self) -> Expr:
-        """Compute the min value of the arrays in the column."""
+        """Compute the min value of the arrays in the column.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().list.min())
 
     def max(self) -> Expr:
-        """Compute the max value of the arrays in the column."""
+        """Compute the max value of the arrays in the column.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().list.max())
 
     def mean(self) -> Expr:
-        """Compute the mean value of the arrays in the column."""
+        """Compute the mean value of the arrays in the column.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().list.avg())
 
     def median(self) -> Expr:
-        """Compute the median value of the arrays in the column."""
+        """Compute the median value of the arrays in the column.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().list.median())
 
     def sum(self) -> Expr:
-        """Compute the sum value of the arrays in the column."""
+        """Compute the sum value of the arrays in the column.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().list.sum())
 
     def std(self, ddof: int = 1) -> Expr:
-        """Compute the standard deviation of the arrays in the column."""
+        """Compute the standard deviation of the arrays in the column.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().list.std(ddof))
 
     def var(self, ddof: int = 1) -> Expr:
-        """Compute the variance of the arrays in the column."""
+        """Compute the variance of the arrays in the column.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().list.var(ddof))
 
     def get(self, index: int) -> Expr:
-        """Return the value by index in each array."""
+        """Return the value by index in each array.
+
+        Returns:
+            Expr
+        """
         return self._new(self._vec.extract(index + 1 if index >= 0 else index))
 
     def join(self, separator: IntoExprColumn, *, ignore_nulls: bool = True) -> Expr:
@@ -354,13 +574,21 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         return self._new(self._vec.count_matches(element))
 
     def explode(self) -> Expr:
-        """Explode arrays into multiple rows."""
+        """Explode arrays into multiple rows.
+
+        Returns:
+            Expr
+        """
         return self._new(self._vec.explode())
 
 
 @dataclass(slots=True)
 class ExprArrayNameSpace(_VecNameSpace[nm.SqlExprArrayNameSpace]):
-    """Array operations namespace (equivalent to pl.Expr.array)."""
+    """Array operations namespace (equivalent to pl.Expr.array).
+
+    Returns:
+        Expr
+    """
 
     @property
     @override
@@ -370,7 +598,11 @@ class ExprArrayNameSpace(_VecNameSpace[nm.SqlExprArrayNameSpace]):
 
 @dataclass(slots=True)
 class ExprListNameSpace(_VecNameSpace[nm.SqlExprListNameSpace]):
-    """List operations namespace (equivalent to pl.Expr.list)."""
+    """List operations namespace (equivalent to pl.Expr.list).
+
+    Returns:
+        Expr
+    """
 
     @property
     @override
@@ -380,20 +612,36 @@ class ExprListNameSpace(_VecNameSpace[nm.SqlExprListNameSpace]):
 
 @dataclass(slots=True)
 class ExprStructNameSpace(ExprNameSpaceBase):
-    """Struct operations namespace (equivalent to pl.Expr.struct)."""
+    """Struct operations namespace (equivalent to pl.Expr.struct).
+
+    Returns:
+        Expr
+    """
 
     def field(self, name: str) -> Expr:
-        """Retrieve a struct field by name."""
+        """Retrieve a struct field by name.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().struct.extract(sql.lit(name))).alias(name)
 
     def json_encode(self) -> Expr:
-        """Encode struct values as JSON strings."""
+        """Encode struct values as JSON strings.
+
+        Returns:
+            Expr
+        """
         return self._new(self.inner().inner().to_json())
 
     def with_fields(
         self, exprs: TryIter[IntoExpr], *more_exprs: IntoExpr, **named_exprs: IntoExpr
     ) -> Expr:
-        """Return a new struct with updated or additional fields."""
+        """Return a new struct with updated or additional fields.
+
+        Returns:
+            Expr
+        """
         return (
             ExprPlan(Schema(()), exprs, more_exprs, named_exprs)
             .with_fields_context(self.inner().inner())
@@ -403,7 +651,11 @@ class ExprStructNameSpace(ExprNameSpaceBase):
 
 @dataclass(slots=True)
 class ExprNameNameSpace(ExprNameSpaceBase):
-    """Name operations namespace (equivalent to pl.Expr.name)."""
+    """Name operations namespace (equivalent to pl.Expr.name).
+
+    Returns:
+        Expr
+    """
 
     def _with_alias_mapper(self, mapper: Callable[[str], str]) -> Expr:
         meta = pc.Some(self.inner().meta.with_alias_mapper(mapper))
@@ -440,7 +692,11 @@ class ExprNameNameSpace(ExprNameSpaceBase):
 
 @dataclass(slots=True)
 class ExprDateTimeNameSpace(ExprNameSpaceBase):
-    """Date and datetime operations namespace (equivalent to pl.Expr.dt)."""
+    """Date and datetime operations namespace (equivalent to pl.Expr.dt).
+
+    Returns:
+        Expr
+    """
 
     def millennium(self) -> Expr:
         return self._new(self.inner().inner().dt.millennium())

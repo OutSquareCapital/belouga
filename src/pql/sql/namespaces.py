@@ -68,7 +68,11 @@ class SqlExprStringNameSpace(StringFns[SqlExpr]):
         return self._new(func("CONCAT", self.inner(), *args))
 
     def to_titlecase(self) -> SqlExpr:
-        """Convert to title case."""
+        """Convert to title case.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the title-cased string.
+        """
         return (
             self
             .lower()
@@ -83,7 +87,11 @@ class SqlExprStringNameSpace(StringFns[SqlExpr]):
         )
 
     def escape_regex(self) -> SqlExpr:
-        """Escape regex metacharacters without escaping plain spaces."""
+        """Escape regex metacharacters without escaping plain spaces.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the escaped string.
+        """
         return self.inner().re.replace(
             Lit.ESCAPE_REGEX, Lit.ESCAPE_REPLACE, Lit.G_PARAM
         )
@@ -112,7 +120,15 @@ class SqlExprStringNameSpace(StringFns[SqlExpr]):
     def join(
         self, delimiter: IntoExprColumn = Lit.EMPTY_STR, *, ignore_nulls: bool = True
     ) -> SqlExpr:
-        """Vertically concatenate string values into a single string."""
+        """Vertically concatenate string values into a single string.
+
+        Args:
+            delimiter (IntoExprColumn, optional): The separator to use for joining. Defaults to an empty string.
+            ignore_nulls (bool, optional): Whether to ignore null values. Defaults to True.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the joined string.
+        """
         aggregated = self.agg(delimiter)
         match ignore_nulls:
             case True:
@@ -127,7 +143,11 @@ class SqlExprStringNameSpace(StringFns[SqlExpr]):
     def count_matches(
         self, pattern: IntoExprColumn, *, literal: bool = False
     ) -> SqlExpr:
-        """Count pattern matches."""
+        """Count pattern matches.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the number of matches.
+        """
         pattern_expr = into_expr(pattern)
         match literal:
             case False:
@@ -141,7 +161,14 @@ class SqlExprStringNameSpace(StringFns[SqlExpr]):
                 )
 
     def strip_prefix(self, prefix: IntoExpr) -> SqlExpr:
-        """Strip prefix from string."""
+        """Strip prefix from string.
+
+        Args:
+            prefix (IntoExpr): The prefix to strip.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the string with the prefix removed.
+        """
         match prefix:
             case str() as prefix_str:
                 return self.inner().re.replace(
@@ -159,7 +186,14 @@ class SqlExprStringNameSpace(StringFns[SqlExpr]):
                 )
 
     def strip_suffix(self, suffix: IntoExpr) -> SqlExpr:
-        """Strip suffix from string."""
+        """Strip suffix from string.
+
+        Args:
+            suffix (IntoExpr): The suffix to strip.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the string with the suffix removed.
+        """
         match suffix:
             case str() as suffix_str:
                 return self.inner().re.replace(
@@ -177,7 +211,16 @@ class SqlExprStringNameSpace(StringFns[SqlExpr]):
     def replace_all(
         self, pattern: IntoExprColumn, value: IntoExprColumn, *, literal: bool = False
     ) -> SqlExpr:
-        """Replace all occurrences."""
+        """Replace all occurrences.
+
+        Args:
+            pattern (IntoExprColumn): The pattern to replace.
+            value (IntoExprColumn): The value to replace the pattern with.
+            literal (bool, optional): Whether to treat the pattern as a literal string. Defaults to False.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the string with the replacements applied.
+        """
         match literal:
             case True:
                 return self.replace(pattern, value)
@@ -211,15 +254,30 @@ class SqlExprDateTimeNameSpace(DateTimeFns[SqlExpr]):
         return self._new(func("DATE_TRUNC", precision, self.inner()))
 
     def month_start(self) -> SqlExpr:
-        """Get the first day of the month."""
+        """Get the first day of the month.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the first day of the month.
+        """
         return self.trunc(Lit.MONTH).add(self.inner().sub(self.trunc(Lit.DAY)))
 
     def month_end(self) -> SqlExpr:
-        """Get the last day of the month."""
+        """Get the last day of the month.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the last day of the month.
+        """
         return self.last_day().add(self.inner().sub(self.trunc(Lit.DAY)))
 
     def to_datetime(self, format: IntoExprColumn | None = None) -> SqlExpr:  # noqa: A002
-        """Parse string values as datetime."""
+        """Parse string values as datetime.
+
+        Args:
+            format (IntoExprColumn | None): The format to use for parsing. Defaults to None.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the parsed datetime.
+        """
         dtype = exp.DataType.build(exp.DType.TIMESTAMP)  # pyright: ignore[reportUnknownMemberType]
         match format:
             case None:
@@ -228,7 +286,14 @@ class SqlExprDateTimeNameSpace(DateTimeFns[SqlExpr]):
                 return self.inner().str.strptime(format).cast(dtype)
 
     def to_time(self, format: IntoExprColumn | None = None) -> SqlExpr:  # noqa: A002
-        """Parse string values as time."""
+        """Parse string values as time.
+
+        Args:
+            format (IntoExprColumn | None): The format to use for parsing. Defaults to None.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the parsed time.
+        """
         dtype = exp.DataType.build(exp.DType.TIME)  # pyright: ignore[reportUnknownMemberType]
         match format:
             case None:
@@ -242,19 +307,37 @@ class SqlExprListNameSpace(ListFns[SqlExpr]):
     """List function namespace for SQL expressions."""
 
     def explode(self) -> SqlExpr:
-        """Explode lists into multiple rows."""
+        """Explode lists into multiple rows.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the exploded rows.
+        """
         from ._funcs import unnest
 
         return unnest(self.inner())
 
     def eval(self, expr: SqlExpr) -> SqlExpr:
-        """Run an expression against each array element."""
+        """Run an expression against each array element.
+
+        Args:
+            expr (SqlExpr): The expression to run against each element.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the result of the expression for each element.
+        """
         from ._funcs import fn_once
 
         return self.transform(fn_once(expr))
 
     def std(self, ddof: int = 1) -> SqlExpr:
-        """Compute the standard deviation of the lists in the column."""
+        """Compute the standard deviation of the lists in the column.
+
+        Args:
+            ddof (int, optional): Delta Degrees of Freedom. Defaults to 1.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the standard deviation of the lists.
+        """
         match ddof:
             case 0:
                 return self.stddev_pop()
@@ -262,7 +345,14 @@ class SqlExprListNameSpace(ListFns[SqlExpr]):
                 return self.stddev_samp()
 
     def var(self, ddof: int = 1) -> SqlExpr:
-        """Compute the variance of the lists in the column."""
+        """Compute the variance of the lists in the column.
+
+        Args:
+            ddof (int, optional): Delta Degrees of Freedom. Defaults to 1.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the variance of the lists.
+        """
         match ddof:
             case 0:
                 return self.var_pop()
@@ -292,7 +382,15 @@ class SqlExprListNameSpace(ListFns[SqlExpr]):
         return self._new(func("LIST_FILTER", self.inner(), fn_once(lambda_arg)))
 
     def join(self, separator: IntoExprColumn, *, ignore_nulls: bool = True) -> SqlExpr:
-        """Join string values in each list with a separator."""
+        """Join string values in each list with a separator.
+
+        Args:
+            separator (IntoExprColumn): The separator to use for joining.
+            ignore_nulls (bool, optional): Whether to ignore null values. Defaults to True.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the joined string.
+        """
         joined = self.aggregate(Lit.STR_AGG, separator)
         match ignore_nulls:
             case True:
@@ -309,7 +407,14 @@ class SqlExprListNameSpace(ListFns[SqlExpr]):
         return self.distinct().list.length()
 
     def count_matches(self, elem: IntoExpr) -> SqlExpr:
-        """Count matches in each array."""
+        """Count matches in each array.
+
+        Args:
+            elem (IntoExpr): The element to count matches for.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the number of matches in each array.
+        """
         return self.filter(element().eq(elem)).arr.length()
 
 
@@ -318,13 +423,24 @@ class SqlExprArrayNameSpace(ArrayFns[SqlExpr]):
     """Array function namespace for SQL expressions."""
 
     def explode(self) -> SqlExpr:
-        """Explode array into multiple rows."""
+        """Explode array into multiple rows.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the exploded rows.
+        """
         from ._funcs import unnest
 
         return unnest(self.inner())
 
     def eval(self, expr: SqlExpr) -> SqlExpr:
-        """Run an expression against each array element."""
+        """Run an expression against each array element.
+
+        Args:
+            expr (SqlExpr): The expression to run against each element.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the result of the expression for each element.
+        """
         from ._funcs import fn_once
 
         return self.transform(fn_once(expr))
@@ -352,7 +468,15 @@ class SqlExprArrayNameSpace(ArrayFns[SqlExpr]):
         return self._new(func("ARRAY_FILTER", self.inner(), fn_once(lambda_arg)))
 
     def join(self, separator: IntoExprColumn, *, ignore_nulls: bool = True) -> SqlExpr:
-        """Join string values in each array with a separator."""
+        """Join string values in each array with a separator.
+
+        Args:
+            separator (IntoExprColumn): The separator to use for joining.
+            ignore_nulls (bool, optional): Whether to ignore null values. Defaults to True.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the joined string.
+        """
         joined = self.aggregate(Lit.STR_AGG, separator)
         match ignore_nulls:
             case True:
@@ -369,7 +493,14 @@ class SqlExprArrayNameSpace(ArrayFns[SqlExpr]):
         return self.distinct().arr.length()
 
     def count_matches(self, elem: IntoExpr) -> SqlExpr:
-        """Count matches in each array."""
+        """Count matches in each array.
+
+        Args:
+            elem (IntoExpr): The element to count matches for.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the number of matches in each array.
+        """
         return self.filter(element().eq(elem)).arr.length()
 
 

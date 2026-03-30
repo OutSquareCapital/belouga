@@ -27,7 +27,14 @@ class UpperStrEnum(StrEnum):
 
 
 def try_seq[T](val: TryIter[T]) -> pc.Option[pc.Seq[T]]:
-    """Try to convert a potentially iterable value to an `Option[Seq]`."""
+    """Try to convert a potentially iterable value to an `Option[Seq]`.
+
+    Args:
+        val (TryIter[T]): The value to try to convert.
+
+    Returns:
+        pc.Option[pc.Seq[T]]: `Some(Seq)` if the value is iterable, otherwise `None`.
+    """
     return try_iter(val).collect().then_some()
 
 
@@ -61,6 +68,9 @@ def check_by_arg[T: NonNestedLiteral](
     Returns an iterator over arg if lengths match, otherwise returns a ValueError.
 
     If arg is not a sequence, repeats its value to match the length of compared.
+
+    Returns:
+        pc.Result[pc.Iter[T], ValueError]: An iterator over the values in arg if the length of arg matches the length of compared, otherwise a ValueError.
     """
     length = compared.length()
     match arg:

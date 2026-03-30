@@ -4,7 +4,7 @@ import pyochain as pc
 
 
 def generate_themes(caller: Path, dest: Path) -> int:
-    from pygments.styles._mapping import (  # pyright: ignore[reportMissingTypeStubs]
+    from pygments.styles._mapping import (  # pyright: ignore[reportMissingTypeStubs]  # noqa: PLC2701
         STYLES,
     )
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import operator
 from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import auto
@@ -194,7 +195,11 @@ class OverBuilder:
 
 
 def rolling_agg(expr: exp.Expr, order_by: str, spec: BoundsValues) -> exp.Expr:
-    """Build a window expression with a prebuilt spec. Used by rolling aggregations."""
+    """Build a window expression with a prebuilt spec. Used by rolling aggregations.
+
+    Returns:
+        exp.Expr: The window expression with the rolling spec applied.
+    """
     return (
         OverBuilder(expr)
         .handle_clauses(
@@ -214,7 +219,9 @@ def _rewrite_forward_fill(
     def _last_value_arg(inner: exp.Expr) -> pc.Option[exp.Expr]:
         match inner:
             case exp.Anonymous() as fn if fn.name.lower() == "last_value":
-                return pc.Option(fn.args.get("expressions", [])).map(lambda x: x[0])  # pyright: ignore[reportAny]
+                return pc.Option(fn.args.get("expressions", [])).map(  # pyright: ignore[reportAny]
+                    operator.itemgetter(0)
+                )
             case _:
                 return pc.NONE
 
@@ -285,7 +292,11 @@ class Side(NamedTuple):
 
     @classmethod
     def new(cls, value: FrameBound, direction: Bounds) -> Self:
-        """Convert a frame bound value to ``(value, side)`` for `exp.WindowSpec`."""
+        """Convert a frame bound value to ``(value, side)`` for `exp.WindowSpec`.
+
+        Returns:
+            Self: A Side instance with the value and direction for the window bound.
+        """
         match value:
             case 0:
                 return cls(Bounds.CURRENT, Bounds.ROW)

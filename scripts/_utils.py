@@ -35,7 +35,15 @@ class KwordEnum(StrEnum):
 
 
 def get_attr(obj: object, name: str) -> pc.Option[object]:
-    """Safe getattr returning Option."""
+    """Safe getattr returning Option.
+
+    Args:
+        obj (object): The object to get the attribute from.
+        name (str): The name of the attribute to get.
+
+    Returns:
+        pc.Option[object]: An Option containing the attribute value if it exists, or None if it does not.
+    """
     return pc.Option(getattr(obj, name, None))
 
 

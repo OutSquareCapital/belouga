@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from functools import partial
@@ -86,42 +87,66 @@ class Expr(sql.CoreHandler[SqlExpr]):
 
     @property
     def str(self) -> ExprStringNameSpace:
-        """Access string operations."""
+        """Access string operations.
+
+        Returns:
+            Self
+        """
         from ._namespaces import ExprStringNameSpace
 
         return ExprStringNameSpace(self)
 
     @property
     def list(self) -> ExprListNameSpace:
-        """Access list operations."""
+        """Access list operations.
+
+        Returns:
+            Self
+        """
         from ._namespaces import ExprListNameSpace
 
         return ExprListNameSpace(self)
 
     @property
     def arr(self) -> ExprArrayNameSpace:
-        """Access array operations."""
+        """Access array operations.
+
+        Returns:
+            Self
+        """
         from ._namespaces import ExprArrayNameSpace
 
         return ExprArrayNameSpace(self)
 
     @property
     def struct(self) -> ExprStructNameSpace:
-        """Access struct operations."""
+        """Access struct operations.
+
+        Returns:
+            Self
+        """
         from ._namespaces import ExprStructNameSpace
 
         return ExprStructNameSpace(self)
 
     @property
     def name(self) -> ExprNameNameSpace:
-        """Access name operations."""
+        """Access name operations.
+
+        Returns:
+            Self
+        """
         from ._namespaces import ExprNameNameSpace
 
         return ExprNameNameSpace(self)
 
     @property
     def dt(self) -> ExprDateTimeNameSpace:
-        """Access datetime operations."""
+        """Access datetime operations.
+
+        Returns:
+            Self
+        """
         from ._namespaces import ExprDateTimeNameSpace
 
         return ExprDateTimeNameSpace(self)
@@ -214,7 +239,11 @@ class Expr(sql.CoreHandler[SqlExpr]):
         return hash(self.inner().get_name())
 
     def add(self, other: IntoExpr) -> Self:
-        """Add another expression or value."""
+        """Add another expression or value.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().add(other))
 
     def sub(self, other: IntoExpr) -> Self:
@@ -281,23 +310,43 @@ class Expr(sql.CoreHandler[SqlExpr]):
         return self._new(self.inner().xor(sql.into_expr(other)))
 
     def alias(self, name: str) -> Self:
-        """Rename the expression."""
+        """Rename the expression.
+
+        Returns:
+            Self: A new expression with the given alias.
+        """
         return self._with_meta(self.inner(), alias_name=pc.Some(lambda _: name))
 
     def is_null(self) -> Self:
-        """Check if the expression is NULL."""
+        """Check if the expression is NULL.
+
+        Returns:
+            Self: A new expression that evaluates to true if the original expression is NULL, false otherwise.
+        """
         return self._new(self.inner().is_null())
 
     def is_not_null(self) -> Self:
-        """Check if the expression is not NULL."""
+        """Check if the expression is not NULL.
+
+        Returns:
+            Self: A new expression that evaluates to true if the original expression is not NULL, false otherwise.
+        """
         return self._new(self.inner().is_not_null())
 
     def cast(self, dtype: DataType) -> Self:
-        """Cast to a different data type."""
+        """Cast to a different data type.
+
+        Returns:
+            Self: A new expression cast to the given data type.
+        """
         return self._new(self.inner().cast(dtype.raw))
 
     def is_in(self, other: TryIter[IntoExpr]) -> Self:
-        """Check if value is in an iterable of values."""
+        """Check if value is in an iterable of values.
+
+        Returns:
+            Self: A new expression that evaluates to true if the original expression is in the given iterable
+        """
         return self._new(self.inner().is_in(*try_iter(other)))
 
     def shift(self, n: int = 1) -> Self:
@@ -321,35 +370,67 @@ class Expr(sql.CoreHandler[SqlExpr]):
         return self._new(self.inner().clip(lower_bound, upper_bound))
 
     def count(self) -> Self:
-        """Count the number of values."""
+        """Count the number of values.
+
+        Returns:
+            Self: A new expression that evaluates to the count of values.
+        """
         return self._as_scalar(self.inner().count())
 
     def len(self) -> Self:
-        """Get the number of rows in context (including nulls)."""
+        """Get the number of rows in context (including nulls).
+
+        Returns:
+            Self: A new expression that evaluates to the number of rows in context (including nulls).
+        """
         return self._as_scalar(self.inner().is_null().count())
 
     def sum(self) -> Self:
-        """Compute the sum."""
+        """Compute the sum.
+
+        Returns:
+            Self: A new expression that evaluates to the sum of values.
+        """
         return self._as_scalar(self.inner().sum())
 
     def mean(self) -> Self:
-        """Compute the mean."""
+        """Compute the mean.
+
+        Returns:
+            Self: A new expression that evaluates to the mean of values.
+        """
         return self._as_scalar(self.inner().mean())
 
     def median(self) -> Self:
-        """Compute the median."""
+        """Compute the median.
+
+        Returns:
+            Self: A new expression that evaluates to the median of values.
+        """
         return self._as_scalar(self.inner().median())
 
     def min(self) -> Self:
-        """Compute the minimum."""
+        """Compute the minimum.
+
+        Returns:
+            Self: A new expression that evaluates to the minimum of values.
+        """
         return self._as_scalar(self.inner().min())
 
     def max(self) -> Self:
-        """Compute the maximum."""
+        """Compute the maximum.
+
+        Returns:
+            Self: A new expression that evaluates to the maximum of values.
+        """
         return self._as_scalar(self.inner().max())
 
     def first(self, *, ignore_nulls: bool = False) -> Self:
-        """Get first value."""
+        """Get first value.
+
+        Returns:
+            Self: A new expression that evaluates to the first value.
+        """
         match ignore_nulls:
             case True:
                 return self._as_scalar(self.inner().any_value())
@@ -357,39 +438,75 @@ class Expr(sql.CoreHandler[SqlExpr]):
                 return self._as_scalar(self.inner().first())
 
     def last(self) -> Self:
-        """Get last value."""
+        """Get last value.
+
+        Returns:
+            Self: A new expression that evaluates to the last value.
+        """
         return self._as_scalar(self.inner().last())
 
     def mode(self) -> Self:
-        """Compute mode."""
+        """Compute mode.
+
+        Returns:
+            Self: A new expression that evaluates to the mode of values.
+        """
         return self._as_scalar(self.inner().mode())
 
     def approx_n_unique(self) -> Self:
-        """Approximate the number of unique values."""
+        """Approximate the number of unique values.
+
+        Returns:
+            Self: A new expression that evaluates to the approximate number of unique values.
+        """
         return self._as_scalar(self.inner().approx_count_distinct())
 
     def product(self) -> Self:
-        """Compute the product."""
+        """Compute the product.
+
+        Returns:
+            Self: A new expression that evaluates to the product of values.
+        """
         return self._as_scalar(self.inner().product())
 
     def dot(self, other: IntoExpr) -> Self:
-        """Compute the dot product with another expression."""
+        """Compute the dot product with another expression.
+
+        Returns:
+            Self: A new expression that evaluates to the dot product with another expression.
+        """
         return self._as_scalar(self.inner().dot(other))
 
     def max_by(self, by: IntoExpr) -> Self:
-        """Return the value corresponding to the maximum of another expression."""
+        """Return the value corresponding to the maximum of another expression.
+
+        Returns:
+            Self: A new expression that evaluates to the value corresponding to the maximum of another expression.
+        """
         return self._as_scalar(self.inner().max_by(by))
 
     def min_by(self, by: IntoExpr) -> Self:
-        """Return the value corresponding to the minimum of another expression."""
+        """Return the value corresponding to the minimum of another expression.
+
+        Returns:
+            Self: A new expression that evaluates to the value corresponding to the minimum of another expression.
+        """
         return self._as_scalar(self.inner().min_by(by))
 
     def implode(self) -> Self:
-        """Aggregate values into a list."""
+        """Aggregate values into a list.
+
+        Returns:
+            Self: A new expression that evaluates to a list of values.
+        """
         return self._as_scalar(self.inner().implode())
 
     def unique(self) -> Self:
-        """Get unique values."""
+        """Get unique values.
+
+        Returns:
+            Self: A new expression that evaluates to the unique values.
+        """
         return self._with_meta(self.inner(), kind=ExprKind.UNIQUE)
 
     def is_close(
@@ -400,7 +517,11 @@ class Expr(sql.CoreHandler[SqlExpr]):
         *,
         nans_equal: bool = False,
     ) -> Self:
-        """Check if two floating point values are close."""
+        """Check if two floating point values are close.
+
+        Returns:
+            Self: A new expression that evaluates to whether two floating point values are close.
+        """
         return self._new(
             self.inner().is_close(other, abs_tol, rel_tol, nans_equal=nans_equal)
         )
@@ -412,7 +533,11 @@ class Expr(sql.CoreHandler[SqlExpr]):
         *,
         center: bool = False,
     ) -> Self:
-        """Compute rolling max."""
+        """Compute rolling max.
+
+        Returns:
+            Self: A new expression that evaluates to the rolling max.
+        """
         return self._rolling_agg(SqlExpr.max, window_size, min_samples, center=center)
 
     def rolling_min(
@@ -422,7 +547,11 @@ class Expr(sql.CoreHandler[SqlExpr]):
         *,
         center: bool = False,
     ) -> Self:
-        """Compute rolling mean."""
+        """Compute rolling min.
+
+        Returns:
+            Self: A new expression that evaluates to the rolling min.
+        """
         return self._rolling_agg(SqlExpr.min, window_size, min_samples, center=center)
 
     def rolling_mean(
@@ -432,7 +561,11 @@ class Expr(sql.CoreHandler[SqlExpr]):
         *,
         center: bool = False,
     ) -> Self:
-        """Compute rolling mean."""
+        """Compute rolling mean.
+
+        Returns:
+            Self: A new expression that evaluates to the rolling mean.
+        """
         return self._rolling_agg(SqlExpr.mean, window_size, min_samples, center=center)
 
     def rolling_median(
@@ -442,7 +575,11 @@ class Expr(sql.CoreHandler[SqlExpr]):
         *,
         center: bool = False,
     ) -> Self:
-        """Compute rolling mean."""
+        """Compute rolling median.
+
+        Returns:
+            Self: A new expression that evaluates to the rolling median.
+        """
         return self._rolling_agg(
             SqlExpr.median, window_size, min_samples, center=center
         )
@@ -454,7 +591,11 @@ class Expr(sql.CoreHandler[SqlExpr]):
         *,
         center: bool = False,
     ) -> Self:
-        """Compute rolling sum."""
+        """Compute rolling sum.
+
+        Returns:
+            Self: A new expression that evaluates to the rolling sum.
+        """
         return self._rolling_agg(SqlExpr.sum, window_size, min_samples, center=center)
 
     def rolling_std(
@@ -465,7 +606,11 @@ class Expr(sql.CoreHandler[SqlExpr]):
         center: bool = False,
         ddof: int = 1,
     ) -> Self:
-        """Compute rolling std."""
+        """Compute rolling standard deviation.
+
+        Returns:
+            Self: A new expression that evaluates to the rolling standard deviation.
+        """
         return self._rolling_agg(
             lambda expr: expr.std(ddof), window_size, min_samples, center=center
         )
@@ -478,20 +623,37 @@ class Expr(sql.CoreHandler[SqlExpr]):
         center: bool = False,
         ddof: int = 1,
     ) -> Self:
-        """Compute rolling variance."""
+        """Compute rolling variance.
+
+        Returns:
+            Self: A new expression that evaluates to the rolling variance.
+        """
         return self._rolling_agg(
             lambda expr: expr.var(ddof), window_size, min_samples, center=center
         )
 
     def std(self, ddof: int = 1) -> Self:
-        """Compute the standard deviation."""
+        """Compute the standard deviation.
+
+        Returns:
+            Self: A new expression that evaluates to the standard deviation.
+        """
         return self._as_scalar(self.inner().std(ddof))
 
     def var(self, ddof: int = 1) -> Self:
-        """Compute the variance."""
+        """Compute the variance.
+
+        Returns:
+            Self: A new expression that evaluates to the variance.
+        """
         return self._as_scalar(self.inner().var(ddof))
 
     def kurtosis(self, *, fisher: bool = True, bias: bool = True) -> Self:
+        """Compute the kurtosis.
+
+        Returns:
+            Self: A new expression that evaluates to the kurtosis.
+        """
         base = self.inner().kurtosis(bias=bias)
         match fisher:
             case True:
@@ -500,41 +662,77 @@ class Expr(sql.CoreHandler[SqlExpr]):
                 return self._as_scalar(base.add(3))
 
     def skew(self, *, bias: bool = True) -> Self:
+        """Compute the skewness.
+
+        Returns:
+            Self: A new expression that evaluates to the skewness.
+        """
         return self._as_scalar(self.inner().skew(bias=bias))
 
-    def entropy(
-        self, base: float = 2.718281828459045, *, normalize: bool = True
-    ) -> Self:
-        """Compute the entropy."""
+    def entropy(self, base: float = math.e, *, normalize: bool = True) -> Self:
+        """Compute the entropy.
+
+        Returns:
+            Self: A new expression that evaluates to the entropy.
+        """
         return self._as_scalar(self.inner().entropy(base=base, normalize=normalize))
 
     def quantile(self, quantile: float, *, interpolation: bool = True) -> Self:
+        """Compute the quantile.
+
+        Returns:
+            Self: A new expression that evaluates to the quantile.
+        """
         return self._as_scalar(
             self.inner().quantile(quantile, interpolation=interpolation)
         )
 
     def all(self) -> Self:
-        """Return whether all values are true."""
+        """Return whether all values are true.
+
+        Returns:
+            Self
+        """
         return self._as_scalar(self.inner().all())
 
     def any(self) -> Self:
-        """Return whether any value is true."""
+        """Return whether any value is true.
+
+        Returns:
+            Self
+        """
         return self._as_scalar(self.inner().any())
 
     def n_unique(self) -> Self:
-        """Count distinct values."""
+        """Count distinct values.
+
+        Returns:
+            Self: A new expression that evaluates to the number of distinct values.
+        """
         return self._as_scalar(self.inner().n_unique())
 
     def null_count(self) -> Self:
-        """Count null values."""
+        """Count null values.
+
+        Returns:
+            Self: A new expression that evaluates to the number of null values.
+        """
         return self.len().sub(self.count())
 
     def has_nulls(self) -> Self:
-        """Return whether the expression contains nulls."""
+        """Return whether the expression contains nulls.
+
+        Returns:
+            Self: A new expression that evaluates to whether the expression contains nulls.
+        """
         return self._as_scalar(self.inner().has_nulls())
 
     def rank(self, method: RankMethod = "average", *, descending: bool = False) -> Self:
-        """Compute rank values."""
+        """Compute rank values.
+
+        Returns:
+            Self: A new expression that evaluates to the rank of values according to the specified method.
+        """
         base_rank = (
             self
             .inner()
@@ -567,23 +765,43 @@ class Expr(sql.CoreHandler[SqlExpr]):
         return self._as_window(expr)
 
     def cum_count(self, *, reverse: bool = False) -> Self:
-        """Cumulative non-null count."""
+        """Cumulative non-null count.
+
+        Returns:
+            Self
+        """
         return self._as_window(self.inner().cum_count(reverse=reverse))
 
     def cum_sum(self, *, reverse: bool = False) -> Self:
-        """Cumulative sum."""
+        """Cumulative sum.
+
+        Returns:
+            Self
+        """
         return self._as_window(self.inner().cum_sum(reverse=reverse))
 
     def cum_prod(self, *, reverse: bool = False) -> Self:
-        """Cumulative product."""
+        """Cumulative product.
+
+        Returns:
+            Self
+        """
         return self._as_window(self.inner().cum_prod(reverse=reverse))
 
     def cum_min(self, *, reverse: bool = False) -> Self:
-        """Cumulative minimum."""
+        """Cumulative minimum.
+
+        Returns:
+            Self
+        """
         return self._as_window(self.inner().cum_min(reverse=reverse))
 
     def cum_max(self, *, reverse: bool = False) -> Self:
-        """Cumulative maximum."""
+        """Cumulative maximum.
+
+        Returns:
+            Self
+        """
         return self._as_window(self.inner().cum_max(reverse=reverse))
 
     def over(
@@ -621,135 +839,267 @@ class Expr(sql.CoreHandler[SqlExpr]):
         )
 
     def floor(self) -> Self:
-        """Round down to the nearest integer."""
+        """Round down to the nearest integer.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().floor())
 
     def ceil(self) -> Self:
-        """Round up to the nearest integer."""
+        """Round up to the nearest integer.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().ceil())
 
     def round(self, decimals: int = 0, *, mode: RoundMode = "half_to_even") -> Self:
-        """Round to given number of decimal places."""
+        """Round to given number of decimal places.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().round(decimals, mode=mode))
 
     def truncate(self, decimals: int = 0) -> Self:
-        """Truncate numeric value to given number of decimal places."""
+        """Truncate numeric value to given number of decimal places.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().trunc(decimals))
 
     def sqrt(self) -> Self:
-        """Compute the square root."""
+        """Compute the square root.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().sqrt())
 
     def cbrt(self) -> Self:
-        """Compute the cube root."""
+        """Compute the cube root.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().cbrt())
 
-    def log(self, base: float = 2.718281828459045) -> Self:
-        """Compute the logarithm."""
+    def log(self, base: float = math.e) -> Self:
+        """Compute the logarithm.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().log(base))
 
     def log10(self) -> Self:
-        """Compute the base 10 logarithm."""
+        """Compute the base 10 logarithm.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().log10())
 
     def log1p(self) -> Self:
-        """Compute the natural logarithm of 1+x."""
+        """Compute the natural logarithm of 1+x.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().add(1).ln())
 
     def exp(self) -> Self:
-        """Compute the exponential."""
+        """Compute the exponential.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().exp())
 
     def sin(self) -> Self:
-        """Compute the sine."""
+        """Compute the sine.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().sin())
 
     def cos(self) -> Self:
-        """Compute the cosine."""
+        """Compute the cosine.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().cos())
 
     def tan(self) -> Self:
-        """Compute the tangent."""
+        """Compute the tangent.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().tan())
 
     def arctan(self) -> Self:
-        """Compute the arc tangent."""
+        """Compute the arc tangent.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().atan())
 
     def arccos(self) -> Self:
-        """Compute the arc cosine."""
+        """Compute the arc cosine.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().acos())
 
     def arccosh(self) -> Self:
-        """Compute the inverse hyperbolic cosine."""
+        """Compute the inverse hyperbolic cosine.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().acosh())
 
     def arcsin(self) -> Self:
-        """Compute the arc sine."""
+        """Compute the arc sine.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().asin())
 
     def arcsinh(self) -> Self:
-        """Compute the inverse hyperbolic sine."""
+        """Compute the inverse hyperbolic sine.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().asinh())
 
     def arctanh(self) -> Self:
-        """Compute the inverse hyperbolic tangent."""
+        """Compute the inverse hyperbolic tangent.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().atanh())
 
     def cot(self) -> Self:
-        """Compute the cotangent."""
+        """Compute the cotangent.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().cot())
 
     def sinh(self) -> Self:
-        """Compute the hyperbolic sine."""
+        """Compute the hyperbolic sine.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().sinh())
 
     def cosh(self) -> Self:
-        """Compute the hyperbolic cosine."""
+        """Compute the hyperbolic cosine.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().cosh())
 
     def tanh(self) -> Self:
-        """Compute the hyperbolic tangent."""
+        """Compute the hyperbolic tangent.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().tanh())
 
     def degrees(self) -> Self:
-        """Convert radians to degrees."""
+        """Convert radians to degrees.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().degrees())
 
     def radians(self) -> Self:
-        """Convert degrees to radians."""
+        """Convert degrees to radians.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().radians())
 
     def sign(self) -> Self:
-        """Get the sign of the value."""
+        """Get the sign of the value.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().sign())
 
     def forward_fill(self) -> Self:
-        """Fill null values with the last non-null value."""
+        """Fill null values with the last non-null value.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().forward_fill())
 
     def backward_fill(self, limit: int | None = None) -> Self:
-        """Fill null values with the next non-null value."""
+        """Fill null values with the next non-null value.
+
+        Returns:
+            Self
+        """
         return self._as_window(self.inner().backward_fill(limit))
 
     def is_nan(self) -> Self:
-        """Check if value is NaN."""
+        """Check if value is NaN.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().is_nan())
 
     def is_not_nan(self) -> Self:
-        """Check if value is not NaN."""
+        """Check if value is not NaN.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().is_nan().not_())
 
     def is_finite(self) -> Self:
-        """Check if value is finite."""
+        """Check if value is finite.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().is_finite())
 
     def is_infinite(self) -> Self:
-        """Check if value is infinite."""
+        """Check if value is infinite.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().is_inf())
 
     def fill_nan(self, value: float | IntoExprColumn | None) -> Self:
-        """Fill NaN values."""
+        """Fill NaN values.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().fill_nan(value))
 
     def fill_null(
@@ -766,35 +1116,67 @@ class Expr(sql.CoreHandler[SqlExpr]):
         )
 
     def hash(self, seed: int = 0) -> Self:
-        """Compute a hash."""
+        """Compute a hash.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().str.hash(seed))
 
     def replace(self, old: IntoExpr, new: IntoExpr) -> Self:
-        """Replace values."""
+        """Replace values.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().replace(old, new))
 
     def repeat_by(self, by: IntoExprColumn | int) -> Self:
-        """Repeat values by count, returning a list."""
+        """Repeat values by count, returning a list.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().repeat_by(by))
 
     def is_duplicated(self) -> Self:
-        """Check if value is duplicated."""
+        """Check if value is duplicated.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().is_duplicated())
 
     def is_unique(self) -> Self:
-        """Check if value is unique."""
+        """Check if value is unique.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().is_unique())
 
     def is_first_distinct(self) -> Self:
-        """Check if value is first occurrence."""
+        """Check if value is first occurrence.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().is_first_distinct())
 
     def is_last_distinct(self) -> Self:
-        """Check if value is last occurrence."""
+        """Check if value is last occurrence.
+
+        Returns:
+            Self
+        """
         return self._new(self.inner().is_last_distinct())
 
     def arg_sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
-        """Get the indices that would sort this expression."""
+        """Get the indices that would sort this expression.
+
+        Returns:
+            Self
+        """
         return self._as_window(
             self.inner().arg_sort(descending=descending, nulls_last=nulls_last)
         )

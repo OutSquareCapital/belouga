@@ -6,7 +6,7 @@ import pytest
 from polars.testing import assert_frame_equal
 
 import pql
-import pql._typing as t
+import pql._typing as t  # noqa: PLC2701
 
 from ._utils import assert_lf_eq_pl
 

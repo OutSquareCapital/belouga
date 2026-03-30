@@ -8,7 +8,14 @@ from ._dtypes import CATEGORY_TYPES, DTYPES, FUNC_TYPES, SchemaName, Stability
 
 
 def schema(cls: type[object]) -> pl.Schema:
-    """Simple decorator for creating Polars Schema from class attributes."""
+    """Simple decorator for creating Polars Schema from class attributes.
+
+    Args:
+        cls (type[object]): The class to create a schema from.
+
+    Returns:
+        pl.Schema: A Polars Schema created from the class attributes.
+    """
 
     def _is_polars_dtype(_k: str, v: object) -> bool:
         return isinstance(v, (type, pl.DataType)) and (

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import operator
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from functools import partial
@@ -91,17 +92,34 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         )
 
     def lazy(self) -> pl.LazyFrame:
-        """Get a Polars LazyFrame."""
+        """Get a Polars LazyFrame.
+
+        Returns:
+            pl.LazyFrame: A Polars LazyFrame representing the same query.
+        """
         return self.inner().pl(lazy=True).pipe(Marker.drop_marker, self.columns)
 
     def collect(self) -> pl.DataFrame:
-        """Execute the query and return a Polars DataFrame."""
+        """Execute the query and return a Polars DataFrame.
+
+        Returns:
+            pl.DataFrame: A Polars DataFrame representing the query result.
+        """
         return self.inner().pl().pipe(Marker.drop_marker, self.columns)
 
     def select(
         self, exprs: TryIter[IntoExpr], *more_exprs: IntoExpr, **named_exprs: IntoExpr
     ) -> Self:
-        """Select columns or expressions."""
+        """Select columns or expressions.
+
+        Args:
+        exprs (TryIter[IntoExpr]): Expressions to select.
+        *more_exprs (IntoExpr): Additional expressions to select.
+        **named_exprs (IntoExpr): Expressions to select with aliases.
+
+        Returns:
+            Self: A new LazyFrame with the selected columns.
+        """
         return self._new(
             self.schema.into(ExprPlan, exprs, more_exprs, named_exprs).select_context(
                 self.inner()
@@ -111,7 +129,16 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
     def with_columns(
         self, exprs: TryIter[IntoExpr], *more_exprs: IntoExpr, **named_exprs: IntoExpr
     ) -> Self:
-        """Add or replace columns."""
+        """Add or replace columns.
+
+        Args:
+            exprs (TryIter[IntoExpr]): Expressions to add or replace.
+            *more_exprs (IntoExpr): Additional expressions to add or replace.
+            **named_exprs (IntoExpr): Expressions to add or replace with aliases.
+
+        Returns:
+            Self: A new LazyFrame with the added or replaced columns.
+        """
         return self._new(
             self.schema.into(
                 ExprPlan, exprs, more_exprs, named_exprs
@@ -124,7 +151,16 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         *more_predicates: IntoExprColumn,
         **constraints: IntoExpr,
     ) -> Self:
-        """Filter rows based on predicates and equality constraints."""
+        """Filter rows based on predicates and equality constraints.
+
+        Args:
+            predicates (TryIter[IntoExprColumn]): Predicates to filter rows.
+            *more_predicates (IntoExprColumn): Additional predicates to filter rows.
+            **constraints (IntoExpr): Equality constraints to filter rows.
+
+        Returns:
+            Self: A new LazyFrame with the filtered rows.
+        """
 
         def _constraint(k: str, val: IntoExpr) -> SqlExpr:
             return sql.col(k).eq(sql.into_expr(val))
@@ -145,7 +181,17 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         drop_null_keys: bool = False,
         strategy: GroupByClause | None = None,
     ) -> LazyGroupBy:
-        """Start a group by operation."""
+        """Start a group by operation.
+
+        Args:
+            keys (TryIter[IntoExpr]): Keys to group by.
+            *more_keys (IntoExpr): Additional keys to group by.
+            drop_null_keys (bool): Whether to drop rows with null keys.
+            strategy (GroupByClause | None): Grouping strategy.
+
+        Returns:
+            LazyGroupBy: A LazyGroupBy object representing the group by operation.
+        """
         from ._groupby import LazyGroupBy
 
         key_exprs = (
@@ -178,7 +224,16 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         *more_exprs: IntoExpr,
         **named_exprs: IntoExpr,
     ) -> Self:
-        """Aggregate with GROUP BY ALL — DuckDB auto-detects grouping keys."""
+        """Aggregate with GROUP BY ALL — DuckDB auto-detects grouping keys.
+
+        Args:
+            exprs (TryIter[IntoExpr]): Expressions to aggregate.
+            *more_exprs (IntoExpr): Additional expressions to aggregate.
+            **named_exprs (IntoExpr): Expressions to aggregate with aliases.
+
+        Returns:
+            Self: A new LazyFrame with the aggregated rows.
+        """
         return self._new(
             self.schema.into(
                 ExprPlan, exprs, more_exprs, named_exprs
@@ -192,7 +247,17 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         descending: TrySeq[bool] = False,
         nulls_last: TrySeq[bool] = False,
     ) -> Self:
-        """Sort by columns."""
+        """Sort by columns.
+
+        Args:
+            by (TryIter[IntoExpr]): Columns to sort by.
+            *more_by (IntoExpr): Additional columns to sort by.
+            descending (TrySeq[bool]): Whether to sort in descending order.
+            nulls_last (TrySeq[bool]): Whether to place nulls last.
+
+        Returns:
+            Self: A new LazyFrame with the sorted rows.
+        """
         return self._new(
             try_chain(by, more_by)
             .map(lambda v: sql.into_expr(v, as_col=True))
@@ -212,15 +277,37 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         )
 
     def limit(self, n: int) -> Self:
-        """Limit the number of rows."""
+        """Limit the number of rows.
+
+        Args:
+            n (int): The number of rows to limit.
+
+        Returns:
+            Self: A new LazyFrame with the limited rows.
+        """
         return self._new(self.inner().limit(n))
 
     def head(self, n: int = 5) -> Self:
-        """Get the first n rows."""
+        """Get the first n rows.
+
+        Args:
+            n (int): The number of rows to retrieve.
+
+        Returns:
+            Self: A new LazyFrame with the first n rows.
+        """
         return self.limit(n)
 
     def slice(self, offset: int, length: int | None = None) -> Self:
-        """Get a slice of rows."""
+        """Get a slice of rows.
+
+        Args:
+            offset (int): The starting index of the slice.
+            length (int | None): The number of rows to include in the slice.
+
+        Returns:
+            Self: A new LazyFrame with the sliced rows.
+        """
 
         def _with_idx_and_len() -> Self:
             return self.with_columns(
@@ -265,7 +352,17 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         return _filter_lf(pc.Option(length), offset).unwrap()
 
     def tail(self, n: int = 5) -> Self:
-        """Get the last n rows."""
+        """Get the last n rows.
+
+        Args:
+            n (int): The number of rows to retrieve.
+
+        Returns:
+            Self: A new LazyFrame with the last n rows.
+
+        Raises:
+            ValueError: If n is negative.
+        """
         match n:
             case val if val < 0:
                 msg = "`n` must be greater than or equal to 0"
@@ -278,12 +375,27 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
     def drop(
         self, columns: TryIter[IntoExprColumn] = None, *more_columns: IntoExprColumn
     ) -> Self:
-        """Drop columns from the frame."""
+        """Drop columns from the frame.
+
+        Args:
+            columns (TryIter[IntoExprColumn]): Columns to drop.
+            *more_columns (IntoExprColumn): Additional columns to drop.
+
+        Returns:
+            Self: A new LazyFrame with the specified columns dropped.
+        """
         expr = sql.all(exclude=try_chain(columns, more_columns)).into_duckdb()
         return self._new(self.inner().select(expr))
 
     def drop_nulls(self, subset: TryIter[str] = None) -> Self:
-        """Drop rows that contain null values."""
+        """Drop rows that contain null values.
+
+        Args:
+            subset (TryIter[str]): Columns to consider for null values.
+
+        Returns:
+            Self: A new LazyFrame with rows containing null values dropped.
+        """
         return (
             pc
             .Option(subset)
@@ -296,7 +408,15 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
     def explode(
         self, columns: TryIter[IntoExprColumn], *more_columns: IntoExprColumn
     ) -> Self:
-        """Explode list-like columns."""
+        """Explode list-like columns.
+
+        Args:
+            columns (TryIter[IntoExprColumn]): Columns to explode.
+            *more_columns (IntoExprColumn): Additional columns to explode.
+
+        Returns:
+            Self: A new LazyFrame with the exploded columns.
+        """
         to_explode_names = (
             self.schema
             .into(ExprPlan, columns, more_columns, {})
@@ -357,7 +477,14 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         return self._new(self.inner().union(other.inner()))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
-        """Rename columns."""
+        """Rename columns.
+
+        Args:
+            mapping (Mapping[str, str]): A dictionary mapping old column names to new column names.
+
+        Returns:
+            Self: A new LazyFrame with the renamed columns.
+        """
         rename_map = pc.Dict(mapping)
 
         return self._iter_slct(
@@ -398,11 +525,19 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         )
 
     def first(self) -> Self:
-        """Get the first row."""
+        """Get the first row.
+
+        Returns:
+            Self: A new LazyFrame with the first row.
+        """
         return self.head(1)
 
     def last(self) -> Self:
-        """Get the last row."""
+        """Get the last row.
+
+        Returns:
+            Self: A new LazyFrame with the last row.
+        """
         return self.tail(1)
 
     def count(self) -> Self:
@@ -414,32 +549,66 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         return self._new(self.inner().describe())
 
     def sum(self) -> Self:
-        """Aggregate the sum of each column."""
+        """Aggregate the sum of each column.
+
+        Returns:
+            Self: A new LazyFrame with the sum of each column.
+        """
         return self._iter_agg(SqlExpr.sum)
 
     def mean(self) -> Self:
-        """Aggregate the mean of each column."""
+        """Aggregate the mean of each column.
+
+        Returns:
+            Self: A new LazyFrame with the mean of each column.
+        """
         return self._iter_agg(SqlExpr.mean)
 
     def median(self) -> Self:
-        """Aggregate the median of each column."""
+        """Aggregate the median of each column.
+
+        Returns:
+            Self: A new LazyFrame with the median of each column.
+        """
         return self._iter_agg(SqlExpr.median)
 
     def min(self) -> Self:
-        """Aggregate the minimum of each column."""
+        """Aggregate the minimum of each column.
+
+        Returns:
+            Self: A new LazyFrame with the minimum of each column.
+        """
         return self._iter_agg(SqlExpr.min)
 
     def max(self) -> Self:
-        """Aggregate the maximum of each column."""
+        """Aggregate the maximum of each column.
+
+        Returns:
+            Self: A new LazyFrame with the maximum of each column.
+        """
         return self._iter_agg(SqlExpr.max)
 
     def std(self, ddof: int = 1) -> Self:
-        """Aggregate the standard deviation of each column."""
+        """Aggregate the standard deviation of each column.
+
+        Args:
+            ddof (int): Delta Degrees of Freedom.
+
+        Returns:
+            Self: A new LazyFrame with the standard deviation of each column.
+        """
         fn = partial(SqlExpr.std, ddof=ddof)
         return self._iter_agg(fn)
 
     def var(self, ddof: int = 1) -> Self:
-        """Aggregate the variance of each column."""
+        """Aggregate the variance of each column.
+
+        Args:
+            ddof (int): Delta Degrees of Freedom.
+
+        Returns:
+            Self: A new LazyFrame with the variance of each column.
+        """
         fn = partial(SqlExpr.var, ddof=ddof)
         return self._iter_agg(fn)
 
@@ -448,11 +617,25 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         return self._iter_agg(lambda c: c.is_null().count_if())
 
     def quantile(self, quantile: float) -> Self:
-        """Compute quantile for each column."""
+        """Compute quantile for each column.
+
+        Args:
+            quantile (float): The quantile to compute.
+
+        Returns:
+            Self: A new LazyFrame with the computed quantile for each column.
+        """
         return self._iter_agg(lambda c: c.quantile_cont(quantile))
 
     def fill_nan(self, value: float | Expr | None) -> Self:
-        """Fill NaN values."""
+        """Fill NaN values.
+
+        Args:
+            value (float | Expr | None): The value to replace NaNs with.
+
+        Returns:
+            Self: A new LazyFrame with NaNs filled.
+        """
         return self._iter_slct(
             lambda c: sql.when(sql.col(c).is_nan()).then(value).otherwise(c).alias(c)
         )
@@ -463,7 +646,16 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         strategy: FillNullStrategy | None = None,
         limit: int | None = None,
     ) -> Self:
-        """Fill null values."""
+        """Fill null values.
+
+        Args:
+            value (IntoExpr | None): The value to replace nulls with.
+            strategy (FillNullStrategy | None): The strategy to use for filling nulls.
+            limit (int | None): The maximum number of nulls to fill.
+
+        Returns:
+            Self: A new LazyFrame with nulls filled.
+        """
         return self._iter_slct(
             lambda c: (
                 col(c)
@@ -474,17 +666,37 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         )
 
     def shift(self, n: int = 1, *, fill_value: IntoExpr = None) -> Self:
-        """Shift values by n positions."""
+        """Shift values by n positions.
+
+        Args:
+            n (int): Number of positions to shift.
+            fill_value (IntoExpr | None): The value to use for filling empty positions.
+
+        Returns:
+            Self: A new LazyFrame with shifted values.
+        """
         return self._iter_slct(
             lambda c: sql.coalesce(sql.col(c).shift(n), fill_value).alias(c)
         )
 
     def clone(self) -> Self:
-        """Create a copy of the LazyFrame."""
+        """Create a copy of the LazyFrame.
+
+        Returns:
+            Self: A new LazyFrame that is a copy of the current one.
+        """
         return self._new(self.inner())
 
     def gather_every(self, n: int, offset: int = 0) -> Self:
-        """Take every nth row starting from offset."""
+        """Take every nth row starting from offset.
+
+        Args:
+            n (int): The step size.
+            offset (int): The starting offset.
+
+        Returns:
+            Self: A new LazyFrame with every nth row starting from offset.
+        """
         expr = Marker.TEMP.to_expr()
         return (
             self
@@ -514,7 +726,11 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
                 return schma
 
     def collect_schema(self) -> Schema:
-        """Collect the schema (same as schema property for lazy)."""
+        """Collect the schema (same as schema property for lazy).
+
+        Returns:
+            Schema: The schema of the LazyFrame.
+        """
         return self.schema
 
     def join(  # noqa: PLR0913
@@ -527,7 +743,19 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         right_on: TryIter[str] = None,
         suffix: str = "_right",
     ) -> Self:
-        """Join with another LazyFrame."""
+        """Join with another LazyFrame.
+
+        Args:
+            other (Self): The other LazyFrame to join with.
+            on (TryIter[str] | None): The columns to join on.
+            how (JoinStrategy): The type of join to perform.
+            left_on (TryIter[str] | None): The columns from the left frame to join on.
+            right_on (TryIter[str] | None): The columns from the right frame to join on.
+            suffix (str): The suffix to use for overlapping column names.
+
+        Returns:
+            Self: A new LazyFrame resulting from the join.
+        """
         join_keys = JoinKeys.from_how(
             how, try_seq(on), try_seq(left_on), try_seq(right_on)
         ).unwrap()
@@ -581,7 +809,15 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         )
 
     def join_cross(self, other: Self, *, suffix: str = "_right") -> Self:
-        """Join with another LazyFrame."""
+        """Join with another LazyFrame using a cross join.
+
+        Args:
+            other (Self): The other LazyFrame to join with.
+            suffix (str): The suffix to use for overlapping column names.
+
+        Returns:
+            Self: A new LazyFrame resulting from the cross join.
+        """
         builder = JoinBuilder(suffix, self.columns, other.columns)
         return self._new(
             self
@@ -611,7 +847,22 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         strategy: AsofJoinStrategy = "backward",
         suffix: str = "_right",
     ) -> Self:
-        """Perform an asof join."""
+        """Perform an asof join.
+
+        Args:
+            other (Self): The other LazyFrame to join with.
+            left_on (str | None): The column from the left frame to join on.
+            right_on (str | None): The column from the right frame to join on.
+            on (str | None): The column to join on.
+            by_left (TryIter[str] | None): The columns from the left frame to group by.
+            by_right (TryIter[str] | None): The columns from the right frame to group by.
+            by (TryIter[str] | None): The columns to group by.
+            strategy (AsofJoinStrategy): The strategy to use for the asof join.
+            suffix (str): The suffix to use for overlapping column names.
+
+        Returns:
+            Self: A new LazyFrame resulting from the asof join.
+        """
         on_opt = pc.Option(on)
         on_keys = JoinKeys.from_on(
             on_opt, pc.Option(left_on), pc.Option(right_on)
@@ -662,7 +913,16 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         keep: UniqueKeepStrategy = "any",
         order_by: TrySeq[str] = None,
     ) -> Self:
-        """Drop duplicate rows from this LazyFrame."""
+        """Drop duplicate rows from this LazyFrame.
+
+        Args:
+            subset (TryIter[str] | None): Subset of columns to consider for identifying duplicates.
+            keep (UniqueKeepStrategy): Strategy to determine which duplicates to keep.
+            order_by (TrySeq[str] | None): Columns to order by when determining which duplicates to keep.
+
+        Returns:
+            Self: A new LazyFrame with duplicates removed.
+        """
 
         def _marker(
             subset_cols: Iterable[IntoExprColumn],
@@ -730,7 +990,20 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         maintain_order: bool = False,
         separator: str = "_",
     ) -> Self:
-        """Create a spreadsheet-style pivot table."""
+        """Create a spreadsheet-style pivot table.
+
+        Args:
+            on (TryIter[str]): Columns to pivot on.
+            on_columns (Sequence[PythonLiteral]): Values to pivot on.
+            index (TryIter[str] | None): Columns to use as the index.
+            values (TryIter[str] | None): Columns to use as values.
+            aggregate_function (PivotAgg): Aggregation function to apply.
+            maintain_order (bool): Whether to maintain the order of the index columns.
+            separator (str): Separator to use for multi-level column names.
+
+        Returns:
+            Self: A new LazyFrame with the pivoted data.
+        """
 
         def _cols_not_in(cols: Iterable[str]) -> pc.Seq[str]:
             return (
@@ -834,7 +1107,18 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         value_name: str = "value",
         order_by: TryIter[str] = None,
     ) -> Self:
-        """Unpivot from wide to long format."""
+        """Unpivot from wide to long format.
+
+        Args:
+            on (TryIter[str] | None): Columns to unpivot.
+            index (TryIter[str] | None): Columns to use as the index.
+            variable_name (str): Name of the variable column.
+            value_name (str): Name of the value column.
+            order_by (TryIter[str] | None): Columns to order by.
+
+        Returns:
+            Self: A new LazyFrame with the unpivoted data.
+        """
         index_cols = try_iter(index).collect(dict.fromkeys)
         unpivot_cols = (
             try_iter(on)
@@ -865,7 +1149,15 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         return self._from_sql_expr(qry, rel=self.inner())
 
     def with_row_index(self, name: str, *, order_by: TrySeq[str]) -> Self:
-        """Insert row index based on order_by."""
+        """Insert row index based on order_by.
+
+        Args:
+            name (str): The name of the new index column.
+            order_by (TrySeq[str]): Columns to order by for row numbering.
+
+        Returns:
+            Self: A new LazyFrame with the row index added.
+        """
         row_nb = (
             sql
             .row_number()
@@ -886,7 +1178,7 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
                 case bool():
                     return not reverse
                 case _:
-                    return try_iter(reverse).map(lambda x: not x).collect()
+                    return try_iter(reverse).map(operator.not_).collect()
 
         return self.sort(by, descending=_descending()).head(k)
 
@@ -897,7 +1189,14 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         return self.sort(by, descending=reverse).head(k)
 
     def cast(self, dtypes: Mapping[str, DataType] | DataType) -> Self:
-        """Cast columns to specified dtypes."""
+        """Cast columns to specified dtypes.
+
+        Args:
+            dtypes (Mapping[str, DataType] | DataType): The target data types for the columns.
+
+        Returns:
+            Self: A new LazyFrame with the columns cast to the specified dtypes.
+        """
         match dtypes:
             case Mapping():
                 dtype_map = pc.Dict(dtypes)
@@ -929,7 +1228,11 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         self.inner().pl(lazy=True).sink_ndjson(path)
 
     def reverse(self) -> Self:
-        """Reverse the order of rows."""
+        """Reverse the order of rows.
+
+        Returns:
+            Self: A new LazyFrame with the rows reversed.
+        """
         return (
             self
             .with_row_index(name=Marker.TEMP, order_by=self.columns)
@@ -938,7 +1241,14 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         )
 
     def drop_nans(self, subset: TryIter[str] = None) -> Self:
-        """Drop rows that contain NaN values."""
+        """Drop rows that contain NaN values.
+
+        Args:
+            subset (TryIter[str] | None): Columns to consider for NaN values. If None, all columns are considered.
+
+        Returns:
+            Self: A new LazyFrame with rows containing NaN values dropped.
+        """
         return (
             pc
             .Option(subset)

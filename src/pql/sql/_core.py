@@ -57,11 +57,22 @@ class CoreHandler[T]:
         return function(self, *args, **kwargs)
 
     def _new(self, value: T) -> Self:
-        """Create a new instance of *Self* with the given value."""
+        """Create a new instance of *Self* with the given value.
+
+        Args:
+            value (T): The value to wrap.
+
+        Returns:
+            Self: A new instance of *Self* with the given value.
+        """
         return self.__class__(value)
 
     def inner(self) -> T:
-        """Unwrap the underlying value."""
+        """Unwrap the underlying value.
+
+        Returns:
+            T: The underlying value.
+        """
         return self._inner
 
 
@@ -70,7 +81,11 @@ class DuckHandler(CoreHandler[exp.Expr]):
     """A wrapper for DuckDB expressions."""
 
     def into_duckdb(self) -> duckdb.Expression:
-        """Convert the inner expression to a DuckDB expression."""
+        """Convert the inner expression to a DuckDB expression.
+
+        Returns:
+            duckdb.Expression: The corresponding DuckDB expression.
+        """
         return glot_into_duckdb(self.inner())
 
 
@@ -84,12 +99,20 @@ class NameSpaceHandler[T: DuckHandler]:
         return self._parent.__class__(expr)
 
     def inner(self) -> T:
-        """Unwrap the underlying expression."""
+        """Unwrap the underlying expression.
+
+        Returns:
+            T: The parent type of the namespace.
+        """
         return self._parent
 
 
 def anon(name: str, *args: IntoExpr) -> exp.Expr:
-    """Create a SQL anonymous function expression."""
+    """Create a SQL anonymous function expression.
+
+    Returns:
+        exp.Expr: A new expression representing the anonymous function.
+    """
     return exp.Anonymous(this=name, expressions=args_into_glot(args))
 
 

@@ -5,7 +5,7 @@ import pyochain as pc
 from polars.lazyframe.group_by import LazyGroupBy as plLazyGroupBy
 
 import pql
-from pql._groupby import LazyGroupBy as pqlLazyGroupBy
+from pql._groupby import LazyGroupBy as pqlLazyGroupBy  # noqa: PLC2701
 
 from .._utils import Pql
 from ._rules import IGNORED_MEMBERS

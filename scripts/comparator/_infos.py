@@ -33,7 +33,14 @@ class ParamInfo:
 
     @classmethod
     def from_signature(cls, param: inspect.Parameter) -> Self:
-        """Create ParamInfo from inspect.Parameter."""
+        """Create ParamInfo from inspect.Parameter.
+
+        Args:
+            param (inspect.Parameter): The parameter to create ParamInfo from.
+
+        Returns:
+            ParamInfo: The created ParamInfo instance.
+        """
         return cls(
             name=param.name,
             is_var_positional=param.kind == inspect.Parameter.VAR_POSITIONAL,
@@ -63,7 +70,15 @@ class MethodInfo:
 
     @classmethod
     def from_signature(cls, name: str, sig: inspect.Signature) -> Self:
-        """Create MethodInfo from inspect.Signature."""
+        """Create MethodInfo from inspect.Signature.
+
+        Args:
+            name (str): The name of the method.
+            sig (inspect.Signature): The signature to create MethodInfo from.
+
+        Returns:
+            MethodInfo: The created MethodInfo instance.
+        """
         return cls(
             name=name,
             params=pc
@@ -74,7 +89,14 @@ class MethodInfo:
         )
 
     def signature_str(self, highlight_names: pc.Option[pc.Set[str]] = pc.NONE) -> str:
-        """Generate a human-readable signature string."""
+        """Generate a human-readable signature string.
+
+        Args:
+            highlight_names (pc.Option[pc.Set[str]]): Optional set of parameter names to highlight.
+
+        Returns:
+            str: The formatted signature string.
+        """
         highlights = highlight_names.unwrap_or_else(pc.Set[str].new)
         params_str = (
             self.params
@@ -87,7 +109,11 @@ class MethodInfo:
         return f"({params_str}){ret}"
 
     def to_map(self) -> MapInfo:
-        """Convert parameters to a dictionary mapping names to ParamInfo."""
+        """Convert parameters to a dictionary mapping names to ParamInfo.
+
+        Returns:
+            MapInfo: A dictionary mapping parameter names to ParamInfo instances.
+        """
         return (
             self.params
             .iter()
@@ -128,7 +154,11 @@ class ComparisonInfos:
                 return pc.NONE
 
     def to_status(self) -> Status:
-        """Classify the method comparison result."""
+        """Classify the method comparison result.
+
+        Returns:
+            Status: The status of the method comparison.
+        """
         match (self.pql_info, self.polars):
             case (pc.NONE, pc.Some(_)):
                 return Status.MISSING
@@ -148,7 +178,14 @@ class ComparisonInfos:
 
 
 def _get_annotation_str(annotation: object) -> pc.Option[str]:
-    """Convert annotation to string representation."""
+    """Convert annotation to string representation.
+
+    Args:
+        annotation (object): The annotation to convert.
+
+    Returns:
+        pc.Option[str]: The string representation of the annotation, or pc.NONE if not available.
+    """
     match annotation:
         case inspect.Parameter.empty | inspect.Signature.empty:
             return pc.NONE
@@ -235,7 +272,14 @@ class ComparisonResult:
         self.infos = infos
 
     def to_format(self, *, status: Status) -> pc.Iter[str]:
-        """Format a single comparison result as markdown lines."""
+        """Format a single comparison result as markdown lines.
+
+        Args:
+            status (Status): The status to filter the results by.
+
+        Returns:
+            pc.Iter[str]: An iterator over the formatted markdown lines.
+        """
         match (status, self.infos.polars, self.infos.pql_info):
             case (Status.MISSING, _, _):
                 return pc.Iter.once(f"- `{self.method_name}`").chain(

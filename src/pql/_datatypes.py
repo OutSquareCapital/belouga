@@ -45,12 +45,26 @@ class DataType(ABC):
 
     @classmethod
     def from_duckdb(cls, dtype: DuckDBPyType) -> DataType:
-        """Convert a DuckDBPyType to a PQL DataType."""
+        """Convert a DuckDBPyType to a PQL DataType.
+
+        Args:
+            dtype (DuckDBPyType): The DuckDBPyType to convert.
+
+        Returns:
+            DataType: The corresponding PQL DataType.
+        """
         return cls.from_sql(build(str(dtype)))
 
     @classmethod
     def from_sql(cls, dtype: exp.DataType) -> DataType:
-        """Convert a sqlglot DataType to a PQL DataType."""
+        """Convert a sqlglot DataType to a PQL DataType.
+
+        Args:
+            dtype (exp.DataType): The sqlglot DataType to convert.
+
+        Returns:
+            DataType: The corresponding PQL DataType.
+        """
         dt_enum: exp.DType = dtype.this  # pyright: ignore[reportAny]
         match dt_enum:
             case exp.DType.ARRAY if not dtype.args.get("values"):
@@ -72,47 +86,86 @@ class DataType(ABC):
 
     @ClassInstMethod
     def is_[T: DataType](self, other: T) -> TypeIs[T]:
-        """Check if this DataType is the same as another DataType."""
+        """Check if this DataType is the same as another DataType.
+
+        Args:
+            other (DataType): The other DataType to compare against.
+
+        Returns:
+            bool: True if the data types are the same, False otherwise.
+        """
         return self == other and hash(self) == hash(other)
 
     @classmethod
     def is_numeric(cls) -> bool:
-        """Check whether the data type is a numeric type."""
+        """Check whether the data type is a numeric type.
+
+        Returns:
+            bool: True if the data type is numeric, False otherwise.
+        """
         return issubclass(cls, NumericType)
 
     @classmethod
     def is_decimal(cls) -> bool:
-        """Check whether the data type is a decimal type."""
+        """Check whether the data type is a decimal type.
+
+        Returns:
+            bool: True if the data type is decimal, False otherwise.
+        """
         return issubclass(cls, Decimal)
 
     @classmethod
     def is_integer(cls) -> bool:
-        """Check whether the data type is an integer type."""
+        """Check whether the data type is an integer type.
+
+        Returns:
+            bool: True if the data type is an integer, False otherwise.
+        """
         return issubclass(cls, IntegerType)
 
     @classmethod
     def is_signed_integer(cls) -> bool:
-        """Check whether the data type is a signed integer type."""
+        """Check whether the data type is a signed integer type.
+
+        Returns:
+            bool: True if the data type is a signed integer, False otherwise.
+        """
         return issubclass(cls, SignedIntegerType)
 
     @classmethod
     def is_unsigned_integer(cls) -> bool:
-        """Check whether the data type is an unsigned integer type."""
+        """Check whether the data type is an unsigned integer type.
+
+        Returns:
+            bool: True if the data type is an unsigned integer, False otherwise.
+        """
         return issubclass(cls, UnsignedIntegerType)
 
     @classmethod
     def is_float(cls) -> bool:
-        """Check whether the data type is a floating point type."""
+        """Check whether the data type is a floating point type.
+
+        Returns:
+            bool: True if the data type is a floating point type, False otherwise.
+        """
         return issubclass(cls, FloatType)
 
     @classmethod
     def is_temporal(cls) -> bool:
-        """Check whether the data type is a temporal type."""
+        """Check whether the data type is a temporal type.
+
+        Returns:
+            bool: True if the data type is temporal, False otherwise.
+        """
         return issubclass(cls, TemporalType)
 
     @classmethod
     def is_nested(cls) -> bool:
-        """Check whether the data type is a nested type."""
+        """Check whether the data type is a nested type.
+
+        Returns:
+            bool: True if the data type is nested, False otherwise.
+        """
         return issubclass(cls, NestedType)
 
 
@@ -161,7 +214,7 @@ class ComplexDataType(DataType):
     """Base class for complex data types that need reverse-construction from parsed sqlglot AST."""
 
     @classmethod
-    def __from_raw__(cls, raw: exp.DataType) -> DataType:
+    def __from_raw__(cls, raw: exp.DataType) -> DataType:  # noqa: PLW3201
         instance = cls.__new__(cls)
         instance.raw = raw
         instance._init_cache()
@@ -464,7 +517,14 @@ class Array(NestedType, ComplexDataType):
         )
 
     def with_dim(self, size: int) -> Self:
-        """Add another level of nesting to the array."""
+        """Add another level of nesting to the array.
+
+        Args:
+            size (int): The size of the new dimension.
+
+        Returns:
+            Self: A new Array instance with the added dimension.
+        """
         return self.__class__(self, size)
 
     @property

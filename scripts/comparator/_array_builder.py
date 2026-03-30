@@ -84,7 +84,15 @@ class ArrayBuilder:
 
 
 def _generate_progress_bar(percentage: float, width: int = 10) -> str:
-    """Generate a Unicode progress bar with color based on percentage."""
+    """Generate a Unicode progress bar with color based on percentage.
+
+    Args:
+        percentage (float): The percentage to represent.
+        width (int): The width of the progress bar.
+
+    Returns:
+        str: The formatted progress bar as a string.
+    """
     filled = int(percentage / 100 * width)
     empty = width - filled
     color = BarColor.on_pct(percentage)

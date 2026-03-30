@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Iterable
 from functools import cache
 from typing import TYPE_CHECKING, ClassVar, Self, override
@@ -90,12 +91,6 @@ class SqlExpr(Fns):  # noqa: PLW1641
 
     def truediv(self, other: IntoExpr) -> Self:
         return self.__truediv__(other)
-
-    def __div__(self, other: IntoExpr) -> Self:
-        return self._binop(exp.Div, other)
-
-    def div(self, other: IntoExpr) -> Self:
-        return self.__div__(other)
 
     @override
     def __eq__(self, other: IntoExpr) -> Self:  # pyright: ignore[reportIncompatibleMethodOverride]
@@ -188,12 +183,6 @@ class SqlExpr(Fns):  # noqa: PLW1641
 
     def rand(self, other: IntoExpr) -> Self:
         return self.__rand__(other)
-
-    def __rdiv__(self, other: IntoExpr) -> Self:
-        return self._rbinop(exp.Div, other)
-
-    def rdiv(self, other: IntoExpr) -> Self:
-        return self.__rdiv__(other)
 
     def __rfloordiv__(self, other: IntoExpr) -> Self:
         return self._rbinop(exp.IntDiv, other)
@@ -297,12 +286,12 @@ class SqlExpr(Fns):  # noqa: PLW1641
     def show(self) -> None:
         print(self.inner().sql(dialect="duckdb"))
 
-    def _reversed(self, expr: Self, *, reverse: bool = False) -> Self:
+    def _reversed(self, *, reverse: bool = False) -> Self:
         match reverse:
             case True:
-                return expr.over(frame_start=pc.Some(0))
+                return self.over(frame_start=pc.Some(0))
             case False:
-                return expr.over(frame_end=pc.Some(0))
+                return self.over(frame_end=pc.Some(0))
 
     @property
     def arr(self) -> nm.SqlExprArrayNameSpace:
@@ -416,24 +405,44 @@ class SqlExpr(Fns):  # noqa: PLW1641
         return _get_strat().map(lambda e: self._new(e.inner())).unwrap()
 
     def cum_count(self, *, reverse: bool = False) -> Self:
-        """Cumulative non-null count."""
-        return self._reversed(self.count(), reverse=reverse)
+        """Cumulative non-null count.
+
+        Returns:
+            Self: A cumulative count expression.
+        """
+        return self.count()._reversed(reverse=reverse)
 
     def cum_sum(self, *, reverse: bool = False) -> Self:
-        """Cumulative sum."""
-        return self._reversed(self.sum(), reverse=reverse)
+        """Cumulative sum.
+
+        Returns:
+            Self: A cumulative sum expression.
+        """
+        return self.sum()._reversed(reverse=reverse)
 
     def cum_prod(self, *, reverse: bool = False) -> Self:
-        """Cumulative product."""
-        return self._reversed(self.product(), reverse=reverse)
+        """Cumulative product.
+
+        Returns:
+            Self: A cumulative product expression.
+        """
+        return self.product()._reversed(reverse=reverse)
 
     def cum_min(self, *, reverse: bool = False) -> Self:
-        """Cumulative minimum."""
-        return self._reversed(self.min(), reverse=reverse)
+        """Cumulative minimum.
+
+        Returns:
+            Self: A cumulative minimum expression.
+        """
+        return self.min()._reversed(reverse=reverse)
 
     def cum_max(self, *, reverse: bool = False) -> Self:
-        """Cumulative maximum."""
-        return self._reversed(self.max(), reverse=reverse)
+        """Cumulative maximum.
+
+        Returns:
+            Self: A cumulative maximum expression.
+        """
+        return self.max()._reversed(reverse=reverse)
 
     def var(self, ddof: int) -> Self:
         match ddof:
@@ -514,22 +523,38 @@ class SqlExpr(Fns):  # noqa: PLW1641
                 return self.greatest(lower).least(upper)
 
     def n_unique(self) -> Self:
-        """Count distinct values."""
+        """Count distinct values.
+
+        Returns:
+            Self: A expression representing the count of distinct values.
+        """
         return self._new(self.implode().list.distinct().list.length().inner())
 
     def has_nulls(self) -> Self:
-        """Return whether the expression contains nulls."""
+        """Return whether the expression contains nulls.
+
+        Returns:
+            Self: A boolean expression indicating whether the expression contains nulls.
+        """
         return self.is_null().any()
 
     def repeat_by(self, by: IntoExprColumn | int) -> Self:
-        """Repeat values by count, returning a list."""
+        """Repeat values by count, returning a list.
+
+        Returns:
+            Self: A list expression with repeated values.
+        """
         from ._funcs import into_expr
 
         expr = into_expr(by, as_col=True).list.range().list.eval(self).inner()
         return self._new(expr)
 
     def replace(self, old: IntoExpr, new: IntoExpr) -> Self:
-        """Replace values."""
+        """Replace values.
+
+        Returns:
+            Self: An expression with values replaced.
+        """
         from ._when import when
 
         return self._new(when(self.eq(old)).then(new).otherwise(self).inner())
@@ -542,7 +567,11 @@ class SqlExpr(Fns):  # noqa: PLW1641
         *,
         nans_equal: bool = False,
     ) -> Self:
-        """Check if two floating point values are close."""
+        """Check if two floating point values are close.
+
+        Returns:
+            Self: A boolean expression indicating whether the values are close.
+        """
         from ._funcs import into_expr, lit
         from ._when import when
 
@@ -561,11 +590,19 @@ class SqlExpr(Fns):  # noqa: PLW1641
                 )
 
     def is_first_distinct(self) -> Self:
-        """Check if value is first occurrence."""
+        """Check if value is first occurrence.
+
+        Returns:
+            Self: A boolean expression indicating whether the value is the first occurrence.
+        """
         return self.row_number().over(pc.Some(self)).eq(1)
 
     def is_last_distinct(self) -> Self:
-        """Check if value is last occurrence."""
+        """Check if value is last occurrence.
+
+        Returns:
+            Self: A boolean expression indicating whether the value is the last occurrence.
+        """
         return (
             self
             .row_number()
@@ -574,13 +611,21 @@ class SqlExpr(Fns):  # noqa: PLW1641
         )
 
     def is_duplicated(self) -> Self:
-        """Check if value is duplicated."""
+        """Check if value is duplicated.
+
+        Returns:
+            Self: A boolean expression indicating whether the value is duplicated.
+        """
         from ._funcs import all
 
         return self._new(all().count().over(pc.Some(self)).gt(1).inner())
 
     def is_unique(self) -> Self:
-        """Check if value is unique."""
+        """Check if value is unique.
+
+        Returns:
+            Self: A boolean expression indicating whether the value is unique.
+        """
         from ._funcs import all
 
         return self._new(all().count().over(pc.Some(self)).eq(1).inner())
@@ -595,11 +640,19 @@ class SqlExpr(Fns):  # noqa: PLW1641
         )
 
     def forward_fill(self) -> Self:
-        """Fill null values with the last non-null value."""
+        """Fill null values with the last non-null value.
+
+        Returns:
+            Self: An expression with null values filled with the last non-null value.
+        """
         return self.last_value().over(frame_end=pc.Some(0), ignore_nulls=True)
 
     def backward_fill(self, limit: int | None) -> Self:
-        """Fill null values with the next non-null value."""
+        """Fill null values with the next non-null value.
+
+        Returns:
+            Self: An expression with null values filled with the next non-null value.
+        """
         expr = self.any_value()
         return (
             pc
@@ -609,19 +662,29 @@ class SqlExpr(Fns):  # noqa: PLW1641
         )
 
     def fill_nan(self, value: float | IntoExprColumn | None) -> Self:
-        """Fill NaN values."""
+        """Fill NaN values.
+
+        Returns:
+            Self: An expression with NaN values filled with the specified value.
+        """
         from ._when import when
 
         return self._new(when(self.is_nan()).then(value).otherwise(self).inner())
 
     def dot(self, other: IntoExpr) -> Self:
-        """Compute the dot product with another expression."""
+        """Compute the dot product with another expression.
+
+        Returns:
+            Self: An expression representing the dot product.
+        """
         return self.mul(other).sum()
 
-    def entropy(
-        self, base: float = 2.718281828459045, *, normalize: bool = True
-    ) -> Self:
-        """Compute the entropy."""
+    def entropy(self, base: float = math.e, *, normalize: bool = True) -> Self:
+        """Compute the entropy.
+
+        Returns:
+            Self: An expression representing the entropy.
+        """
         from ._funcs import lit
 
         match normalize:
@@ -684,7 +747,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
         expr = exp.Least(this=self.inner(), expressions=args_into_glot(args))
         return self._new(expr)
 
-    def over(  # noqa: PLR0913
+    def over(  # noqa: PLR0913, PLR0917
         self,
         partition_by: pc.Option[TryIter[IntoExprColumn]] = pc.NONE,
         order_by: pc.Option[TryIter[IntoExprColumn]] = pc.NONE,
@@ -727,7 +790,15 @@ class SqlExpr(Fns):  # noqa: PLW1641
         )
 
     def set_order(self, *, desc: bool, nulls_last: bool) -> Self:
-        """Set the ordering of the expression. Syntactic sugar for use in parameterized functions."""
+        """Set the ordering of the expression. Syntactic sugar for use in parameterized functions.
+
+        Args:
+        desc (bool): Whether to sort in descending order.
+        nulls_last (bool): Whether to put nulls last.
+
+        Returns:
+            Self
+        """
         match (desc, nulls_last):
             case (True, True):
                 return self.desc().nulls_last()

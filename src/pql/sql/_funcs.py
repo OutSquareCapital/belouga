@@ -19,6 +19,13 @@ def reduce(
     """Reduces an `Iterable` of `IntoExpr` into a single `SqlExpr`.
 
     Done by applying a binary *fn* (defaulting to logical `AND`) to each item, after converting them with `into_expr`.
+
+    Args:
+        exprs (Iterable[IntoExpr]): The expressions to reduce.
+        function (Callable[[SqlExpr, IntoExpr], SqlExpr]): The binary function to apply for reduction.
+
+    Returns:
+        SqlExpr: The result of reducing the expressions with the given function.
     """
     return (
         pc.Iter(exprs).map(lambda value: into_expr(value, as_col=True)).reduce(function)
@@ -26,7 +33,11 @@ def reduce(
 
 
 def row_number() -> SqlExpr:
-    """Create a ROW_NUMBER() expression."""
+    """Create a ROW_NUMBER() expression.
+
+    Returns:
+        SqlExpr: An expression representing the ROW_NUMBER() function.
+    """
     return SqlExpr(exp.RowNumber())
 
 
@@ -107,12 +118,27 @@ def all(exclude: TryIter[IntoExprColumn] = None) -> SqlExpr:
 
 
 def lit(value: PythonLiteral) -> SqlExpr:
-    """Create a literal expression."""
+    """Create a literal expression.
+
+    Args:
+        value (PythonLiteral): The literal value to create an expression for.
+
+    Returns:
+        SqlExpr: An expression representing the literal value.
+    """
     return SqlExpr(exp.convert(value))
 
 
 def coalesce(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
-    """Create a COALESCE expression."""
+    """Create a COALESCE expression.
+
+    Args:
+        exprs (TryIter[IntoExpr]): The expressions to coalesce.
+        *more_exprs (IntoExpr): Additional expressions to coalesce.
+
+    Returns:
+        SqlExpr: An expression representing the COALESCE operation.
+    """
     exprs = try_chain(exprs, more_exprs).into(args_into_glot)
     return SqlExpr(exp.Coalesce(this=exprs[0], expressions=exprs))
 

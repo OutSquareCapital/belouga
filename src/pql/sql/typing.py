@@ -9,7 +9,7 @@ import duckdb
 from sqlglot import exp
 
 if TYPE_CHECKING:
-    from _duckdb._typing import (  # pyright: ignore[reportMissingModuleSource]
+    from _duckdb._typing import (  # pyright: ignore[reportMissingModuleSource]  # noqa: PLC2701
         BlobLiteral as DuckBlobLit,
         IntoExpr as DuckIntoExpr,
         IntoExprColumn as DuckIntoExprColumn,
@@ -43,12 +43,12 @@ class NPProtocol(Protocol):
     def dtype(self) -> Any: ...  # noqa: ANN401, D102  # pyright: ignore[reportExplicitAny, reportAny]
     @property
     def ndim(self) -> int: ...  # noqa: D102
-    def __array__(self, *args: Any, **kwargs: Any) -> Any: ...  # noqa: ANN401, D105  # pyright: ignore[reportExplicitAny, reportAny]
-    def __array_wrap__(self, *args: Any, **kwargs: Any) -> Any: ...  # noqa: ANN401, D105  # pyright: ignore[reportExplicitAny, reportAny]
+    def __array__(self, *args: Any, **kwargs: Any) -> Any: ...  # noqa: ANN401, D105, PLW3201  # pyright: ignore[reportExplicitAny, reportAny]
+    def __array_wrap__(self, *args: Any, **kwargs: Any) -> Any: ...  # noqa: ANN401, D105, PLW3201  # pyright: ignore[reportExplicitAny, reportAny]
     @property
-    def __array_interface__(self) -> dict[str, Any]: ...  # noqa: D105  # pyright: ignore[reportExplicitAny]
+    def __array_interface__(self) -> dict[str, Any]: ...  # noqa: D105, PLW3201  # pyright: ignore[reportExplicitAny]
     @property
-    def __array_priority__(self) -> float: ...  # noqa: D105
+    def __array_priority__(self) -> float: ...  # noqa: D105, PLW3201
 
 
 class NPScalarTypeLike(NPProtocol, Protocol):  # noqa: D101
@@ -63,7 +63,7 @@ class NPArrayLike[S: tuple[Any, ...], D](NPProtocol, Protocol):
     def __len__(self) -> int: ...  # noqa: D105
     def __contains__(self, value: object, /) -> bool: ...  # noqa: D105
     def __iter__(self) -> Iterator[D]: ...  # noqa: D105
-    def __array_finalize__(self, *args: Any, **kwargs: Any) -> None: ...  # noqa: ANN401, D105  # pyright: ignore[reportExplicitAny, reportAny]
+    def __array_finalize__(self, *args: Any, **kwargs: Any) -> None: ...  # noqa: ANN401, D105, PLW3201  # pyright: ignore[reportExplicitAny, reportAny]
     def __getitem__(self, *args: Any, **kwargs: Any) -> Any: ...  # noqa: ANN401, D105  # pyright: ignore[reportExplicitAny, reportAny]
     def __setitem__(self, *args: Any, **kwargs: Any) -> None: ...  # noqa: ANN401, D105  # pyright: ignore[reportExplicitAny, reportAny]
     @property

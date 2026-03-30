@@ -17,7 +17,11 @@ class ComparisonReport:
     results: pc.Vec[ComparisonResult]
 
     def to_section(self) -> pc.Seq[str]:
-        """Format detailed sections for a class comparison."""
+        """Format detailed sections for a class comparison.
+
+        Returns:
+            pc.Seq[str]: A sequence of formatted strings representing the detailed sections of the report.
+        """
         return pc.Seq((
             f"\n## {self.name}\n",
             _format(self.results, "[x] Missing Methods", status=Status.MISSING),
@@ -79,7 +83,11 @@ class ClassComparison:
     ignored_names: pc.Set[str] = field(default_factory=pc.Set[str].new)
 
     def to_report(self) -> ComparisonReport:
-        """Compare two classes and return comparison results."""
+        """Compare two classes and return comparison results.
+
+        Returns:
+            ComparisonReport: A report containing the results of the comparison.
+        """
         polars_methods = self._get_public_methods(self.polars_cls)
         pql_methods = self._get_public_methods(self.pql_cls)
 
@@ -164,7 +172,16 @@ def _format_separator(widths: pc.Seq[int]) -> str:
 
 
 def _format(results: pc.Vec[ComparisonResult], title: str, *, status: Status) -> str:
-    """Format a section of the report."""
+    """Format a section of the report.
+
+    Args:
+        results (pc.Vec[ComparisonResult]): The comparison results to format.
+        title (str): The title of the section.
+        status (Status): The status to filter the results by.
+
+    Returns:
+        str: The formatted section of the report.
+    """
     return (
         results
         .into(_by_status, status)

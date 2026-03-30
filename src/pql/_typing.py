@@ -15,7 +15,7 @@ PivotAgg = Literal[
 type JoinKeysRes[T: pc.Seq[str] | str] = pc.Result[JoinKeys[T], ValueError]
 type GroupByClause = Literal["ROLLUP", "CUBE"]
 
-### theme marker START
+# theme marker START
 Themes = Literal[
     "abap",
     "algol",
@@ -72,4 +72,4 @@ Themes = Literal[
 Dynamically generated from the available styles in the `pygments` library by `scripts/__main__.py`.
 
 Do NOT edit manually."""
-### theme marker END
+# theme marker END

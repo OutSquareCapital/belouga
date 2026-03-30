@@ -28,12 +28,20 @@ col: Col = Col()
 
 
 def lit(value: PythonLiteral) -> Expr:
-    """Create a literal expression."""
+    """Create a literal expression.
+
+    Returns:
+        Expr: A new expression that evaluates to the literal value.
+    """
     return Expr(sql.lit(value), SingleMeta(root_name=Marker.LIT))
 
 
 def len() -> Expr:
-    """Return the number of rows."""
+    """Return the number of rows.
+
+    Returns:
+        Expr: A new expression that evaluates to the number of rows.
+    """
     return Expr(sql.lit(1), SingleMeta(root_name=Marker.LEN)).count()
 
 
@@ -81,7 +89,11 @@ def max(cols: TryIter[str], *more_cols: str) -> Expr:
 
 
 def coalesce(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> Expr:
-    """Create a coalesce expression."""
+    """Create a coalesce expression.
+
+    Returns:
+        Expr: A new expression that evaluates to the first non-null value among the given expressions.
+    """
     expr_name = (
         try_iter(exprs).next().map(sql.into_expr, as_col=True).unwrap().get_name()
     )
@@ -89,7 +101,11 @@ def coalesce(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> Expr:
 
 
 def all(exclude: TryIter[IntoExprColumn] = None) -> Expr:
-    """Create an expression representing all columns (equivalent to pl.all())."""
+    """Create an expression representing all columns (equivalent to pl.all()).
+
+    Returns:
+        Expr: A new expression that evaluates to all columns.
+    """
     meta = MultiMeta(resolver=Resolver.all_fn(pc.Option(exclude)), preserve_native=True)
     return Expr(sql.all(exclude), meta)
 
@@ -137,5 +153,9 @@ _ELEMENT = Expr(sql.element(), SingleMeta(root_name=Marker.ELEMENT))
 
 
 def element() -> Expr:
-    """Alias for an element being evaluated in a list context."""
+    """Alias for an element being evaluated in a list context.
+
+    Returns:
+        Expr: A new expression that evaluates to the element being evaluated in a list or array context.
+    """
     return _ELEMENT

@@ -184,8 +184,8 @@ class NamesBuilder(NamedTuple):
         return self.base.iter().zip(self.output).map_star(self._to_resolved)
 
     def not_overriden(self) -> pc.Iter[ResolvedExpr]:
-        _res = partial(self._to_resolved, output=self.output.first())
-        return self.base.iter().map(_res)
+        res = partial(self._to_resolved, output=self.output.first())
+        return self.base.iter().map(res)
 
 
 class ResolvedExpr(NamedTuple):

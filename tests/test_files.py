@@ -58,7 +58,9 @@ def test_sink_csv(sample_df: pl.DataFrame) -> None:
 
 
 def test_sink_ndjson(sample_df: pl.DataFrame) -> None:
-    with NamedTemporaryFile(suffix=".ndjson", delete=False, mode="w") as tmp:
+    with NamedTemporaryFile(
+        encoding="utf-8", suffix=".ndjson", delete=False, mode="w"
+    ) as tmp:
         tmp_path = Path(tmp.name)
     try:
         lf = pql.LazyFrame(sample_df)

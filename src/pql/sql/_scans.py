@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import operator
 from collections.abc import Callable, Mapping, Sequence
 from functools import partial
 from typing import TYPE_CHECKING, Any, cast
@@ -61,7 +62,15 @@ _PY_CODE = partial(exec, "relation = dk.from_query(qry)")
 
 
 def from_query(query: str, **relations: IntoRel) -> duckdb.DuckDBPyRelation:
-    """Create a relation from a SQL query."""
+    """Create a relation from a SQL query.
+
+    Args:
+        query (str): The SQL query to execute.
+        **relations (IntoRel): Relations to include in the query.
+
+    Returns:
+        duckdb.DuckDBPyRelation: The resulting DuckDB relation.
+    """
 
     def _as_namespace(
         rels: IntoDict[str, duckdb.DuckDBPyRelation],
@@ -82,7 +91,12 @@ def from_dicts(data: Sequence[Mapping[str, PythonLiteral]]) -> duckdb.DuckDBPyRe
     return (
         pc
         .Iter(data[0])
-        .map(lambda key: (key, pc.Iter(data).map(lambda row: row[key]).collect(tuple)))
+        .map(
+            lambda key: (
+                key,
+                pc.Iter(data).map(operator.itemgetter(key)).collect(tuple),
+            )
+        )
         .into(from_dict)
     )
 
@@ -117,7 +131,10 @@ def from_records(
                         .map(
                             lambda j: (
                                 _named(j),
-                                pc.Iter(vals).map(lambda row: row[j]).collect(tuple),
+                                pc
+                                .Iter(vals)
+                                .map(operator.itemgetter(j))
+                                .collect(tuple),
                             )
                         )
                         .into(from_dict)
@@ -169,12 +186,12 @@ def from_numpy(data: AnyArray, orient: Orientation = "col") -> duckdb.DuckDBPyRe
                     names
                     .iter()
                     .enumerate()
-                    .map_star(lambda j, name: _to_expr(name, _arr_getter(j)))
+                    .map_star(lambda j, name: _to_expr(name, arr_getter(j)))
                     .collect(tuple)
                 )
 
                 return duckdb.values(vals).select(*names.iter().map(_unnest))
 
-            axis, _arr_getter = _array_strategy()
+            axis, arr_getter = _array_strategy()
             names_nb: int = arr.shape[axis]  # pyright: ignore[reportAny]
             return pc.Iter(range(names_nb)).map(_named).collect().into(_named_array)

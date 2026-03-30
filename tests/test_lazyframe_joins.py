@@ -3,7 +3,7 @@ import pytest
 from polars._typing import JoinStrategy as PlJoinStrategy
 
 import pql
-import pql._typing as t
+import pql._typing as t  # noqa: PLC2701
 
 from ._utils import assert_lf_eq_pl
 

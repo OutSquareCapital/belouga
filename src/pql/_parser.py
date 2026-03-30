@@ -17,7 +17,7 @@ from . import meta
 
 if TYPE_CHECKING:
     from pygments.token import (
-        _TokenType as TokenType,  # pyright: ignore[reportPrivateUsage]
+        _TokenType as TokenType,  # pyright: ignore[reportPrivateUsage]  # noqa: PLC2701
     )
 
     from ._frame import LazyFrame
@@ -47,10 +47,10 @@ class DuckDbSqlLexer(SqlLexer):
     def get_tokens_unprocessed(  # pyright: ignore[reportIncompatibleMethodOverride]
         self, text: str
     ) -> pc.Iter[ProcessedToken]:
-        _process = partial(self._process, pc.Dict(duckdb.tokenize(text)))
-        return pc.Iter(super().get_tokens_unprocessed(text)).map_star(_process)
+        process = partial(self._process, pc.Dict(duckdb.tokenize(text)))
+        return pc.Iter(super().get_tokens_unprocessed(text)).map_star(process)
 
-    def _process(
+    def _process(  # noqa: PLR6301
         self,
         duck_tokens: pc.Dict[int, duckdb.token_type],
         pos: int,

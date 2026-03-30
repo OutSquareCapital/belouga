@@ -16,7 +16,14 @@ def args_into_glot(args: Iterable[IntoExpr]) -> list[exp.Expr]:
 
 
 def pql_into_glot(value: IntoExpr) -> exp.Expr:
-    """Convert an IntoExpr value into a sqlglot expression node."""
+    """Convert an IntoExpr value into a sqlglot expression node.
+
+    Args:
+        value (IntoExpr): The value to convert.
+
+    Returns:
+        exp.Expr: The resulting sqlglot expression.
+    """
     from .._expr import Expr
     from ._core import DuckHandler
 

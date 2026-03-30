@@ -27,7 +27,11 @@ class When:
     _when: IntoExpr
 
     def then(self, value: IntoExpr) -> Then:
-        """Attach the value for the initial WHEN condition."""
+        """Attach the value for the initial WHEN condition.
+
+        Returns:
+            Then: An object that allows chaining additional WHEN conditions or specifying an OTHERWISE clause.
+        """
         return Then(
             exp.Case(
                 ifs=[exp.If(this=pql_into_glot(self._when), true=pql_into_glot(value))]
