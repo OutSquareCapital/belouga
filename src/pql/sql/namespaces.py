@@ -70,7 +70,8 @@ class SqlExprStringNameSpace(StringFns[SqlExpr]):
     def to_titlecase(self) -> SqlExpr:
         """Convert to title case."""
         return (
-            self.lower()
+            self
+            .lower()
             .re.extract_all(Lit.TITLECASE)
             .list.eval(
                 element()
@@ -96,7 +97,8 @@ class SqlExprStringNameSpace(StringFns[SqlExpr]):
                 )
             case False:
                 return (
-                    self.inner()
+                    self
+                    .inner()
                     .re.extract(pattern, 0)
                     .pipe(
                         lambda matched: (
@@ -132,7 +134,8 @@ class SqlExprStringNameSpace(StringFns[SqlExpr]):
                 return self.inner().re.extract_all(pattern_expr).list.len()
             case True:
                 return (
-                    self.length()
+                    self
+                    .length()
                     .sub(self.replace(pattern_expr, Lit.EMPTY_STR).str.length())
                     .truediv(pattern_expr.str.length())
                 )

@@ -12,7 +12,8 @@ def _get_fn(name: str) -> Callable[..., pql.LazyFrame]:
 
 
 _META_FNS: pc.Seq[Callable[[], pql.LazyFrame]] = (
-    pc.Iter(dir(meta))
+    pc
+    .Iter(dir(meta))
     .map(_get_fn)
     .filter(lambda fn: callable(fn) and fn.__name__ != "LazyFrame")
     .collect()

@@ -9,25 +9,23 @@ import pql._typing as t
 
 from ._utils import assert_lf_eq_pl
 
-_DF = pl.DataFrame(
-    {
-        "id": [1, 2, 3, 4, 5],
-        "name": ["Alice", "Bob", "Charlie", "David", "Eve"],
-        "sex": ["F", "M", "M", "M", "F"],
-        "age": [25, 30, 35, 28, 22],
-        "salary": [50000.0, 60000.0, 75000.0, 55000.0, 45000.0],
-        "department": [
-            "Engineering",
-            "Sales",
-            "Engineering",
-            "Sales",
-            "Engineering",
-        ],
-        "is_active": [True, True, False, True, True],
-        "value": [10.0, None, 30.0, None, 50.0],
-        "category": ["A", "B", None, "A", "B"],
-    }
-)
+_DF = pl.DataFrame({
+    "id": [1, 2, 3, 4, 5],
+    "name": ["Alice", "Bob", "Charlie", "David", "Eve"],
+    "sex": ["F", "M", "M", "M", "F"],
+    "age": [25, 30, 35, 28, 22],
+    "salary": [50000.0, 60000.0, 75000.0, 55000.0, 45000.0],
+    "department": [
+        "Engineering",
+        "Sales",
+        "Engineering",
+        "Sales",
+        "Engineering",
+    ],
+    "is_active": [True, True, False, True, True],
+    "value": [10.0, None, 30.0, None, 50.0],
+    "category": ["A", "B", None, "A", "B"],
+})
 
 
 @pytest.fixture
@@ -100,7 +98,8 @@ def test_pivot_aggregate_fns(sample_df: pl.DataFrame, agg: t.PivotAgg) -> None:
 def test_pivot_aggregate_sum(sample_df: pl.DataFrame) -> None:
     """Sum in `polars` is at 0 for null values, but return null in `DuckDB`."""
     assert_lf_eq_pl(
-        pql.LazyFrame(sample_df)
+        pql
+        .LazyFrame(sample_df)
         .pivot(
             "department",
             on_columns=["Engineering", "Sales"],

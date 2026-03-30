@@ -84,7 +84,8 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
 
     def _iter_agg(self, func: Callable[[SqlExpr], SqlExpr]) -> Self:
         return self._new(
-            self.columns.iter()
+            self.columns
+            .iter()
             .map(lambda c: func(sql.col(c)).alias(c).into_duckdb())
             .into(lambda exprs: self.inner().aggregate(exprs))
         )
@@ -284,7 +285,8 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
     def drop_nulls(self, subset: TryIter[str] = None) -> Self:
         """Drop rows that contain null values."""
         return (
-            pc.Option(subset)
+            pc
+            .Option(subset)
             .map(try_iter)
             .unwrap_or_else(self.columns.iter)
             .map(lambda name: sql.col(name).is_not_null())
@@ -296,7 +298,8 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
     ) -> Self:
         """Explode list-like columns."""
         to_explode_names = (
-            self.schema.into(ExprPlan, columns, more_columns, {})
+            self.schema
+            .into(ExprPlan, columns, more_columns, {})
             .projections.iter()
             .map(lambda r: r.name)
             .collect()
@@ -313,7 +316,8 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         )
 
         zipped_index = (
-            to_explode_names.iter()
+            to_explode_names
+            .iter()
             .enumerate()
             .map_star(lambda idx, name: (name, idx + 1))
             .collect(pc.Dict)
@@ -343,7 +347,8 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         cond = target.is_not_null().and_(target.len().gt(0))
 
         return (
-            self.filter(cond)
+            self
+            .filter(cond)
             .select(_proj(unnest=True))
             .union(self.filter(cond.not_()).select(_proj(unnest=False)))
         )
@@ -382,7 +387,8 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
             .collect()
             .into(
                 lambda unnest_cols: (
-                    unnest_cols.iter()
+                    unnest_cols
+                    .iter()
                     .map(sql.unnest)
                     .insert(sql.all(exclude=unnest_cols))
                     .map(lambda expr: expr.into_duckdb())
@@ -481,7 +487,8 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         """Take every nth row starting from offset."""
         expr = Marker.TEMP.to_expr()
         return (
-            self.with_row_index(name=Marker.TEMP, order_by=self.columns)
+            self
+            .with_row_index(name=Marker.TEMP, order_by=self.columns)
             .filter(expr.ge(offset).and_(expr.sub(offset).mod(n).eq(0)))
             .drop(Marker.TEMP)
         )
@@ -532,19 +539,22 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
             match how:
                 case "inner" | "left":
                     return (
-                        left.map(builder.lhs)
+                        left
+                        .map(builder.lhs)
                         .chain(right.filter_map(builder.for_inner_left))
                         .map(lambda c: c.into_duckdb())
                     )
                 case "outer":
                     return (
-                        left.map(builder.lhs)
+                        left
+                        .map(builder.lhs)
                         .chain(right.map(builder.for_outer))
                         .map(lambda c: c.into_duckdb())
                     )
                 case "right":
                     return (
-                        left.filter(lambda name: name not in join_keys.left)
+                        left
+                        .filter(lambda name: name not in join_keys.left)
                         .map(builder.lhs)
                         .chain(right.map(builder.for_right))
                         .map(lambda c: c.into_duckdb())
@@ -553,11 +563,13 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
                     return pc.Iter.once("lhs.*")
 
         return self._new(
-            self.inner()
+            self
+            .inner()
             .set_alias("lhs")
             .join(
                 other.inner().set_alias("rhs"),
-                condition=join_keys.left.iter()
+                condition=join_keys.left
+                .iter()
                 .zip(join_keys.right)
                 .map_star(builder.equals)
                 .reduce(SqlExpr.and_)
@@ -572,11 +584,13 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         """Join with another LazyFrame."""
         builder = JoinBuilder(suffix, self.columns, other.columns)
         return self._new(
-            self.inner()
+            self
+            .inner()
             .set_alias("lhs")
             .cross(other.inner().set_alias("rhs"))
             .select(
-                *builder.left.iter()
+                *builder.left
+                .iter()
                 .map(builder.lhs)
                 .chain(builder.right.iter().map(builder.for_outer))
                 .map(lambda c: c.into_duckdb())
@@ -618,20 +632,23 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
                     return expr.le(other)
 
         by_cond = (
-            by_keys.left.iter()
+            by_keys.left
+            .iter()
             .zip(by_keys.right)
             .map_star(builder.equals)
             .chain(builder.lhs(on_keys.left).pipe(_get_strategy).pipe(pc.Iter.once))
             .reduce(SqlExpr.and_)
         )
         selected = (
-            builder.left.iter()
+            builder.left
+            .iter()
             .map(builder.lhs)
             .chain(other.columns.iter().filter_map(builder.for_inner_left))
             .map(lambda c: c.inner())
         )
         qry = (
-            exp.select(*selected)
+            exp
+            .select(*selected)
             .from_("lhs")
             .join("rhs", on=by_cond.inner(), join_type="asof left")
         )
@@ -685,13 +702,15 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
                     )
 
         return (
-            pc.Option(subset)
+            pc
+            .Option(subset)
             .map(try_iter)
             .unwrap_or_else(self.columns.iter)
             .into(_marker)
             .map(
                 lambda expr: (
-                    expr.alias(Marker.TEMP)
+                    expr
+                    .alias(Marker.TEMP)
                     .pipe(self.with_columns)
                     .filter(Marker.TEMP.to_expr().eq(1))
                     .drop(Marker.TEMP)
@@ -715,7 +734,8 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
 
         def _cols_not_in(cols: Iterable[str]) -> pc.Seq[str]:
             return (
-                self.columns.iter()
+                self.columns
+                .iter()
                 .filter(lambda c: c not in on_cols and c not in cols)
                 .collect()
             )
@@ -795,7 +815,8 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
 
                     on_values = pc.Iter(on_columns).map(str).collect()
                     cols = (
-                        idx_cols.iter()
+                        idx_cols
+                        .iter()
                         .map(sql.col)
                         .chain(val_cols.iter().flat_map(_rename_col))
                     )
@@ -846,7 +867,8 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
     def with_row_index(self, name: str, *, order_by: TrySeq[str]) -> Self:
         """Insert row index based on order_by."""
         row_nb = (
-            sql.row_number()
+            sql
+            .row_number()
             .over(order_by=pc.Some(order_by))
             .sub(1)
             .alias(name)
@@ -881,7 +903,8 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
                 dtype_map = pc.Dict(dtypes)
                 return self._iter_slct(
                     lambda c: (
-                        dtype_map.get_item(c)
+                        dtype_map
+                        .get_item(c)
                         .map(lambda dtype: sql.col(c).cast(dtype.raw).alias(c))
                         .unwrap_or_else(lambda: sql.col(c))
                     )
@@ -908,7 +931,8 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
     def reverse(self) -> Self:
         """Reverse the order of rows."""
         return (
-            self.with_row_index(name=Marker.TEMP, order_by=self.columns)
+            self
+            .with_row_index(name=Marker.TEMP, order_by=self.columns)
             .sort(Marker.TEMP, descending=True)
             .drop(Marker.TEMP)
         )
@@ -916,7 +940,8 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
     def drop_nans(self, subset: TryIter[str] = None) -> Self:
         """Drop rows that contain NaN values."""
         return (
-            pc.Option(subset)
+            pc
+            .Option(subset)
             .map(try_iter)
             .unwrap_or_else(self.columns.iter)
             .map(lambda name: sql.col(name).is_nan().not_())

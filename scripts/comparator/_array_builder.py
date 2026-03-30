@@ -52,10 +52,12 @@ class ArrayBuilder:
 
     def _count_for_status(self, status: Status) -> int:
         return (
-            self.results.iter()
+            self.results
+            .iter()
             .filter(
                 lambda result: (
-                    result.infos.status()
+                    result.infos
+                    .status()
                     .map(lambda current: current == status)
                     .unwrap_or(default=False)
                 )
@@ -74,7 +76,8 @@ class ArrayBuilder:
 
     def _count_with(self) -> int:
         return (
-            self.results.iter()
+            self.results
+            .iter()
             .filter(lambda result: result.infos.has_reference())
             .length()
         )

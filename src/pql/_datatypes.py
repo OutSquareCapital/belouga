@@ -57,11 +57,13 @@ class DataType(ABC):
                 return List.__from_raw__(dtype)
             case _:
                 return (
-                    NESTED_MAP.get_item(dt_enum)
+                    NESTED_MAP
+                    .get_item(dt_enum)
                     .map(lambda constructor: constructor.__from_raw__(dtype))
                     .unwrap_or_else(
                         lambda: (
-                            NON_NESTED_MAP.get_item(dt_enum)
+                            NON_NESTED_MAP
+                            .get_item(dt_enum)
                             .ok_or_else(lambda: f"Unsupported data type: {dtype}")
                             .unwrap()
                         )
@@ -380,7 +382,8 @@ class Enum(StringType, ComplexDataType):
 class Union(NestedType, ComplexDataType):
     def __init__(self, fields: Iterable[DataType]) -> None:
         exprs = (
-            pc.Iter(fields)
+            pc
+            .Iter(fields)
             .enumerate()
             .map_star(
                 lambda i, f: exp.ColumnDef(this=exp.to_identifier(f"v{i}"), kind=f.raw)
@@ -392,7 +395,8 @@ class Union(NestedType, ComplexDataType):
     @property
     def fields(self) -> pc.Seq[DataType]:
         return (
-            pc.Iter(self.raw.expressions)
+            pc
+            .Iter(self.raw.expressions)
             .map(lambda col_def: self.from_sql(col_def.kind))  # pyright: ignore[reportAny]
             .collect()
         )
@@ -420,7 +424,8 @@ class Map(NestedType, ComplexDataType):
 class Struct(NestedType, ComplexDataType):
     def __init__(self, fields: IntoDict[str, DataType]) -> None:
         exprs = (
-            pc.Dict(fields)
+            pc
+            .Dict(fields)
             .items()
             .iter()
             .map_star(
@@ -435,7 +440,8 @@ class Struct(NestedType, ComplexDataType):
     @property
     def fields(self) -> pc.Dict[str, DataType]:
         return (
-            pc.Iter(self.raw.expressions)
+            pc
+            .Iter(self.raw.expressions)
             .map(
                 lambda col_def: (  # pyright: ignore[reportAny]
                     col_def.this.this,  # pyright: ignore[reportAny]
@@ -484,61 +490,55 @@ class List(NestedType, ComplexDataType):
         return self.from_sql(self.raw.expressions[0])  # pyright: ignore[reportAny]
 
 
-PRECISION_MAP: pc.Dict[EpochTimeUnit, exp.DataType] = pc.Dict.from_ref(
-    {
-        "s": build(exp.DType.TIMESTAMP_S),
-        "ms": build(exp.DType.TIMESTAMP_MS),
-        "us": build(exp.DType.TIMESTAMP),
-        "ns": build(exp.DType.TIMESTAMP_NS),
-    }
-)
+PRECISION_MAP: pc.Dict[EpochTimeUnit, exp.DataType] = pc.Dict.from_ref({
+    "s": build(exp.DType.TIMESTAMP_S),
+    "ms": build(exp.DType.TIMESTAMP_MS),
+    "us": build(exp.DType.TIMESTAMP),
+    "ns": build(exp.DType.TIMESTAMP_NS),
+})
 
 
-NESTED_MAP: pc.Dict[exp.DType, type[ComplexDataType]] = pc.Dict.from_ref(
-    {
-        exp.DType.LIST: List,
-        exp.DType.ARRAY: Array,
-        exp.DType.STRUCT: Struct,
-        exp.DType.MAP: Map,
-        exp.DType.UNION: Union,
-        exp.DType.ENUM: Enum,
-        exp.DType.DECIMAL: Decimal,
-    }
-)
+NESTED_MAP: pc.Dict[exp.DType, type[ComplexDataType]] = pc.Dict.from_ref({
+    exp.DType.LIST: List,
+    exp.DType.ARRAY: Array,
+    exp.DType.STRUCT: Struct,
+    exp.DType.MAP: Map,
+    exp.DType.UNION: Union,
+    exp.DType.ENUM: Enum,
+    exp.DType.DECIMAL: Decimal,
+})
 
-NON_NESTED_MAP: pc.Dict[exp.DType, DataType] = pc.Dict.from_ref(
-    {
-        exp.DType.BIGINT: Int64(),
-        exp.DType.BIT: BitString(),
-        exp.DType.BIGNUM: Number(),
-        exp.DType.VARBINARY: Binary(),
-        exp.DType.BOOLEAN: Boolean(),
-        exp.DType.DATE: Date(),
-        exp.DType.DOUBLE: Float64(),
-        exp.DType.FLOAT: Float32(),
-        exp.DType.INT128: Int128(),
-        exp.DType.GEOMETRY: Geometry(),
-        exp.DType.INT: Int32(),
-        exp.DType.INTERVAL: Duration(),
-        exp.DType.JSON: Json(),
-        exp.DType.SMALLINT: Int16(),
-        exp.DType.TIMESTAMP_S: Datetime("s"),
-        exp.DType.TIMESTAMP_MS: Datetime("ms"),
-        exp.DType.TIMESTAMP: Datetime(),
-        exp.DType.TIMESTAMPNTZ: Datetime(),
-        exp.DType.TIMESTAMP_NS: Datetime("ns"),
-        exp.DType.TIMESTAMPTZ: DatetimeTZ(),
-        exp.DType.TIME: Time(),
-        exp.DType.TIME_NS: Time(),
-        exp.DType.TIMETZ: TimeTZ(),
-        exp.DType.TINYINT: Int8(),
-        exp.DType.UUID: UUID(),
-        exp.DType.UINT128: UInt128(),
-        exp.DType.UBIGINT: UInt64(),
-        exp.DType.UINT: UInt32(),
-        exp.DType.USMALLINT: UInt16(),
-        exp.DType.UTINYINT: UInt8(),
-        exp.DType.TEXT: String(),
-        exp.DType.VARIANT: Number(),
-    }
-)
+NON_NESTED_MAP: pc.Dict[exp.DType, DataType] = pc.Dict.from_ref({
+    exp.DType.BIGINT: Int64(),
+    exp.DType.BIT: BitString(),
+    exp.DType.BIGNUM: Number(),
+    exp.DType.VARBINARY: Binary(),
+    exp.DType.BOOLEAN: Boolean(),
+    exp.DType.DATE: Date(),
+    exp.DType.DOUBLE: Float64(),
+    exp.DType.FLOAT: Float32(),
+    exp.DType.INT128: Int128(),
+    exp.DType.GEOMETRY: Geometry(),
+    exp.DType.INT: Int32(),
+    exp.DType.INTERVAL: Duration(),
+    exp.DType.JSON: Json(),
+    exp.DType.SMALLINT: Int16(),
+    exp.DType.TIMESTAMP_S: Datetime("s"),
+    exp.DType.TIMESTAMP_MS: Datetime("ms"),
+    exp.DType.TIMESTAMP: Datetime(),
+    exp.DType.TIMESTAMPNTZ: Datetime(),
+    exp.DType.TIMESTAMP_NS: Datetime("ns"),
+    exp.DType.TIMESTAMPTZ: DatetimeTZ(),
+    exp.DType.TIME: Time(),
+    exp.DType.TIME_NS: Time(),
+    exp.DType.TIMETZ: TimeTZ(),
+    exp.DType.TINYINT: Int8(),
+    exp.DType.UUID: UUID(),
+    exp.DType.UINT128: UInt128(),
+    exp.DType.UBIGINT: UInt64(),
+    exp.DType.UINT: UInt32(),
+    exp.DType.USMALLINT: UInt16(),
+    exp.DType.UTINYINT: UInt8(),
+    exp.DType.TEXT: String(),
+    exp.DType.VARIANT: Number(),
+})

@@ -61,7 +61,8 @@ def _expr_call(
         ignore_nulls=True,
     )
     return (
-        pl.when(py.glot_name.is_not_null())
+        pl
+        .when(py.glot_name.is_not_null())
         .then(
             formatter(
                 'func("{glot_name}", self.inner(){dk_args}{dk_varargs})',
@@ -108,9 +109,11 @@ def _see_also(py: PyCols) -> pl.Expr:
 
 def _description(dk: DuckCols, py: PyCols) -> pl.Expr:
     return (
-        pl.when(dk.description.is_not_null())
+        pl
+        .when(dk.description.is_not_null())
         .then(
-            dk.description.str.strip_chars()
+            dk.description.str
+            .strip_chars()
             .str.replace_all("\u2019", "'")
             .str.replace_all('"', EMPTY_STR)
             .str.replace_all(r"\n[ \t]*", _INDENT2)

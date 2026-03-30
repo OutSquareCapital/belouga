@@ -30,7 +30,7 @@ class MetaFnInfo:
     varargs_type: pc.Option[str]
 
     @classmethod
-    def from_row(  # noqa: PLR0913
+    def from_row(  # noqa: PLR0913, PLR0917
         cls,
         name: str,
         final_name: str,
@@ -49,7 +49,8 @@ class MetaFnInfo:
 
     def _body_args(self) -> str:
         return (
-            self.params.iter()
+            self.params
+            .iter()
             .map_star(lambda n, _: n)
             .chain(
                 self.varargs_type.map(lambda _: pc.Iter.once("*args")).unwrap_or_else(
@@ -63,7 +64,8 @@ class MetaFnInfo:
 
     def _args_section(self) -> str:
         return (
-            self.params.iter()
+            self.params
+            .iter()
             .map_star(lambda n, t: f"        {n} ({t} | None): Parameter")
             .chain(
                 self.varargs_type.map(
@@ -77,7 +79,8 @@ class MetaFnInfo:
 
     def _signature(self) -> str:
         return (
-            self.params.iter()
+            self.params
+            .iter()
             .map_star(lambda n, t: f"{n}: {t} | None = None")
             .chain(
                 self.varargs_type.map(
@@ -109,7 +112,8 @@ def {self.final_name}({self._signature()}) -> duckdb.DuckDBPyRelation:
 
 def run_pipeline(caller: Path, source: Path) -> str:
     return (
-        pl.scan_parquet(source)
+        pl
+        .scan_parquet(source)
         .pipe(_query)
         .collect()
         .pipe(_to_infos)
@@ -130,7 +134,8 @@ def _build_file(fns: pc.Seq[MetaFnInfo], caller: Path) -> str:
 def _query(lf: pl.LazyFrame) -> pl.LazyFrame:
     fn_name = pl.col("function_name")
     return (
-        lf.filter(
+        lf
+        .filter(
             pl.col("function_type").cast(pl.String).eq(FuncTypes.TABLE),
             fn_name.str.starts_with("duckdb_"),
             fn_name.eq("duckdb_table_sample").not_(),
@@ -140,26 +145,31 @@ def _query(lf: pl.LazyFrame) -> pl.LazyFrame:
             fn_name.str.strip_prefix("duckdb_").alias("final_name"),
             "description",
             pl.col("parameters").list.eval(
-                pl.element()
+                pl
+                .element()
                 .str.strip_chars("'\"[]")
                 .str.to_lowercase()
                 .pipe(
                     lambda e: (
-                        pl.when(e.is_in(SHADOWERS))
+                        pl
+                        .when(e.is_in(SHADOWERS))
                         .then(pl.concat_str(e, pl.lit("_arg")))
                         .otherwise(e)
                     )
                 )
             ),
-            pl.col("parameter_types")
+            pl
+            .col("parameter_types")
             .list.eval(
-                pl.element()
+                pl
+                .element()
                 .fill_null(DuckDbTypes.ANY)
                 .cast(pl.String)
                 .replace_strict(CONVERTER, default="object", return_dtype=pl.String)
             )
             .alias("py_types"),
-            pl.col("varargs")
+            pl
+            .col("varargs")
             .cast(pl.String)
             .replace_strict(CONVERTER, default="object", return_dtype=pl.String)
             .alias("varargs_type"),
@@ -171,7 +181,8 @@ def _query(lf: pl.LazyFrame) -> pl.LazyFrame:
 
 def _to_infos(df: pl.DataFrame) -> pc.Seq[MetaFnInfo]:
     return (
-        df.map_rows(lambda x: MetaFnInfo.from_row(*x), return_dtype=pl.Object)  # pyright: ignore[reportAny]
+        df
+        .map_rows(lambda x: MetaFnInfo.from_row(*x), return_dtype=pl.Object)  # pyright: ignore[reportAny]
         .pipe(lambda df: pc.Iter[MetaFnInfo](df.to_series()))
         .collect()
     )

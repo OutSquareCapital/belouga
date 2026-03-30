@@ -10,25 +10,23 @@ import pql._typing as t
 
 from ._utils import assert_lf_eq_pl
 
-_DF = pl.DataFrame(
-    {
-        "id": [1, 2, 3, 4, 5],
-        "name": ["Alice", "Bob", "Charlie", "David", "Eve"],
-        "sex": ["F", "M", "M", "M", "F"],
-        "age": [25, 30, 35, 28, 22],
-        "salary": [50000.0, 60000.0, 75000.0, 55000.0, 45000.0],
-        "department": [
-            "Engineering",
-            "Sales",
-            "Engineering",
-            "Sales",
-            "Engineering",
-        ],
-        "is_active": [True, True, False, True, True],
-        "value": [10.0, None, 30.0, None, 50.0],
-        "category": ["A", "B", None, "A", "B"],
-    }
-)
+_DF = pl.DataFrame({
+    "id": [1, 2, 3, 4, 5],
+    "name": ["Alice", "Bob", "Charlie", "David", "Eve"],
+    "sex": ["F", "M", "M", "M", "F"],
+    "age": [25, 30, 35, 28, 22],
+    "salary": [50000.0, 60000.0, 75000.0, 55000.0, 45000.0],
+    "department": [
+        "Engineering",
+        "Sales",
+        "Engineering",
+        "Sales",
+        "Engineering",
+    ],
+    "is_active": [True, True, False, True, True],
+    "value": [10.0, None, 30.0, None, 50.0],
+    "category": ["A", "B", None, "A", "B"],
+})
 
 
 @pytest.fixture
@@ -77,7 +75,8 @@ def test_clone(sample_df: pl.DataFrame) -> None:
 
 def test_sql_query(sample_df: pl.DataFrame) -> None:
     parsed = (
-        pql.LazyFrame(sample_df)
+        pql
+        .LazyFrame(sample_df)
         .filter(pql.col("age").gt(25))
         .select("name", "age")
         .sql_query()
@@ -234,12 +233,14 @@ def test_filter(sample_df: pl.DataFrame) -> None:
         ),
     )
     assert_lf_eq_pl(
-        pql.LazyFrame(sample_df).filter(
-            [pql.col("salary").mul(12).gt(600000), pql.col("age").lt(50)]
-        ),
-        sample_df.lazy().filter(
-            [pl.col("salary").mul(12).gt(600000), pl.col("age").lt(50)]
-        ),
+        pql.LazyFrame(sample_df).filter([
+            pql.col("salary").mul(12).gt(600000),
+            pql.col("age").lt(50),
+        ]),
+        sample_df.lazy().filter([
+            pl.col("salary").mul(12).gt(600000),
+            pl.col("age").lt(50),
+        ]),
     )
     assert_lf_eq_pl(
         pql.LazyFrame(sample_df).filter(
@@ -316,17 +317,20 @@ def test_bottom_k(sample_df: pl.DataFrame) -> None:
 
 def test_cast(sample_df: pl.DataFrame) -> None:
     assert_frame_equal(
-        pql.LazyFrame(sample_df)
+        pql
+        .LazyFrame(sample_df)
         .select(pql.col("age"), pql.col("id"))
         .cast({"age": pql.Float64()})
         .collect(),
-        sample_df.lazy()
+        sample_df
+        .lazy()
         .select(pl.col("age"), pl.col("id"))
         .cast({"age": pl.Float64})
         .collect(),
     )
     assert_frame_equal(
-        pql.LazyFrame(sample_df)
+        pql
+        .LazyFrame(sample_df)
         .select(pql.col("age"), pql.col("id"))
         .cast(pql.String())
         .collect(),
@@ -358,7 +362,8 @@ def test_rename(sample_df: pl.DataFrame, mapping: dict[str, str]) -> None:
 def test_with_columns_add_only_uses_star(sample_df: pl.DataFrame) -> None:
     """Add-only with_columns must generate SELECT * instead of enumerating existing columns."""
     parsed = (
-        pql.LazyFrame(sample_df)
+        pql
+        .LazyFrame(sample_df)
         .with_columns(pql.col("age").mul(2).alias("age2"))
         .sql_query()
     )
@@ -369,7 +374,8 @@ def test_with_columns_add_only_uses_star(sample_df: pl.DataFrame) -> None:
 def test_with_columns_override_enumerates_columns(sample_df: pl.DataFrame) -> None:
     """Override with_columns must enumerate columns (no SELECT *) to preserve order."""
     parsed = (
-        pql.LazyFrame(sample_df)
+        pql
+        .LazyFrame(sample_df)
         .with_columns(pql.col("age").mul(2).alias("age"))
         .sql_query()
     )
@@ -578,13 +584,11 @@ def test_explode() -> None:
         pql.LazyFrame(data).explode("vals"),
         data.lazy().explode("vals"),
     )
-    data = pl.DataFrame(
-        {
-            "id": [1, 2, 3, 4],
-            "vals1": [[10, 11], [], None, [70]],
-            "vals2": [[100, 110], [], None, [700]],
-        }
-    )
+    data = pl.DataFrame({
+        "id": [1, 2, 3, 4],
+        "vals1": [[10, 11], [], None, [70]],
+        "vals2": [[100, 110], [], None, [700]],
+    })
     assert_lf_eq_pl(
         pql.LazyFrame(data).explode("vals1", "vals2"),
         data.lazy().explode("vals1", "vals2"),
@@ -605,9 +609,10 @@ def test_describe(sample_df: pl.DataFrame) -> None:
 
 
 def test_unnest() -> None:
-    df = pl.DataFrame(
-        {"id": [1, 2], "nested": [{"a": 10, "b": 100}, {"a": 20, "b": 200}]}
-    )
+    df = pl.DataFrame({
+        "id": [1, 2],
+        "nested": [{"a": 10, "b": 100}, {"a": 20, "b": 200}],
+    })
     assert_lf_eq_pl(
         pql.LazyFrame(df).unnest("nested"),
         df.lazy().unnest("nested"),
@@ -657,12 +662,10 @@ def test_reverse(sample_df: pl.DataFrame) -> None:
 
 @pytest.mark.parametrize("subset", [["a"], ["b"], ["a", "b"]])
 def test_drop_nans(subset: list[str]) -> None:
-    df = pl.DataFrame(
-        {
-            "a": [1.0, float("nan"), 3.0, 4.0],
-            "b": [float("nan"), 2.0, 3.0, 4.0],
-        }
-    )
+    df = pl.DataFrame({
+        "a": [1.0, float("nan"), 3.0, 4.0],
+        "b": [float("nan"), 2.0, 3.0, 4.0],
+    })
     assert_lf_eq_pl(
         pql.LazyFrame(df).drop_nans(subset=subset), df.lazy().drop_nans(subset=subset)
     )

@@ -40,7 +40,8 @@ def _inspect(lf: pl.LazyFrame) -> pl.LazyFrame:
 
 def run_pipeline(caller: Path, source: Path, *, profile: bool = False) -> str:
     return (
-        pl.scan_parquet(source)
+        pl
+        .scan_parquet(source)
         .pipe(run_qry)
         .pipe(_inspect if profile else lambda lf: lf)
         .collect()

@@ -18,20 +18,16 @@ class ComparisonReport:
 
     def to_section(self) -> pc.Seq[str]:
         """Format detailed sections for a class comparison."""
-        return pc.Seq(
-            (
-                f"\n## {self.name}\n",
-                _format(self.results, "[x] Missing Methods", status=Status.MISSING),
-                _format(
-                    self.results,
-                    "[!] Signature Mismatches",
-                    status=Status.SIGNATURE_MISMATCH,
-                ),
-                _format(
-                    self.results, "[+] Extra Methods (pql-only)", status=Status.EXTRA
-                ),
-            )
-        )
+        return pc.Seq((
+            f"\n## {self.name}\n",
+            _format(self.results, "[x] Missing Methods", status=Status.MISSING),
+            _format(
+                self.results,
+                "[!] Signature Mismatches",
+                status=Status.SIGNATURE_MISMATCH,
+            ),
+            _format(self.results, "[+] Extra Methods (pql-only)", status=Status.EXTRA),
+        ))
 
     def to_row(self) -> pc.Vec[str]:
         """Return a row of summary data as columns."""
@@ -62,17 +58,15 @@ Each summary cell is relative to Polars.
 
 
 def _summary_header() -> pc.Seq[str]:
-    return pc.Seq(
-        (
-            "Class",
-            "Coverage",
-            "Implemented",
-            "Matched",
-            "Missing",
-            "Mismatched",
-            "Extra",
-        )
-    )
+    return pc.Seq((
+        "Class",
+        "Coverage",
+        "Implemented",
+        "Matched",
+        "Missing",
+        "Mismatched",
+        "Extra",
+    ))
 
 
 @dataclass(slots=True)
@@ -91,7 +85,8 @@ class ClassComparison:
 
         return ComparisonReport(
             self.name,
-            polars_methods.union(pql_methods)
+            polars_methods
+            .union(pql_methods)
             .iter()
             .map(
                 lambda name: ComparisonResult(
@@ -133,7 +128,8 @@ def render_summary_table(comps: pc.Seq[ComparisonReport]) -> pc.Iter[str]:
     data_rows = _summary_rows(comps)
 
     return (
-        pc.Iter.once(_summary_header())
+        pc.Iter
+        .once(_summary_header())
         .chain(data_rows)
         .collect()
         .into(_summary_widths)
@@ -154,7 +150,8 @@ def _summary_rows(comps: pc.Seq[ComparisonReport]) -> pc.Seq[pc.Vec[str]]:
 def _summary_widths(rows: pc.Seq[pc.Seq[str]]) -> pc.Iter[int]:
     return pc.Iter(range(_summary_header().length())).map(
         lambda idx: (
-            rows.iter()
+            rows
+            .iter()
             .map(lambda row: len(row[idx]))
             .fold(0, lambda acc, length: max(length, acc))
         )
@@ -169,10 +166,12 @@ def _format_separator(widths: pc.Seq[int]) -> str:
 def _format(results: pc.Vec[ComparisonResult], title: str, *, status: Status) -> str:
     """Format a section of the report."""
     return (
-        results.into(_by_status, status)
+        results
+        .into(_by_status, status)
         .then(
             lambda items: (
-                pc.Iter((f"\n### {title} ({items.length()})\n",))
+                pc
+                .Iter((f"\n### {title} ({items.length()})\n",))
                 .chain(items.iter().flat_map(lambda r: r.to_format(status=status)))
                 .join("\n")
             )
@@ -183,7 +182,8 @@ def _format(results: pc.Vec[ComparisonResult], title: str, *, status: Status) ->
 
 def _format_row(row: pc.Seq[str], widths: pc.Seq[int]) -> str:
     cells = (
-        pc.Iter(range(widths.length()))
+        pc
+        .Iter(range(widths.length()))
         .map(lambda idx: row[idx].ljust(widths[idx]))
         .join(" | ")
     )

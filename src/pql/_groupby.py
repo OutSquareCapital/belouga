@@ -29,7 +29,8 @@ class LazyGroupBy:
         self._keys = keys
         keys_names = keys.iter().filter_map(SqlExpr.root_column_name).collect(pc.Set)
         self._schema = (
-            frame.schema.items()
+            frame.schema
+            .items()
             .iter()
             .filter_star(lambda name, _: name not in keys_names)
             .collect(Schema)
@@ -43,7 +44,8 @@ class LazyGroupBy:
 
     def _agg_columns(self, func: Callable[[Expr], Expr]) -> LazyFrame:
         return (
-            self._schema.iter()
+            self._schema
+            .iter()
             .map(lambda name: col(name).pipe(func).alias(name))
             .into(self.agg)
         )

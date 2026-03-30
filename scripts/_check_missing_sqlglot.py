@@ -28,7 +28,7 @@ def _run_qry() -> str:
     from pyochain import Dict
 
     import pql
-    from pql.sql._sqlglot_patch import DUCKDB_FUNCTIONS
+    from pql.sql._sqlglot_patch import DUCKDB_FUNCTIONS  # noqa: PLC2701
 
     from .fn_generator._query import (
         DuckCols,  # pyright: ignore[reportPrivateLocalImportUsage]
@@ -43,7 +43,8 @@ def _run_qry() -> str:
     known_function_names = pl.col("known_function_names")
 
     return (
-        Dict.from_ref(DUCKDB_FUNCTIONS)
+        Dict
+        .from_ref(DUCKDB_FUNCTIONS)
         .iter()
         .collect()
         .into(pl.Series)
@@ -53,13 +54,15 @@ def _run_qry() -> str:
         .lazy()
         .pipe(
             lambda fn_keys: (
-                pql.meta.functions()
+                pql.meta
+                .functions()
                 .collect()
                 .lazy()
                 .pipe(_filters, DuckCols())
                 .select(
                     function_name.str.to_uppercase(),
-                    pl.coalesce(alias_of, function_name)
+                    pl
+                    .coalesce(alias_of, function_name)
                     .str.to_uppercase()
                     .alias("alias_root"),
                 )
@@ -79,7 +82,8 @@ def _run_qry() -> str:
         .pipe(
             lambda lf: lf.join(
                 lf.select(
-                    function_name.unique()
+                    function_name
+                    .unique()
                     .sort()
                     .implode()
                     .alias("known_function_names")

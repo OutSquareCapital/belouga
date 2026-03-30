@@ -16,9 +16,10 @@ Some of those are listed here, but for a more comprehensive list, see the [API c
 
 ```python
 import pql
+
 lf_pql = pql.LazyFrame({...})
-lf_polars = lf_pql.lazy() # equivalent to DuckDBPyRelation.pl(lazy=True)
-df_polars = lf_pql.collect() # equivalent to DuckDBPyRelation.pl(lazy=False)
+lf_polars = lf_pql.lazy()  # equivalent to DuckDBPyRelation.pl(lazy=True)
+df_polars = lf_pql.collect()  # equivalent to DuckDBPyRelation.pl(lazy=False)
 ```
 
 - `LazyFrame.join()` don't have a `"cross"` strategy. Instead, call `LazyFrame.join_cross()`. This is a deliberate choice, because:

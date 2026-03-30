@@ -95,7 +95,8 @@ def _ordered(
                 return try_iter(val).cycle().take(n)
 
     return (
-        cols.iter()
+        cols
+        .iter()
         .zip(
             _expand_clauses(clauses=kwargs["descending"], n=cols.length()),
             _expand_clauses(clauses=kwargs["nulls_last"], n=cols.length()),
@@ -159,7 +160,8 @@ class OverBuilder:
 
     def handle_filter(self, filter_cond: pc.Option[IntoExprColumn]) -> Self:
         return (
-            filter_cond.map(
+            filter_cond
+            .map(
                 lambda c: exp.Filter(
                     this=self.expr, expression=exp.Where(this=pql_into_glot(c))
                 )
@@ -184,7 +186,8 @@ class OverBuilder:
         self, *, ignore_nulls: bool = False, **kwargs: Unpack[FnArgs]
     ) -> exp.Expr:
         return (
-            self.handle_fn_order_by(**kwargs)
+            self
+            .handle_fn_order_by(**kwargs)
             .handle_nulls(ignore_nulls=ignore_nulls)
             .build()
         )
@@ -269,7 +272,8 @@ def make_spec(
     mode: FrameMode, *, has_order_by: bool, **bounds: Unpack[BoundArgs]
 ) -> pc.Option[exp.WindowSpec]:
     return (
-        BoundsValues.new(bounds, has_order_by=has_order_by)
+        BoundsValues
+        .new(bounds, has_order_by=has_order_by)
         .map(lambda b: b.into_spec(mode))
         .inspect(lambda spec: bounds["exclude"].map(lambda ex: spec.set("exclude", ex)))
     )

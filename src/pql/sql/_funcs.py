@@ -98,7 +98,8 @@ def fn_once(rhs: IntoExpr) -> SqlExpr:
 
 def all(exclude: TryIter[IntoExprColumn] = None) -> SqlExpr:
     return (
-        pc.Option(exclude)
+        pc
+        .Option(exclude)
         .map(lambda x: try_iter(x).map(pql_into_glot).collect())
         .map(lambda exc: SqlExpr(exp.Star(except_=exc)))
         .unwrap_or_else(lambda: SqlExpr(exp.Star()))
@@ -126,7 +127,8 @@ def _horizontal_fn(
 ) -> SqlExpr:
     return try_chain(exprs, more_exprs).into(
         lambda all_exprs: (
-            all_exprs.next()
+            all_exprs
+            .next()
             .map(lambda value: into_expr(value, as_col=True))
             .map(
                 lambda x: fn(
@@ -166,11 +168,13 @@ def mean_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
         .collect()
         .then(
             lambda vals: (
-                vals.iter()
+                vals
+                .iter()
                 .map(lambda value: coalesce(value, 0))
                 .reduce(SqlExpr.add)
                 .truediv(
-                    vals.iter()
+                    vals
+                    .iter()
                     .map(
                         lambda value: value.is_not_null().cast(
                             exp.DataType.build(exp.DType.BIGINT)  # pyright: ignore[reportUnknownMemberType]

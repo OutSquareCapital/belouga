@@ -13,22 +13,20 @@ assert_eq = partial(assert_frame_equal, check_dtypes=False, check_row_order=Fals
 
 @pytest.fixture
 def sample_df() -> pl.DataFrame:
-    return pl.DataFrame(
-        {
-            "id": [1, 2, 3, 4, 5],
-            "name": ["Alice", "Bob", "Charlie", "David", "Eve"],
-            "age": [25, 30, 35, 28, 22],
-            "salary": [50000.0, 60000.0, 75000.0, 55000.0, 45000.0],
-            "department": [
-                "Engineering",
-                "Sales",
-                "Engineering",
-                "Sales",
-                "Engineering",
-            ],
-            "is_active": [True, True, False, True, True],
-        }
-    )
+    return pl.DataFrame({
+        "id": [1, 2, 3, 4, 5],
+        "name": ["Alice", "Bob", "Charlie", "David", "Eve"],
+        "age": [25, 30, 35, 28, 22],
+        "salary": [50000.0, 60000.0, 75000.0, 55000.0, 45000.0],
+        "department": [
+            "Engineering",
+            "Sales",
+            "Engineering",
+            "Sales",
+            "Engineering",
+        ],
+        "is_active": [True, True, False, True, True],
+    })
 
 
 def test_sink_parquet(sample_df: pl.DataFrame) -> None:

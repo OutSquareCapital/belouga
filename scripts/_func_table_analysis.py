@@ -27,7 +27,8 @@ def _analyze_by_categories(lf: pl.LazyFrame) -> None:
     )
 
     df = (
-        lf.explode("categories")
+        lf
+        .explode("categories")
         .select(pl.col("categories").value_counts(parallel=True).struct.unnest())
         .sort("count", descending=True)
         .collect()
@@ -56,7 +57,8 @@ def _analyze_multi_category(lf: pl.LazyFrame) -> None:
     CONSOLE.print("\n═══ Fonctions multi-catégories ═══\n", style="bold cyan")
 
     df = (
-        lf.with_columns(pl.col("categories").list.len().alias("n_categories"))
+        lf
+        .with_columns(pl.col("categories").list.len().alias("n_categories"))
         .filter(pl.col("n_categories").gt(1))
         .select("function_name", "categories", "n_categories")
         .sort("n_categories", descending=True)

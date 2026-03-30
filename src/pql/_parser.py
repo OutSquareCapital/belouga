@@ -24,16 +24,14 @@ if TYPE_CHECKING:
     from ._typing import Themes
 
 CONSOLE = Console()
-DUCK_PYGMENT_MAP = pc.Dict.from_ref(
-    {
-        duckdb.token_type.identifier: token.Name,
-        duckdb.token_type.keyword: token.Keyword,
-        duckdb.token_type.string_const: token.String,
-        duckdb.token_type.numeric_const: token.Number,
-        duckdb.token_type.comment: token.Comment,
-        duckdb.token_type.operator: token.Operator,
-    }
-)
+DUCK_PYGMENT_MAP = pc.Dict.from_ref({
+    duckdb.token_type.identifier: token.Name,
+    duckdb.token_type.keyword: token.Keyword,
+    duckdb.token_type.string_const: token.String,
+    duckdb.token_type.numeric_const: token.Number,
+    duckdb.token_type.comment: token.Comment,
+    duckdb.token_type.operator: token.Operator,
+})
 
 
 def _get_names(lf: LazyFrame, col_name: str) -> pc.Set[str]:
@@ -82,7 +80,8 @@ def _get_kwords() -> dict[str, Any]:  # pyright: ignore[reportExplicitAny]
     name = col("keyword_name")
 
     return (
-        meta.keywords()
+        meta
+        .keywords()
         .select(
             when(col("keyword_category").is_in(lit("reserved"), lit("unreserved")))
             .then(name.str.upper())
@@ -97,7 +96,8 @@ def _get_kwords() -> dict[str, Any]:  # pyright: ignore[reportExplicitAny]
 
 
 DTYPES = (
-    meta.types()
+    meta
+    .types()
     .pipe(_get_names, "type_name")
     .union(meta.types().pipe(_get_names, "logical_type"))
 )

@@ -12,7 +12,8 @@ def test_field() -> None:
 
 def test_with_fields() -> None:
     assert_eq_pl(
-        pql.col("structs")
+        pql
+        .col("structs")
         .struct.with_fields(
             "structs",
             pql.col("structs").struct.field("a").alias("e"),
@@ -21,7 +22,8 @@ def test_with_fields() -> None:
             h="structs",
         )
         .alias("structs"),
-        pl.col("structs")
+        pl
+        .col("structs")
         .struct.with_fields(
             "structs",
             pl.col("structs").struct.field("a").alias("e"),

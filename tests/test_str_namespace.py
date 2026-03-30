@@ -13,104 +13,102 @@ import pql
 def sample_df() -> nw.LazyFrame[duckdb.DuckDBPyRelation]:
     return nw.from_native(
         duckdb.from_arrow(
-            pl.DataFrame(
-                {
-                    "text": [
-                        "  Hello World suffix  ",
-                        "  foo bar baz suffix  ",
-                        "  Polars is great suffix  ",
-                        "  Testing string functions suffix  ",
-                    ],
-                    "text_nullable": [
-                        "  abc  ",
-                        "abc",
-                        "",
-                        "  ",
-                    ],
-                    "text_short": [
-                        "a",
-                        "ab",
-                        "",
-                        "abc",
-                    ],
-                    "date_str": [
-                        "2024-01-15",
-                        "2024-02-20",
-                        "2024-03-25",
-                        "2024-04-30",
-                    ],
-                    "dt_str": [
-                        "2024-01-15 10:30:00",
-                        "2024-02-20 15:45:30",
-                        "2024-03-25 20:00:00",
-                        "2024-04-30 23:59:59",
-                    ],
-                    "dt_mixed": [
-                        "2024-01-15",
-                        "2024-02-20 15:45:30",
-                        "2024-03-25",
-                        "2024-04-30 23:59:59",
-                    ],
-                    "time_str": [
-                        "10:30:00",
-                        "15:45:30",
-                        "20:00:00",
-                        "23:59:59",
-                    ],
-                    "normalize_input": [
-                        "ardèch",
-                        "Café",
-                        "résumé",
-                        "naive",
-                    ],
-                    "text_with_null": [
-                        "aa",
-                        None,
-                        "bb",
-                        "cc",
-                    ],
-                    "prefixed": [
-                        "prefix_text",
-                        "prefix_other",
-                        "prefix_sample",
-                        "prefix_data",
-                    ],
-                    "suffixed": [
-                        "text_suffix",
-                        "other_suffix",
-                        "sample_suffix",
-                        "data_suffix",
-                    ],
-                    "prefix_exact": [
-                        "foobar",
-                        "foofoobar",
-                        "baab",
-                        "barfoo",
-                    ],
-                    "suffix_exact": [
-                        "foobar",
-                        "foobarbar",
-                        "barfoo",
-                        "ababa",
-                    ],
-                    "prefix_col": [
-                        "prefix_",
-                        "prefix_",
-                        "pre",
-                        "data",
-                    ],
-                    "suffix_col": [
-                        "_suffix",
-                        "_suffix",
-                        "suffix",
-                        "data",
-                    ],
-                    "suffix_val": pc.Iter(range(4)).map(lambda _: "suffix").collect(),
-                    "json": ['{"a": 1}', '{"a": 2}', '{"a": 3}', '{"a": 4}'],
-                    "json_path": ["$.a", "$.a", "$.a", "$.a"],
-                    "numbers": ["123.456", "456.789", "789.123", "1234.567"],
-                }
-            )
+            pl.DataFrame({
+                "text": [
+                    "  Hello World suffix  ",
+                    "  foo bar baz suffix  ",
+                    "  Polars is great suffix  ",
+                    "  Testing string functions suffix  ",
+                ],
+                "text_nullable": [
+                    "  abc  ",
+                    "abc",
+                    "",
+                    "  ",
+                ],
+                "text_short": [
+                    "a",
+                    "ab",
+                    "",
+                    "abc",
+                ],
+                "date_str": [
+                    "2024-01-15",
+                    "2024-02-20",
+                    "2024-03-25",
+                    "2024-04-30",
+                ],
+                "dt_str": [
+                    "2024-01-15 10:30:00",
+                    "2024-02-20 15:45:30",
+                    "2024-03-25 20:00:00",
+                    "2024-04-30 23:59:59",
+                ],
+                "dt_mixed": [
+                    "2024-01-15",
+                    "2024-02-20 15:45:30",
+                    "2024-03-25",
+                    "2024-04-30 23:59:59",
+                ],
+                "time_str": [
+                    "10:30:00",
+                    "15:45:30",
+                    "20:00:00",
+                    "23:59:59",
+                ],
+                "normalize_input": [
+                    "ardèch",
+                    "Café",
+                    "résumé",
+                    "naive",
+                ],
+                "text_with_null": [
+                    "aa",
+                    None,
+                    "bb",
+                    "cc",
+                ],
+                "prefixed": [
+                    "prefix_text",
+                    "prefix_other",
+                    "prefix_sample",
+                    "prefix_data",
+                ],
+                "suffixed": [
+                    "text_suffix",
+                    "other_suffix",
+                    "sample_suffix",
+                    "data_suffix",
+                ],
+                "prefix_exact": [
+                    "foobar",
+                    "foofoobar",
+                    "baab",
+                    "barfoo",
+                ],
+                "suffix_exact": [
+                    "foobar",
+                    "foobarbar",
+                    "barfoo",
+                    "ababa",
+                ],
+                "prefix_col": [
+                    "prefix_",
+                    "prefix_",
+                    "pre",
+                    "data",
+                ],
+                "suffix_col": [
+                    "_suffix",
+                    "_suffix",
+                    "suffix",
+                    "data",
+                ],
+                "suffix_val": pc.Iter(range(4)).map(lambda _: "suffix").collect(),
+                "json": ['{"a": 1}', '{"a": 2}', '{"a": 3}', '{"a": 4}'],
+                "json_path": ["$.a", "$.a", "$.a", "$.a"],
+                "numbers": ["123.456", "456.789", "789.123", "1234.567"],
+            })
         )
     )
 
@@ -290,14 +288,16 @@ def test_extract() -> None:
     assert_eq_pl(
         (
             pql.col("text").str.extract(ptrn).alias("group_default"),
-            pql.col("text")
+            pql
+            .col("text")
             .str.extract(pql.lit(r"(\w+)\s+(\w+)"), group_index=2)
             .alias("group_index_2"),
             pql.col("text").str.extract(ptrn, group_index=0).alias("all"),
         ),
         (
             pl.col("text").str.extract(r"(\w+)").alias("group_default"),
-            pl.col("text")
+            pl
+            .col("text")
             .str.extract(r"(\w+)\s+(\w+)", group_index=2)
             .alias("group_index_2"),
             pl.col("text").str.extract(pl.lit(r"(\w+)"), group_index=0).alias("all"),
@@ -310,7 +310,8 @@ def test_find() -> None:
     assert_eq_pl(
         (
             pql.col("text").str.find(pql.lit("World"), literal=True).alias("lit_found"),
-            pql.col("text")
+            pql
+            .col("text")
             .str.find(pql.lit("missing"), literal=True)
             .alias("lit_none"),
             pql.col("text").str.find(pql.lit(pattern), literal=False).alias("regex"),
@@ -346,20 +347,24 @@ def test_join() -> None:
         (
             pql.col("text_short").str.join().alias("default"),
             pql.col("text_short").str.join(pql.lit("|")).alias("custom"),
-            pql.col("text_with_null")
+            pql
+            .col("text_with_null")
             .str.join(sep, ignore_nulls=True)
             .alias("ignore_nulls_true"),
-            pql.col("text_with_null")
+            pql
+            .col("text_with_null")
             .str.join(sep, ignore_nulls=False)
             .alias("ignore_nulls_false"),
         ),
         (
             pl.col("text_short").str.join().alias("default"),
             pl.col("text_short").str.join("|").alias("custom"),
-            pl.col("text_with_null")
+            pl
+            .col("text_with_null")
             .str.join("-", ignore_nulls=True)
             .alias("ignore_nulls_true"),
-            pl.col("text_with_null")
+            pl
+            .col("text_with_null")
             .str.join("-", ignore_nulls=False)
             .alias("ignore_nulls_false"),
         ),

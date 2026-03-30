@@ -223,7 +223,8 @@ class ResolvedExpr(NamedTuple):
     def is_windowed(self, marker: Marker) -> bool:
         def _check_temp(col: exp.Column) -> bool:
             return (
-                pc.Option.if_some(col.parts[-1])
+                pc.Option
+                .if_some(col.parts[-1])
                 .map(lambda part: part.name == marker)
                 .unwrap_or(default=False)
             )
@@ -259,7 +260,8 @@ class ExprPlan:
 
         self.cols = schema.keys()
         expr_map = (
-            pc.Iter(named_exprs.items())
+            pc
+            .Iter(named_exprs.items())
             .map_star(lambda k, v: _resolve(v, pc.Some(k)))
             .flatten()
             .collect()
@@ -270,7 +272,8 @@ class ExprPlan:
 
     def aliased_sql(self) -> pc.Iter[Expression]:
         return (
-            self.projections.iter()
+            self.projections
+            .iter()
             .map(ResolvedExpr.as_aliased)
             .map(lambda e: e.into_duckdb())
         )
@@ -304,21 +307,24 @@ class ExprPlan:
                 match updates.any(lambda name: name in self.cols):
                     case False:
                         return (
-                            updates.items()
+                            updates
+                            .items()
                             .iter()
                             .map_star(lambda name, e: e.alias(name))
                             .insert(sql.all())
                         )
                     case True:
                         return (
-                            self.cols.iter()
+                            self.cols
+                            .iter()
                             .map(
                                 lambda name: updates.get_item(name).map_or(
                                     sql.col(name), lambda c: c.alias(name)
                                 )
                             )
                             .chain(
-                                updates.items()
+                                updates
+                                .items()
                                 .iter()
                                 .filter_star(lambda name, _expr: name not in self.cols)
                                 .map_star(lambda name, e: e.alias(name))
@@ -326,7 +332,8 @@ class ExprPlan:
                         )
 
             return (
-                self.projections.iter()
+                self.projections
+                .iter()
                 .map(lambda r: (r.name, r.expr))
                 .collect(pc.Dict)
                 .into(_resolved)
@@ -344,7 +351,8 @@ class ExprPlan:
 
     def with_fields_context(self, expr: SqlExpr) -> SqlExpr:
         return (
-            self.projections.iter()
+            self.projections
+            .iter()
             .map(ResolvedExpr.as_aliased)
             .into(lambda args: expr.struct.insert(*args))
         )
@@ -360,7 +368,8 @@ class ExprPlan:
         def _lower_projection(proj: ResolvedExpr) -> pc.Iter[Expression]:
             def _excluded(star: exp.Star) -> pc.Set[str]:
                 return (
-                    pc.Option(star.args.get("except_"))
+                    pc
+                    .Option(star.args.get("except_"))
                     .map(pc.Iter[exp.Expr])
                     .unwrap_or_else(pc.Iter[exp.Expr].new)
                     .filter_map(lambda e: SqlExpr(e).root_column_name())
@@ -378,7 +387,8 @@ class ExprPlan:
                 case exp.Star() as star:
                     excluded = _excluded(star)
                     return (
-                        self.cols.iter()
+                        self.cols
+                        .iter()
                         .filter(lambda name: name not in excluded)
                         .map(_into_duck)
                     )
@@ -441,7 +451,8 @@ class Resolver:
     @staticmethod
     def dtype(*on: type[DataType]) -> ResolverFn:
         return lambda schema: (
-            schema.items()
+            schema
+            .items()
             .iter()
             .filter_star(lambda _, dtype: isinstance(dtype, on))
             .map_star(lambda name, _: name)

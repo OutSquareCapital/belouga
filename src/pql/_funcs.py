@@ -52,7 +52,8 @@ def _agg_expr(
         kind=ExprKind.SCALAR, resolver=Resolver.agg_expr(names), preserve_native=True
     )
     inner_expr = (
-        names.map(_columns_expr)
+        names
+        .map(_columns_expr)
         .unwrap_or_else(lambda: SqlExpr(exp.Columns(this=exp.Star())))
         .pipe(agg)
     )

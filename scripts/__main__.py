@@ -102,7 +102,11 @@ def gen_meta(
 
 @app.command()
 def compare() -> int:
-    """Run the comparison between polars/narwhals and pql and generate markdown report at the repo root."""
+    """Run the comparison between polars/narwhals and pql and generate markdown report at the repo root.
+
+    Returns:
+        int
+    """
     from .comparator import get_comparisons
 
     return Path("API_COVERAGE.md").write_text(get_comparisons(), encoding="utf-8")

@@ -66,7 +66,8 @@ class MethodInfo:
         """Create MethodInfo from inspect.Signature."""
         return cls(
             name=name,
-            params=pc.Iter(sig.parameters.values())
+            params=pc
+            .Iter(sig.parameters.values())
             .map(ParamInfo.from_signature)
             .collect(),
             return_annotation=_get_annotation_str(sig.return_annotation),  # pyright: ignore[reportAny]
@@ -76,7 +77,8 @@ class MethodInfo:
         """Generate a human-readable signature string."""
         highlights = highlight_names.unwrap_or_else(pc.Set[str].new)
         params_str = (
-            self.params.iter()
+            self.params
+            .iter()
             .filter(lambda p: p.name != Builtins.SELF)
             .map(lambda p: _format_param_str(p, highlights))
             .join(", ")
@@ -87,7 +89,8 @@ class MethodInfo:
     def to_map(self) -> MapInfo:
         """Convert parameters to a dictionary mapping names to ParamInfo."""
         return (
-            self.params.iter()
+            self.params
+            .iter()
             .filter(lambda p: p.name != Builtins.SELF)
             .map(lambda p: (p.name, p))
             .collect(pc.Dict)
@@ -162,7 +165,8 @@ def _mismatch_against(target: MapInfo, other: MapInfo, ignored: pc.Set[str]) -> 
         other_filtered.keys().symmetric_difference(target_filtered.keys()).length() > 0
     )
     on_ann = (
-        other_filtered.keys()
+        other_filtered
+        .keys()
         .intersection(target_filtered.keys())
         .any(
             lambda name: annotations_differ(
@@ -184,7 +188,8 @@ def _without_ignored_params(mapping: MapInfo, ignored: pc.Set[str]) -> MapInfo:
         return current.setdefault(key, param)
 
     return (
-        mapping.items()
+        mapping
+        .items()
         .iter()
         .filter_star(lambda k, _v: not ignored.contains(k))
         .map_star(lambda _name, param: param)
@@ -197,7 +202,8 @@ def _without_ignored_params(mapping: MapInfo, ignored: pc.Set[str]) -> MapInfo:
 
 def ignored_params_for(class_name: Pql, method_name: str) -> pc.Set[str]:
     return (
-        IGNORED_PARAMS.get_item(class_name)
+        IGNORED_PARAMS
+        .get_item(class_name)
         .and_then(lambda method_map: method_map.get_item(method_name))
         .unwrap_or_else(pc.Set.new)
     )
@@ -240,13 +246,11 @@ class ComparisonResult:
                     ).unwrap_or(pc.Iter(()))
                 )
             case (Status.SIGNATURE_MISMATCH, pc.Some(pl_info), pc.Some(pql_info)):
-                return pc.Iter(
-                    (
-                        f"- `{self.method_name}`",
-                        f"  - **Polars**: {_signature_with_diff(pl_info, pql_info, self.infos.ignored_params)}",
-                        f"  - **pql**: {_signature_with_diff(pql_info, pl_info, self.infos.ignored_params)}",
-                    )
-                )
+                return pc.Iter((
+                    f"- `{self.method_name}`",
+                    f"  - **Polars**: {_signature_with_diff(pl_info, pql_info, self.infos.ignored_params)}",
+                    f"  - **pql**: {_signature_with_diff(pql_info, pl_info, self.infos.ignored_params)}",
+                ))
             case _:
                 return pc.Iter.once(f"- `{self.method_name}`")
 
@@ -306,11 +310,13 @@ def _diff_param_names(
     base_map = _without_ignored_params(base.to_map(), ignored)
     other_map = _without_ignored_params(other.to_map(), ignored)
     return (
-        base_map.keys()
+        base_map
+        .keys()
         .symmetric_difference(other_map.keys())
         .iter()
         .chain(
-            base_map.keys()
+            base_map
+            .keys()
             .intersection(other_map.keys())
             .iter()
             .filter(

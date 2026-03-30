@@ -1,15 +1,15 @@
 [project]
-    dependencies    = [
-    "duckdb>=1.5.0",
-    "narwhals>=2.16.0",
-    "pyochain>=0.9.2",
-    "sqlglot[c]>=30.1.0",
-]
-    description     = "Polars syntax for SQL"
-    name            = "pql"
-    readme          = "README.md"
+    dependencies = [
+        "duckdb>=1.5.0",
+        "narwhals>=2.16.0",
+        "pyochain>=0.9.2",
+        "sqlglot[c]>=30.1.0",
+    ]
+    description = "Polars syntax for SQL"
+    name = "pql"
+    readme = "README.md"
     requires-python = ">=3.13"
-    version         = "0.1.0"
+    version = "0.1.0"
 
 [dependency-groups]
     dev = [
@@ -30,7 +30,7 @@
         "ruff>=0.14.14",
         "sqlparse>=0.5.5",
         "typer>=0.21.1",
-]
+    ]
 [build-system]
     build-backend = "uv_build"
     requires      = ["uv_build>=0.8.15,<0.9.0"]
@@ -41,6 +41,7 @@
         "C417",
         "COM812",
         "COM812",
+        "CPY001",
         "D401",
         "E501",
         "FIX002",
@@ -48,6 +49,7 @@
         "PLC0415",
         "PLR2004",
         "S101",
+        "S404",
         "S608",
         "SLF001",
         "T201",
@@ -59,6 +61,7 @@
         "TID252",
     ]
     lint.select = ["ALL"]
+    preview = true
     [tool.ruff.format]
         docstring-code-format = true
     [tool.ruff.lint.pydocstyle]

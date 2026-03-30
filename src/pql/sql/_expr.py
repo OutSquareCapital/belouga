@@ -32,19 +32,17 @@ if TYPE_CHECKING:
 def _fill_strategy() -> pc.Dict[FillNullStrategy, Callable[[SqlExpr], SqlExpr]]:
     from ._funcs import coalesce
 
-    return pc.Dict.from_ref(
-        {
-            "forward": lambda expr: expr.last_value().over(
-                frame_end=pc.Some(0), ignore_nulls=True
-            ),
-            "backward": lambda expr: expr.any_value().over(frame_start=pc.Some(0)),
-            "min": lambda expr: coalesce(expr, expr.min().over()),
-            "max": lambda expr: coalesce(expr, expr.max().over()),
-            "mean": lambda expr: coalesce(expr, expr.mean().over()),
-            "zero": lambda expr: coalesce(expr, 0),
-            "one": lambda expr: coalesce(expr, 1),
-        }
-    )
+    return pc.Dict.from_ref({
+        "forward": lambda expr: expr.last_value().over(
+            frame_end=pc.Some(0), ignore_nulls=True
+        ),
+        "backward": lambda expr: expr.any_value().over(frame_start=pc.Some(0)),
+        "min": lambda expr: coalesce(expr, expr.min().over()),
+        "max": lambda expr: coalesce(expr, expr.max().over()),
+        "mean": lambda expr: coalesce(expr, expr.mean().over()),
+        "zero": lambda expr: coalesce(expr, 0),
+        "one": lambda expr: coalesce(expr, 1),
+    })
 
 
 """Computation strategies for `fill_null` when ."""
@@ -569,7 +567,8 @@ class SqlExpr(Fns):  # noqa: PLW1641
     def is_last_distinct(self) -> Self:
         """Check if value is last occurrence."""
         return (
-            self.row_number()
+            self
+            .row_number()
             .over(pc.Some(self), pc.Some(self), descending=True, nulls_last=True)
             .eq(1)
         )
@@ -589,7 +588,8 @@ class SqlExpr(Fns):  # noqa: PLW1641
     def arg_sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """Return indices that would sort the expression."""
         return (
-            self.row_number()
+            self
+            .row_number()
             .over(order_by=pc.Some(self), descending=descending, nulls_last=nulls_last)
             .sub(1)
         )
@@ -602,7 +602,8 @@ class SqlExpr(Fns):  # noqa: PLW1641
         """Fill null values with the next non-null value."""
         expr = self.any_value()
         return (
-            pc.Option(limit)
+            pc
+            .Option(limit)
             .map(lambda lmt: expr.over(frame_start=pc.Some(0), frame_end=pc.Some(lmt)))
             .unwrap_or_else(lambda: expr.over(frame_start=pc.Some(0)))
         )

@@ -100,12 +100,14 @@ def test_selector_cast() -> None:
 def test_selector_in_group_by_agg() -> None:
     """We need to filter null values to avoid errors on `sum`."""
     assert_lf_eq_pl(
-        pql.LazyFrame(_SAMPLE_DF)
+        pql
+        .LazyFrame(_SAMPLE_DF)
         .filter(pql.col("a").is_not_null())
         .group_by("a")
         .agg(cs.numeric().sum())
         .sort("a"),
-        _SAMPLE_DF.filter(pl.col("a").is_not_null())
+        _SAMPLE_DF
+        .filter(pl.col("a").is_not_null())
         .group_by("a")
         .agg(cs_pl.numeric().sum())
         .sort("a"),
@@ -180,7 +182,8 @@ def test_enum() -> None:
         lf.with_columns(pql.col("enum").cast(pql.Enum(cats))).select(
             cs.enum().cast(pql.String())
         ),
-        lf.lazy()
+        lf
+        .lazy()
         .with_columns(pl.col("enum").cast(pl.Enum(cats)))
         .select(cs_pl.enum().cast(pl.String)),
     )
@@ -283,12 +286,14 @@ def test_matches_cast() -> None:
 
 def test_contains_sum_in_agg() -> None:
     assert_lf_eq_pl(
-        pql.LazyFrame(_SAMPLE_DF)
+        pql
+        .LazyFrame(_SAMPLE_DF)
         .filter(pql.col("a").is_not_null())
         .group_by("a")
         .agg(cs.contains("al").intersection(cs.numeric()).sum())
         .sort("a"),
-        _SAMPLE_DF.filter(pl.col("a").is_not_null())
+        _SAMPLE_DF
+        .filter(pl.col("a").is_not_null())
         .group_by("a")
         .agg(cs_pl.contains("al").__and__(cs_pl.numeric()).sum())
         .sort("a"),

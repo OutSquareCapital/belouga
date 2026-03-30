@@ -26,7 +26,8 @@ def tst_funcs() -> None:
     )
 
     assert_lf_eq_pl(
-        pql_lf.drop(unwanted)
+        pql_lf
+        .drop(unwanted)
         .filter(pql.col("function_name").str.contains(pql.lit("xor")))
         .group_by("function_name")
         .agg(
@@ -34,7 +35,8 @@ def tst_funcs() -> None:
             pql.col("parameter_types").list.unique().list.sort().list.explode(),
         )
         .sort("function_name"),
-        pl_lf.lazy()
+        pl_lf
+        .lazy()
         .drop(unwanted)
         .filter(pl.col("function_name").str.contains(pl.lit("xor")))
         .group_by("function_name")

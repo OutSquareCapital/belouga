@@ -124,9 +124,11 @@ def _base_type(value: str) -> pc.Option[str]:
     )
 
 
-GENERIC_CONTAINER = pc.Set(
-    (DuckDbTypes.ANY_ARRAY, DuckDbTypes.GENERIC_ARRAY, DuckDbTypes.V_ARRAY)
-)
+GENERIC_CONTAINER = pc.Set((
+    DuckDbTypes.ANY_ARRAY,
+    DuckDbTypes.GENERIC_ARRAY,
+    DuckDbTypes.V_ARRAY,
+))
 
 
 DTYPES = pl.Enum(DuckDbTypes)
@@ -188,42 +190,38 @@ class SchemaName(StrEnum):
     PG_CATALOG = auto()
 
 
-CONVERSION_MAP: pc.Dict[str, str] = pc.Dict(
-    {
-        DuckDbTypes.VARCHAR: Builtins.STR.value,
-        DuckDbTypes.INTEGER: Builtins.INT.value,
-        DuckDbTypes.BIGINT: Builtins.INT.value,
-        DuckDbTypes.SMALLINT: Builtins.INT.value,
-        DuckDbTypes.TINYINT: Builtins.INT.value,
-        DuckDbTypes.HUGEINT: Builtins.INT.value,
-        DuckDbTypes.UINTEGER: Builtins.INT.value,
-        DuckDbTypes.UBIGINT: Builtins.INT.value,
-        DuckDbTypes.USMALLINT: Builtins.INT.value,
-        DuckDbTypes.UTINYINT: Builtins.INT.value,
-        DuckDbTypes.UHUGEINT: Builtins.INT.value,
-        DuckDbTypes.DOUBLE: Builtins.FLOAT.value,
-        DuckDbTypes.FLOAT: Builtins.FLOAT.value,
-        DuckDbTypes.DECIMAL: Decimal.DECIMAL.value,
-        DuckDbTypes.BOOLEAN: Builtins.BOOL.value,
-        DuckDbTypes.DATE: DateTime.DATE.value,
-        DuckDbTypes.TIME: DateTime.TIME.value,
-        DuckDbTypes.TIMESTAMP: DateTime.DATETIME.value,
-        DuckDbTypes.INTERVAL: DateTime.TIMEDELTA.value,
-        DuckDbTypes.BLOB: Pql.BLOB_LITERAL.value,
-        DuckDbTypes.BIT: Builtins.BYTES.into_union(
-            Builtins.BYTEARRAY, Builtins.MEMORYVIEW
-        ),
-        DuckDbTypes.UUID: Builtins.STR.value,
-        DuckDbTypes.JSON: Builtins.STR.value,
-        DuckDbTypes.ANY: Pql.INTO_EXPR.value,
-        DuckDbTypes.GENERIC: Pql.INTO_EXPR.value,
-        DuckDbTypes.KEY: Pql.INTO_EXPR_COLUMN.value,
-        DuckDbTypes.V: Pql.INTO_EXPR_COLUMN.value,
-        DuckDbTypes.LIST: Pql.SEQ_LITERAL.value,
-        DuckDbTypes.MAP: Builtins.DICT.value,
-        DuckDbTypes.STRUCT: Builtins.DICT.value,
-        DuckDbTypes.ARRAY: Pql.SEQ_LITERAL.value,
-        DuckDbTypes.UNION: Pql.INTO_EXPR.value,
-        DuckDbTypes.NULL: Builtins.NONE.value,
-    }
-)
+CONVERSION_MAP: pc.Dict[str, str] = pc.Dict({
+    DuckDbTypes.VARCHAR: Builtins.STR.value,
+    DuckDbTypes.INTEGER: Builtins.INT.value,
+    DuckDbTypes.BIGINT: Builtins.INT.value,
+    DuckDbTypes.SMALLINT: Builtins.INT.value,
+    DuckDbTypes.TINYINT: Builtins.INT.value,
+    DuckDbTypes.HUGEINT: Builtins.INT.value,
+    DuckDbTypes.UINTEGER: Builtins.INT.value,
+    DuckDbTypes.UBIGINT: Builtins.INT.value,
+    DuckDbTypes.USMALLINT: Builtins.INT.value,
+    DuckDbTypes.UTINYINT: Builtins.INT.value,
+    DuckDbTypes.UHUGEINT: Builtins.INT.value,
+    DuckDbTypes.DOUBLE: Builtins.FLOAT.value,
+    DuckDbTypes.FLOAT: Builtins.FLOAT.value,
+    DuckDbTypes.DECIMAL: Decimal.DECIMAL.value,
+    DuckDbTypes.BOOLEAN: Builtins.BOOL.value,
+    DuckDbTypes.DATE: DateTime.DATE.value,
+    DuckDbTypes.TIME: DateTime.TIME.value,
+    DuckDbTypes.TIMESTAMP: DateTime.DATETIME.value,
+    DuckDbTypes.INTERVAL: DateTime.TIMEDELTA.value,
+    DuckDbTypes.BLOB: Pql.BLOB_LITERAL.value,
+    DuckDbTypes.BIT: Builtins.BYTES.into_union(Builtins.BYTEARRAY, Builtins.MEMORYVIEW),
+    DuckDbTypes.UUID: Builtins.STR.value,
+    DuckDbTypes.JSON: Builtins.STR.value,
+    DuckDbTypes.ANY: Pql.INTO_EXPR.value,
+    DuckDbTypes.GENERIC: Pql.INTO_EXPR.value,
+    DuckDbTypes.KEY: Pql.INTO_EXPR_COLUMN.value,
+    DuckDbTypes.V: Pql.INTO_EXPR_COLUMN.value,
+    DuckDbTypes.LIST: Pql.SEQ_LITERAL.value,
+    DuckDbTypes.MAP: Builtins.DICT.value,
+    DuckDbTypes.STRUCT: Builtins.DICT.value,
+    DuckDbTypes.ARRAY: Pql.SEQ_LITERAL.value,
+    DuckDbTypes.UNION: Pql.INTO_EXPR.value,
+    DuckDbTypes.NULL: Builtins.NONE.value,
+})

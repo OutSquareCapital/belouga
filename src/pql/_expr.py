@@ -77,7 +77,8 @@ class Expr(sql.CoreHandler[SqlExpr]):
             return SqlExpr(sql.rolling_agg(e.inner(), Marker.TEMP, spec))
 
         return (
-            sql.when(self.inner().count().pipe(_clause).ge(min_samples or window_size))
+            sql
+            .when(self.inner().count().pipe(_clause).ge(min_samples or window_size))
             .then(self.inner().pipe(agg).pipe(_clause))
             .otherwise(_NONE)
             .pipe(self._as_window)
@@ -535,7 +536,8 @@ class Expr(sql.CoreHandler[SqlExpr]):
     def rank(self, method: RankMethod = "average", *, descending: bool = False) -> Self:
         """Compute rank values."""
         base_rank = (
-            self.inner()
+            self
+            .inner()
             .rank()
             .over(order_by=pc.Some(self.inner()), descending=descending)
         )
@@ -550,13 +552,15 @@ class Expr(sql.CoreHandler[SqlExpr]):
                 expr = base_rank.add(peer_count).sub(1)
             case "dense":
                 expr = (
-                    self.inner()
+                    self
+                    .inner()
                     .dense_rank()
                     .over(order_by=pc.Some(self.inner()), descending=descending)
                 )
             case "ordinal":
                 expr = (
-                    self.inner()
+                    self
+                    .inner()
                     .row_number()
                     .over(order_by=pc.Some(self.inner()), descending=descending)
                 )
@@ -596,7 +600,8 @@ class Expr(sql.CoreHandler[SqlExpr]):
             .map(lambda x: sql.into_expr(x, as_col=True))
             .into(
                 lambda partition_exprs: (
-                    pc.Option(order_by)
+                    pc
+                    .Option(order_by)
                     .map(
                         lambda value: (
                             try_iter(value)
@@ -754,7 +759,8 @@ class Expr(sql.CoreHandler[SqlExpr]):
         limit: int | None = None,
     ) -> Self:
         return (
-            self.inner()
+            self
+            .inner()
             .fill_nulls(pc.Option(value), pc.Option(strategy), pc.Option(limit))
             .pipe(self._new)
         )

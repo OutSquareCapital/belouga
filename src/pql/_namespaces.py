@@ -117,7 +117,8 @@ class ExprStringNameSpace(ExprNameSpaceBase):
                 )
             case _:
                 return (
-                    pc.Iter(range(n))
+                    pc
+                    .Iter(range(n))
                     .fold(self.inner().inner(), lambda acc, _: _replace_once(acc))
                     .pipe(self._new)
                 )
@@ -512,7 +513,8 @@ class ExprDateTimeNameSpace(ExprNameSpaceBase):
         match time_unit:
             case "d":
                 return self._new(
-                    self.inner()
+                    self
+                    .inner()
                     .inner()
                     .dt.epoch_us()
                     .truediv(Sec.micro_by_day())

@@ -387,12 +387,14 @@ def test_is_close() -> None:
         ),
     )
     assert_eq_pl(
-        pql.col("salary")
+        pql
+        .col("salary")
         .is_close(
             pql.col("salary").add(0.001), abs_tol=0.01, rel_tol=0.0, nans_equal=True
         )
         .alias("salary_close_nans_equal"),
-        pl.col("salary")
+        pl
+        .col("salary")
         .is_close(
             pl.col("salary").add(0.001), abs_tol=0.01, rel_tol=0.0, nans_equal=True
         )

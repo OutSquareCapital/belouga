@@ -25,14 +25,16 @@ def run_qry(lf: pl.LazyFrame) -> pl.LazyFrame:
     params = Params()
     dk = DuckCols()
     return (
-        lf.pipe(_filters, dk)
+        lf
+        .pipe(_filters, dk)
         .with_columns(
             dk.parameter_types.list.eval(pl.element().fill_null(DuckDbTypes.ANY)),
             *dk.parameters.list.len().pipe(
                 lambda expr_len: (
                     expr_len.alias("sig_param_count"),
                     expr_len.min().over(dk.function_name).alias("min_params_per_fn"),
-                    expr_len.min()
+                    expr_len
+                    .min()
                     .over(dk.function_name, dk.categories, dk.description)
                     .alias("min_params_per_fn_cat_desc"),
                 )
@@ -68,7 +70,8 @@ def run_qry(lf: pl.LazyFrame) -> pl.LazyFrame:
         .with_columns(
             pl.int_range(pl.len()).over("sig_id").alias("param_idx"),
             dk.parameters.pipe(_to_param_names),
-            dk.varargs.pipe(_convert_duckdb_type_to_python)
+            dk.varargs
+            .pipe(_convert_duckdb_type_to_python)
             .pipe(_make_type_union)
             .alias("py_varargs_type"),
         )
@@ -76,7 +79,8 @@ def run_qry(lf: pl.LazyFrame) -> pl.LazyFrame:
         .agg(
             pl.all().exclude("parameter_types").drop_nulls().first(),
             dk.parameter_types.pipe(_into_union),
-            dk.parameter_types.pipe(_convert_duckdb_type_to_python)
+            dk.parameter_types
+            .pipe(_convert_duckdb_type_to_python)
             .pipe(_into_union)
             .pipe(_make_type_union)
             .alias("py_types"),
@@ -96,7 +100,11 @@ def run_qry(lf: pl.LazyFrame) -> pl.LazyFrame:
 
 
 def _filters(lf: pl.LazyFrame, dk: DuckCols) -> pl.LazyFrame:
-    """First-step filter to remove unwanted functions."""
+    """First-step filter to remove unwanted functions.
+
+    Returns:
+        pl.LazyFrame
+    """
     return lf.select(dk.to_dict().keys()).filter(
         dk.function_type.is_in(FuncTypes.unwanted()).not_(),
         dk.parameters.list.len().eq(0).and_(dk.varargs.is_null()).not_(),  # literals
@@ -109,7 +117,8 @@ def _filters(lf: pl.LazyFrame, dk: DuckCols) -> pl.LazyFrame:
 
 def _return_type(namespace: pl.Expr) -> pl.Expr:
     return (
-        pl.when(namespace.is_not_null())
+        pl
+        .when(namespace.is_not_null())
         .then(pl.lit(Typing.T))
         .otherwise(pl.lit(Typing.SELF))
         .alias("self_type")
@@ -118,7 +127,8 @@ def _return_type(namespace: pl.Expr) -> pl.Expr:
 
 def _py_name(raw_name: pl.Expr, py: PyCols) -> pl.Expr:
     return (
-        pl.concat_str(
+        pl
+        .concat_str(
             raw_name,
             pl.when(py.suffixes.is_not_null()).then(
                 pl.concat_str(pl.lit("_"), py.suffixes)
@@ -128,7 +138,8 @@ def _py_name(raw_name: pl.Expr, py: PyCols) -> pl.Expr:
         .str.to_lowercase()
         .str.replace(
             (
-                NAMESPACE_SPECS.iter()
+                NAMESPACE_SPECS
+                .iter()
                 .flat_map(lambda spec: spec.strip_prefixes.iter().map(re.escape))
                 .into(lambda p: f"^(?:{p.join('|')})")
             ),
@@ -144,9 +155,13 @@ def _alias_map(lf: pl.LazyFrame, dk: DuckCols) -> pl.LazyFrame:
 
     Alias root is determined by taking the first value between `function_name` and `alias_of` that is not null.
     Then all other `function_name`s that share the same `alias_root` are considered aliases of each other.
+
+    Returns:
+        pl.LazyFrame
     """
     return (
-        lf.select(
+        lf
+        .select(
             dk.function_name,
             pl.coalesce(dk.alias_of, dk.function_name).alias("alias_root"),
         )
@@ -161,7 +176,8 @@ def _alias_map(lf: pl.LazyFrame, dk: DuckCols) -> pl.LazyFrame:
         )
         .select(
             dk.function_name,
-            pl.col("alias_group")
+            pl
+            .col("alias_group")
             .list.set_difference(pl.concat_list(dk.function_name))
             .alias("aliases"),
         )
@@ -201,7 +217,8 @@ def _joined_parts(
 def _make_type_union(py_type: pl.Expr) -> pl.Expr:
     into_expr_col = pl.lit(Pql.INTO_EXPR_COLUMN)
     return (
-        pl.when(py_type.eq(EMPTY_STR))
+        pl
+        .when(py_type.eq(EMPTY_STR))
         .then(into_expr_col)
         .when(py_type.str.contains(_token_pattern(Pql.INTO_EXPR)))
         .then(pl.lit(Pql.INTO_EXPR))
@@ -222,7 +239,8 @@ def _token_pattern(token: str) -> str:
 
 def _simplify_generated_union(type_hint: str) -> str:
     tokens = (
-        pc.Iter(type_hint.split("|"))
+        pc
+        .Iter(type_hint.split("|"))
         .map(str.strip)
         .filter(lambda type_name: type_name != "")
         .collect()
@@ -234,7 +252,8 @@ def _simplify_generated_union(type_hint: str) -> str:
         lambda type_name: type_name == Pql.INTO_EXPR_COLUMN
     )
     return (
-        tokens.iter()
+        tokens
+        .iter()
         .filter(
             lambda type_name: (
                 type_name != "str" if has_into_expr_column else type_name != ""
@@ -246,10 +265,12 @@ def _simplify_generated_union(type_hint: str) -> str:
 
 def _namespace_specs(cats: pl.Expr, fn_name: pl.Expr) -> pl.Expr:
     return (
-        NAMESPACE_SPECS.iter()
+        NAMESPACE_SPECS
+        .iter()
         .map(
             lambda spec: pl.when(
-                spec.prefixes.iter()
+                spec.prefixes
+                .iter()
                 .map(fn_name.str.starts_with)
                 .into(pl.any_horizontal)
                 .or_(fn_name.is_in(spec.explicit_names))
@@ -262,10 +283,12 @@ def _namespace_specs(cats: pl.Expr, fn_name: pl.Expr) -> pl.Expr:
             )
         )
         .otherwise(
-            NAMESPACE_SPECS.iter()
+            NAMESPACE_SPECS
+            .iter()
             .map(
                 lambda spec: pl.when(
-                    spec.categories.iter()
+                    spec.categories
+                    .iter()
                     .map(lambda c: c.value)
                     .into(lambda x: cats.list.set_intersection(x.collect(tuple)))
                     .list.len()
@@ -285,13 +308,15 @@ def _convert_duckdb_type_to_python(param_type: pl.Expr) -> pl.Expr:
 
 def _to_param_names(params: pl.Expr) -> pl.Expr:
     return (
-        params.str.strip_chars("'\"[]")
+        params.str
+        .strip_chars("'\"[]")
         .str.replace(r"\(.*$", EMPTY_STR)
         .str.replace_all(r"\.\.\.", EMPTY_STR)
         .str.to_lowercase()
         .pipe(
             lambda expr: (
-                pl.when(expr.is_in(SHADOWERS))
+                pl
+                .when(expr.is_in(SHADOWERS))
                 .then(pl.concat_str(expr, pl.lit("_arg")))
                 .otherwise(expr)
             )
@@ -302,7 +327,8 @@ def _to_param_names(params: pl.Expr) -> pl.Expr:
 
 def _py_name_map(lf: pl.LazyFrame, dk: DuckCols, p_lens: ParamLens) -> pl.LazyFrame:
     return lf.filter(
-        dk.description.n_unique()
+        dk.description
+        .n_unique()
         .over(dk.function_name, dk.categories)
         .gt(1)
         .and_(p_lens.min_params_per_fn_cat_desc.gt(p_lens.min_params_per_fn))
@@ -311,7 +337,8 @@ def _py_name_map(lf: pl.LazyFrame, dk: DuckCols, p_lens: ParamLens) -> pl.LazyFr
         dk.function_name,
         dk.categories,
         dk.description,
-        pl.when(p_lens.min_params_per_fn_cat_desc.eq(p_lens.min_params_per_fn))
+        pl
+        .when(p_lens.min_params_per_fn_cat_desc.eq(p_lens.min_params_per_fn))
         .then(dk.parameters)
         .otherwise(
             dk.parameters.list.slice(

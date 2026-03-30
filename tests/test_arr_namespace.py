@@ -28,10 +28,12 @@ def test_contains() -> None:
             pql.col("arr_num").arr.contains(3).alias("x_y"),
         ),
         (
-            pl.col("arr_num")
+            pl
+            .col("arr_num")
             .arr.contains(pl.lit(None), nulls_equal=False)
             .alias("x_nulls_neq"),
-            pl.col("arr_num")
+            pl
+            .col("arr_num")
             .arr.contains(pl.col("x"), nulls_equal=False)
             .alias("x_nulls_neq_y"),
             pl.col("arr_num").arr.contains(3).alias("x_y"),
@@ -88,13 +90,15 @@ def test_sort() -> None:
     assert_eq(
         (
             pql.col("arr_num").arr.sort().alias("x_sorted"),
-            pql.col("arr_num")
+            pql
+            .col("arr_num")
             .arr.sort(descending=True, nulls_last=True)
             .alias("x_sorted_desc"),
         ),
         (
             nw.col("arr_num").list.sort().alias("x_sorted"),
-            nw.col("arr_num")
+            nw
+            .col("arr_num")
             .list.sort(descending=True, nulls_last=True)
             .alias("x_sorted_desc"),
         ),

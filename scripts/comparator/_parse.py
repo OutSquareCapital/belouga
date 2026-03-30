@@ -32,7 +32,8 @@ class _AliasExpander(ast.NodeTransformer):
         match rewritten:
             case ast.Subscript(value=ast.Name(id=alias_name), slice=slice_node):
                 return (
-                    self._single_param_aliases.get_item(alias_name)
+                    self._single_param_aliases
+                    .get_item(alias_name)
                     .map(
                         lambda template: ast.copy_location(
                             ast.parse(
@@ -88,7 +89,8 @@ class _UnionCanonicalizer(ast.NodeTransformer):
                         )
 
                     return (
-                        parts.iter()
+                        parts
+                        .iter()
                         .map(lambda part: ast.parse(part, mode="eval").body)
                         .fold(pc.NONE, _build_union)
                         .unwrap_or(ast.Constant(value=None))
@@ -105,7 +107,8 @@ class _UnionCanonicalizer(ast.NodeTransformer):
                 has_float = members_as_text.any(lambda text: text == Builtins.FLOAT)
 
                 return (
-                    members_as_text.iter()
+                    members_as_text
+                    .iter()
                     .filter(lambda text: not (has_float and text == Builtins.INT))
                     .unique()
                     .sort()
@@ -227,7 +230,8 @@ def _generic_base_accepts(
                 reference_base, reference_args
             ).map(
                 lambda reference_item: (
-                    CONTAINER_SUPERTYPES.get_item(target_base)
+                    CONTAINER_SUPERTYPES
+                    .get_item(target_base)
                     .map(lambda accepted: accepted.contains(reference_base))
                     .unwrap_or(default=False)
                     and _annotation_accepts(target_item, reference_item)
@@ -237,7 +241,8 @@ def _generic_base_accepts(
         .unwrap_or(
             target_base == reference_base
             and target_args.length() == reference_args.length()
-            and target_args.iter()
+            and target_args
+            .iter()
             .zip(reference_args)
             .map_star(_annotation_accepts)
             .all(bool)

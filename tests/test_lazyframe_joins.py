@@ -88,9 +88,11 @@ def test_join_asof_error_left_on_without_right_on() -> None:
 
 
 left_asof_error = pql.LazyFrame({"t": [1, 4, 9], "g": ["x", "x", "y"], "a": [1, 2, 3]})
-right_asof_error = pql.LazyFrame(
-    {"u": [0, 3, 8], "g2": ["x", "x", "y"], "b": [100, 200, 300]}
-)
+right_asof_error = pql.LazyFrame({
+    "u": [0, 3, 8],
+    "g2": ["x", "x", "y"],
+    "b": [100, 200, 300],
+})
 
 
 def test_join_asof_error_by_and_by_left() -> None:

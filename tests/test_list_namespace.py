@@ -30,10 +30,12 @@ def test_contains() -> None:
             pql.col("list_num").list.contains(pql.col("x")).alias("x_y"),
         ),
         (
-            pl.col("list_num")
+            pl
+            .col("list_num")
             .list.contains(None, nulls_equal=False)
             .alias("x_nulls_neq"),
-            pl.col("list_num")
+            pl
+            .col("list_num")
             .list.contains(pl.col("x"), nulls_equal=False)
             .alias("x_nulls_neq_y"),
             pl.col("list_num").list.contains(pl.col("x")).alias("x_y"),
@@ -99,13 +101,15 @@ def test_sort() -> None:
     assert_eq(
         (
             pql.col("list_num").list.sort().alias("x_sorted"),
-            pql.col("list_num")
+            pql
+            .col("list_num")
             .list.sort(descending=True, nulls_last=True)
             .alias("x_sorted_desc"),
         ),
         (
             nw.col("list_num").list.sort().alias("x_sorted"),
-            nw.col("list_num")
+            nw
+            .col("list_num")
             .list.sort(descending=True, nulls_last=True)
             .alias("x_sorted_desc"),
         ),
