@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pyochain import Dict
-
 
 def check_missing_sqlglot(output: Path) -> int:
     _set_config()
@@ -27,6 +25,7 @@ def _set_config() -> None:
 
 def _run_qry() -> str:
     import polars as pl
+    from pyochain import Dict
 
     import pql
     from pql.sql._sqlglot_patch import DUCKDB_FUNCTIONS
@@ -42,28 +41,35 @@ def _run_qry() -> str:
     all_aliases = pl.col("all_aliases")
     other_aliases = pl.col("other_aliases")
     known_function_names = pl.col("known_function_names")
-    dk_func_keys = pl.LazyFrame(
-        Dict.from_ref(DUCKDB_FUNCTIONS)
-        .iter()
-        .map(str.upper)
-        .collect()
-        .into(lambda x: pl.Series("glot_name", x))
-    )
 
     return (
-        pql.meta.functions()
+        Dict.from_ref(DUCKDB_FUNCTIONS)
+        .iter()
         .collect()
+        .into(pl.Series)
+        .str.to_uppercase()
+        .alias("glot_name")
+        .to_frame()
         .lazy()
-        .pipe(_filters, DuckCols())
-        .select(
-            function_name.str.to_uppercase(),
-            pl.coalesce(alias_of, function_name).str.to_uppercase().alias("alias_root"),
+        .pipe(
+            lambda fn_keys: (
+                pql.meta.functions()
+                .collect()
+                .lazy()
+                .pipe(_filters, DuckCols())
+                .select(
+                    function_name.str.to_uppercase(),
+                    pl.coalesce(alias_of, function_name)
+                    .str.to_uppercase()
+                    .alias("alias_root"),
+                )
+                .group_by(alias_root)
+                .agg(function_name.unique().sort().alias("all_aliases"))
+                .with_columns(all_aliases.alias("function_name"))
+                .explode("function_name")
+                .join(fn_keys, left_on=function_name, right_on="glot_name", how="anti")
+            )
         )
-        .group_by(alias_root)
-        .agg(function_name.unique().sort().alias("all_aliases"))
-        .with_columns(all_aliases.alias("function_name"))
-        .explode("function_name")
-        .join(dk_func_keys, left_on=function_name, right_on="glot_name", how="anti")
         .drop("alias_root")
         .with_columns(
             all_aliases.list.set_difference(pl.concat_list(function_name)).alias(
