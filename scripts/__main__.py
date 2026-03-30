@@ -29,7 +29,7 @@ OutputPath = Annotated[Path, typer.Option("--output-path", "-op")]
 CheckArg = Annotated[
     bool, typer.Option("--c", help="Check output without Ruff applying fixes")
 ]
-app = typer.Typer()
+app = typer.Typer(pretty_exceptions_show_locals=True)
 
 console = Console()
 
@@ -114,6 +114,27 @@ def analyze_funcs(path: InputPath = DATA_PATH) -> None:
     from ._func_table_analysis import analyze
 
     analyze(path)
+
+
+@app.command()
+def check_sqlglot() -> None:
+    """Check for missing functions in the sqlglot `DuckDB` parser `FUNCTIONS` mapping.
+
+    Join both the `duckdb_functions` table and the sqlglot `DuckDBParser.FUNCTIONS` mapping on the upper-cased function name.
+
+    Note that we use the `pql` monkey patched mapping of the parser, instead of the "vanilla" one from `sqlglot`.
+
+    Show the functions that are **missing** in sqlglot.
+
+    Schema:
+        - `function_name` is the name of the function extracted from the `duckdb_functions` table.
+        - `present_aliases` column contains the aliases that are present in the sqlglot `DuckDB` parser `FUNCTIONS` mapping.
+            This is what we look for for simple implementations of missing functions in sqlglot.
+        - `absent_aliases` column contains the aliases that are absent in the sqlglot `DuckDB` parser `FUNCTIONS` mapping.
+    """
+    from ._check_missing_sqlglot import check_missing_sqlglot
+
+    check_missing_sqlglot()
 
 
 def _check_args(*, check_only: bool) -> Iterable[str]:
