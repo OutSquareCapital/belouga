@@ -12,8 +12,8 @@ def generate_themes(caller: Path, dest: Path) -> int:
         pc.Iter(STYLES.values()).map_star(lambda _, style, __: f'"{style}"').join(" ,")
     )
     file_content = dest.read_text(encoding="utf-8")
-    start_marker = "### theme marker START"
-    end_marker = "### theme marker END"
+    start_marker = "# theme marker START"
+    end_marker = "# theme marker END"
     lit = f"Themes = Literal[{styles}]"
 
     start_idx = file_content.find(start_marker)
