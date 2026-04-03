@@ -620,6 +620,13 @@ def test_gather_every(sample_df: pl.DataFrame) -> None:
     )
 
 
+def test_with_row_index(sample_df: pl.DataFrame) -> None:
+    assert_lf_eq_pl(
+        pql.LazyFrame(sample_df).with_row_index("row_num", order_by="sex"),
+        sample_df.lazy().sort("sex").with_row_index("row_num"),
+    )
+
+
 def test_describe(sample_df: pl.DataFrame) -> None:
     assert (
         pql.LazyFrame(sample_df).select("age", "salary").describe().collect().height > 0
