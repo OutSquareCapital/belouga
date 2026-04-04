@@ -1,31 +1,20 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Self, override
+from typing import TYPE_CHECKING, override
 
-import pyochain as pc
 from pyochain import Dict, Vec
 from pyochain.traits import PyoMutableMapping
-from sqlglot import exp
-from sqlglot.optimizer.annotate_types import (
-    annotate_types,  # pyright: ignore[reportUnknownVariableType]
-)
-from sqlglot.optimizer.qualify import (
-    qualify,  # pyright: ignore[reportUnknownVariableType]
-)
-from sqlglot.schema import MappingSchema
 
 from ._datatypes import DataType
 
 if TYPE_CHECKING:
-    from duckdb import DuckDBPyRelation
-
     from .sql.typing import IntoDict
 
 
 @dataclass(slots=True, init=False, repr=False)
-class Schema(PyoMutableMapping[str, DataType]):
+class Schema(PyoMutableMapping[str, DataType]):  # noqa: PLW1641
     _keys: Vec[str]
     _dtypes: Vec[DataType]
     _data: Dict[str, DataType]
@@ -35,6 +24,16 @@ class Schema(PyoMutableMapping[str, DataType]):
         pairs = self._data.items().iter().unzip()
         self._keys = pairs.left.collect(Vec)
         self._dtypes = pairs.right.collect(Vec)
+
+    @override
+    def __eq__(self, other: object) -> bool:
+        match other:
+            case Schema():
+                return self._data == other._data
+            case Mapping():
+                return self._data == other
+            case _:
+                return NotImplemented
 
     @override
     def __iter__(self) -> Iterator[str]:
@@ -79,61 +78,3 @@ class Schema(PyoMutableMapping[str, DataType]):
         self._keys.insert(pos, name)
         self._dtypes.insert(pos, dtype)
         self._data[name] = dtype
-
-    def copy(self) -> Self:
-        """Shallow copy of the schema.
-
-        Returns:
-            Self: A new Schema with the same data.
-        """
-        return self.__class__(self)
-
-    @classmethod
-    def from_frame(cls, frame: DuckDBPyRelation) -> Self:
-        dtypes = pc.Iter(frame.dtypes).map(DataType.from_duckdb)
-        return pc.Iter(frame.columns).zip(dtypes, strict=True).collect(cls)
-
-    @classmethod
-    def from_exprs(
-        cls,
-        input_schema: Schema,
-        exprs: Iterable[tuple[str, exp.Expr]],
-        *,
-        table_name: str = "rel",
-    ) -> Self:
-        mapping_schema = input_schema.to_mapping_schema(table_name)
-
-        def _infer_dtype(name: str, expression: exp.Expr) -> tuple[str, DataType]:
-            query = exp.select(
-                exp.Alias(this=expression.copy(), alias=exp.to_identifier(name))
-            ).from_(table_name)
-            qualified = qualify(
-                query,
-                dialect="duckdb",
-                schema=mapping_schema,
-                validate_qualify_columns=False,
-            )
-            annotated = annotate_types(
-                qualified,
-                schema=mapping_schema,
-                dialect="duckdb",
-            )
-            dtype = (
-                pc
-                .Option(annotated.type)
-                .map(DataType.from_sql)
-                .expect("Failed to infer data type")
-            )
-            return (name, dtype)
-
-        return pc.Iter(exprs).map_star(_infer_dtype).collect(cls)
-
-    def to_mapping_schema(self, table_name: str) -> MappingSchema:
-        type_map = (
-            self
-            .items()
-            .iter()
-            .map_star(lambda k, v: (k, v.raw.sql(dialect="duckdb")))
-            .collect(dict)
-        )
-        return MappingSchema({table_name: type_map}, dialect="duckdb")

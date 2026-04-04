@@ -31,7 +31,7 @@ class LazyGroupBy:
             frame.columns.iter().filter(lambda name: name not in keys_names).collect()
         )
         self._aggregator = partial(
-            self._frame.inner().aggregate,
+            self._frame.inner().relation.aggregate,
             group_expr=group_expr.unwrap_or_else(
                 lambda: keys.iter().map(str).join(", ")
             ),

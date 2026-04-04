@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from .._expr import Expr
     from ._core import DuckHandler
     from ._expr import SqlExpr
+    from ._scans import ScanSource
 
 
 @runtime_checkable
@@ -99,7 +100,7 @@ type SeqIntoVals = (
 
 type IntoValues = ExprIntoVals | Mapping[str, Sequence[PythonLiteral]] | SeqIntoVals
 """Types that can be converted into a `values` relation (either an expression, a mapping, or a sequence)."""
-type IntoRel = IntoFrame | IntoValues
+type IntoRel = IntoFrame | IntoValues | ScanSource
 """"Types that can be converted into a relation (either a frame or values)."""
 type IntoExprColumn = str | ExprLike
 """Inputs that can convert into a `col` expression."""

@@ -10,16 +10,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self, SupportsInt
 
 import pyochain as pc
-from duckdb import DuckDBPyRelation, Expression
 from sqlglot import exp
 
 from . import sql
-from ._datatypes import DataType, Int64
+from ._datatypes import DataType
 from ._funcs import col
 from ._joins import JoinBuilder, JoinKeys
 from ._meta import ExprPlan, Marker
 from ._schema import Schema
-from .sql import SqlExpr
+from .sql import ScanSource, SqlExpr
 from .sql.utils import TryIter, TrySeq, check_by_arg, try_iter, try_seq
 
 if TYPE_CHECKING:
@@ -29,6 +28,7 @@ if TYPE_CHECKING:
         ExplainTypeLiteral,
         RenderModeLiteral,
     )
+    from duckdb import Expression
     from pyochain.traits import PyoIterable
 
     from ._expr import Expr
@@ -66,21 +66,16 @@ PIVOT_AGG: dict[PivotAgg, Callable[[SqlExpr], SqlExpr]] = {
 
 
 @dataclass(slots=True, init=False, repr=False)
-class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
+class LazyFrame(sql.CoreHandler[ScanSource]):
     """LazyFrame providing Polars-like API over DuckDB relations."""
 
-    _inner: DuckDBPyRelation
-    _schema: Schema
+    _inner: ScanSource
 
-    def __init__(
-        self, data: IntoRel, orient: Orientation = "col", schema: Schema | None = None
-    ) -> None:
-        rel = sql.into_relation(data, orient)
-        self._inner = rel
-        self._schema = schema or Schema.from_frame(rel)
+    def __init__(self, data: IntoRel, orient: Orientation = "col") -> None:
+        self._inner = ScanSource.build(data, orient)
 
     def _from_sql_expr(self, expr: exp.Expr, **kwargs: IntoRel) -> Self:
-        qry = sql.from_query(expr.sql(dialect="duckdb"), **kwargs)
+        qry = sql.ScanSource.from_query(expr.sql(dialect="duckdb"), **kwargs).relation
         return self.__class__(qry)
 
     def _iter_slct(self, func: Callable[[str], SqlExpr]) -> Self:
@@ -91,7 +86,7 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
             self.columns
             .iter()
             .map(lambda c: func(sql.col(c)).alias(c).into_duckdb())
-            .into(lambda exprs: self.inner().aggregate(exprs))
+            .into(self.inner().relation.aggregate)
         )
 
     def lazy(self) -> pl.LazyFrame:
@@ -100,7 +95,9 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         Returns:
             pl.LazyFrame: A Polars LazyFrame representing the same query.
         """
-        return self.inner().pl(lazy=True).pipe(Marker.drop_marker, self.columns)
+        return (
+            self.inner().relation.pl(lazy=True).pipe(Marker.drop_marker, self.columns)
+        )
 
     def collect(self) -> pl.DataFrame:
         """Execute the query and return a Polars DataFrame.
@@ -108,7 +105,7 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         Returns:
             pl.DataFrame: A Polars DataFrame representing the query result.
         """
-        return self.inner().pl().pipe(Marker.drop_marker, self.columns)
+        return self.inner().relation.pl().pipe(Marker.drop_marker, self.columns)
 
     def select(
         self, exprs: TryIter[IntoExpr], *more_exprs: IntoExpr, **named_exprs: IntoExpr
@@ -125,7 +122,7 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         """
         return self.__class__(
             self.columns.into(ExprPlan, exprs, more_exprs, named_exprs).select_context(
-                self.inner()
+                self.inner().relation
             )
         )
 
@@ -145,7 +142,7 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         return self.__class__(
             self.columns.into(
                 ExprPlan, exprs, more_exprs, named_exprs
-            ).with_columns_context(self.inner())
+            ).with_columns_context(self.inner().relation)
         )
 
     def filter(
@@ -176,7 +173,7 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
             .into(sql.reduce, SqlExpr.and_)
             .into_duckdb()
         )
-        return self.__class__(self.inner().filter(expr), schema=self.schema)
+        return self.__class__(self.inner().relation.filter(expr))
 
     def group_by(
         self,
@@ -242,7 +239,7 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         return self.__class__(
             self.columns.into(
                 ExprPlan, exprs, more_exprs, named_exprs
-            ).group_by_all_context(self.inner())
+            ).group_by_all_context(self.inner().relation)
         )
 
     def sort(
@@ -279,9 +276,9 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
                     desc=desc, nulls_last=nls
                 ).into_duckdb()
             )
-            .into(lambda x: self.inner().sort(*x))
+            .into(lambda x: self.inner().relation.sort(*x))
         )
-        return self.__class__(lf, schema=self.schema)
+        return self.__class__(lf)
 
     def limit(self, n: int) -> Self:
         """Limit the number of rows.
@@ -292,7 +289,7 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         Returns:
             Self: A new LazyFrame with the limited rows.
         """
-        return self.__class__(self.inner().limit(n), schema=self.schema)
+        return self.__class__(self.inner().relation.limit(n))
 
     def head(self, n: int = 5) -> Self:
         """Get the first n rows.
@@ -333,8 +330,10 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
                     msg = f"negative slice lengths ({length}) are invalid for LazyFrame"
                     return pc.Err(ValueError(msg))
                 case (len_val, offset) if offset >= 0:
-                    rel = self.inner().limit(len_val.unwrap_or(MAX_I64), offset=offset)
-                    return pc.Ok(self.__class__(rel, schema=self.schema))
+                    rel = self.inner().relation.limit(
+                        len_val.unwrap_or(MAX_I64), offset=offset
+                    )
+                    return pc.Ok(self.__class__(rel))
                 case (pc.Some(0), _):
                     return pc.Ok(self.limit(0))
                 case (pc.Some(length), offset):
@@ -391,16 +390,15 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         Returns:
             Self: A new LazyFrame with the specified columns dropped.
         """
-        to_drop = (
+        expr = (
             try_iter(columns)
             .chain(more_columns)
             .map(lambda v: sql.into_expr(v, as_col=True))
             .filter_map(SqlExpr.root_column_name)
-            .collect()
+            .into(sql.all)
+            .into_duckdb()
         )
-        to_drop.iter().for_each(self._schema.__delitem__)
-        expr = sql.all(exclude=to_drop).into_duckdb()
-        return self.__class__(self.inner().select(expr), schema=self.schema)
+        return self.__class__(self.inner().relation.select(expr))
 
     def drop_nulls(self, subset: TryIter[str] = None) -> Self:
         """Drop rows that contain null values.
@@ -489,7 +487,7 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         )
 
     def union(self, other: Self) -> Self:
-        return self.__class__(self.inner().union(other.inner()), schema=self.schema)
+        return self.__class__(self.inner().relation.union(other.inner().relation))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         """Rename columns.
@@ -516,10 +514,10 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         """
         from ._parser import ParsedQuery
 
-        return ParsedQuery(self.inner().sql_query())
+        return ParsedQuery(self.inner().relation.sql_query())
 
     def explain(self, kind: ExplainType | ExplainTypeLiteral = "standard") -> str:
-        return self.inner().explain(kind)
+        return self.inner().relation.explain(kind)
 
     def unnest(
         self, columns: TryIter[IntoExprColumn], *more_columns: IntoExprColumn
@@ -537,7 +535,7 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
                     .map(lambda expr: expr.into_duckdb())
                 )
             )
-            .into(lambda exprs: self.inner().select(*exprs))
+            .into(lambda exprs: self.inner().relation.select(*exprs))
         )
 
     def first(self) -> Self:
@@ -562,7 +560,7 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
 
     def describe(self) -> Self:
         """Return descriptive statistics."""
-        return self.__class__(self.inner().describe())
+        return self.__class__(self.inner().relation.describe())
 
     def sum(self) -> Self:
         """Aggregate the sum of each column.
@@ -701,7 +699,7 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         Returns:
             Self: A new LazyFrame that is a copy of the current one.
         """
-        return self.__class__(self.inner(), schema=self.schema.copy())
+        return self.__class__(self.inner().copy())
 
     def gather_every(self, n: int, offset: int = 0) -> Self:
         """Take every nth row starting from offset.
@@ -724,7 +722,12 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
     @property
     def columns(self) -> pc.Vec[str]:
         """Get column names."""
-        return self.schema.keys()
+        return pc.Vec.from_ref(self.inner().relation.columns)
+
+    @property
+    def dtypes(self) -> pc.Iter[DataType]:
+        """Get column data types."""
+        return pc.Iter(self.inner().relation.dtypes).map(DataType.from_duckdb)
 
     @property
     def width(self) -> int:
@@ -733,7 +736,7 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
 
     @property
     def schema(self) -> Schema:
-        return self._schema
+        return self.columns.iter().zip(self.dtypes, strict=True).collect(Schema)
 
     def collect_schema(self) -> Schema:
         """Collect the schema (same as schema property for lazy).
@@ -803,9 +806,9 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         return self.__class__(
             self
             .inner()
-            .set_alias("lhs")
+            .relation.set_alias("lhs")
             .join(
-                other.inner().set_alias("rhs"),
+                other.inner().relation.set_alias("rhs"),
                 condition=join_keys.left
                 .iter()
                 .zip(join_keys.right)
@@ -815,7 +818,7 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
                 how=how,
             )
             .select(*_cols_how())
-            .set_alias(self.inner().alias)
+            .set_alias(self.inner().relation.alias)
         )
 
     def join_cross(self, other: Self, *, suffix: str = "_right") -> Self:
@@ -832,8 +835,8 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         return self.__class__(
             self
             .inner()
-            .set_alias("lhs")
-            .cross(other.inner().set_alias("rhs"))
+            .relation.set_alias("lhs")
+            .cross(other.inner().relation.set_alias("rhs"))
             .select(
                 *builder.left
                 .iter()
@@ -841,7 +844,7 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
                 .chain(builder.right.iter().map(builder.for_outer))
                 .map(lambda c: c.into_duckdb())
             )
-            .set_alias(self.inner().alias)
+            .set_alias(self.inner().relation.alias)
         )
 
     def join_asof(  # noqa: PLR0913
@@ -1174,9 +1177,8 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
             .alias(name)
             .into_duckdb()
         )
-        self._schema.insert_at(0, name, Int64())
-        lf = self.inner().select(row_nb, sql.all().into_duckdb())
-        return self.__class__(lf, schema=self.schema)
+        lf = self.inner().relation.select(row_nb, sql.all().into_duckdb())
+        return self.__class__(lf)
 
     def top_k(
         self, k: int, by: TryIter[IntoExpr], *, reverse: TrySeq[bool] = False
@@ -1225,17 +1227,17 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         self, path: str | Path, *, compression: ParquetCompression = "zstd"
     ) -> None:
         """Write to Parquet file."""
-        self.inner().write_parquet(str(path), compression=compression)
+        self.inner().relation.write_parquet(str(path), compression=compression)
 
     def sink_csv(
         self, path: str | Path, *, separator: str = ",", include_header: bool = True
     ) -> None:
         """Write to CSV file."""
-        self.inner().write_csv(str(path), sep=separator, header=include_header)
+        self.inner().relation.write_csv(str(path), sep=separator, header=include_header)
 
     def sink_ndjson(self, path: str | Path) -> None:
         """Write to newline-delimited JSON file."""
-        self.inner().pl(lazy=True).sink_ndjson(path)
+        self.inner().relation.pl(lazy=True).sink_ndjson(path)
 
     def reverse(self) -> Self:
         """Reverse the order of rows.
@@ -1269,7 +1271,7 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         )
 
     def fetch_all(self) -> pc.Vec[tuple[Any, ...]]:  # pyright: ignore[reportExplicitAny]
-        return pc.Vec.from_ref(self.inner().fetchall())
+        return pc.Vec.from_ref(self.inner().relation.fetchall())
 
     def show(
         self,
@@ -1279,7 +1281,7 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         null_value: str | None = None,
         render_mode: RenderModeLiteral | None = None,
     ) -> None:
-        return self.inner().show(
+        return self.inner().relation.show(
             max_width=max_width,
             max_rows=max_rows,
             max_col_width=max_col_width,
@@ -1289,4 +1291,4 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
 
     @property
     def shape(self) -> tuple[int, int]:
-        return self.inner().shape
+        return self.inner().relation.shape

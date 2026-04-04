@@ -1,7 +1,5 @@
 """SQL expression functions and converters."""
 
-from duckdb import table as from_table, table_function as from_table_function
-
 from . import typing, utils
 from ._code_gen import meta
 from ._core import CoreHandler
@@ -24,15 +22,7 @@ from ._funcs import (
     sum_horizontal,
     unnest,
 )
-from ._scans import (
-    from_df,
-    from_dict,
-    from_dicts,
-    from_numpy,
-    from_query,
-    from_records,
-    into_relation,
-)
+from ._scans import ScanSource
 from ._when import ChainedThen, ChainedWhen, Then, When, when
 from ._window import BoundsValues, NullsClause, SortClause, rolling_agg
 
@@ -42,6 +32,7 @@ __all__ = [
     "ChainedWhen",
     "CoreHandler",
     "NullsClause",
+    "ScanSource",
     "SortClause",
     "SqlExpr",
     "Then",
@@ -53,16 +44,7 @@ __all__ = [
     "col",
     "element",
     "fn_once",
-    "from_df",
-    "from_dict",
-    "from_dicts",
-    "from_numpy",
-    "from_query",
-    "from_records",
-    "from_table",
-    "from_table_function",
     "into_expr",
-    "into_relation",
     "lit",
     "max_horizontal",
     "mean_horizontal",

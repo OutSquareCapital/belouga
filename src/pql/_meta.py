@@ -11,7 +11,7 @@ import pyochain as pc
 from sqlglot import exp
 
 from . import sql
-from .sql import SqlExpr
+from .sql import ScanSource, SqlExpr
 from .sql.utils import TryIter, try_iter
 
 if TYPE_CHECKING:
@@ -64,10 +64,6 @@ class Marker(StrEnum):
                 return nw.from_native(result).drop(cls.EMPTY).to_native()
             case False:
                 return result
-
-    @classmethod
-    def empty_frame(cls) -> DuckDBPyRelation:
-        return sql.into_relation({cls.EMPTY: ()})
 
     @classmethod
     def windowed(
@@ -298,7 +294,7 @@ class ExprPlan:
 
         return self.projections.then(
             lambda projs: _non_empty_slct(projs, Marker.windowed(lf, projs))
-        ).unwrap_or_else(Marker.empty_frame)
+        ).unwrap_or_else(lambda: ScanSource.from_none().relation)
 
     def with_columns_context(self, lf: DuckDBPyRelation) -> DuckDBPyRelation:
 
