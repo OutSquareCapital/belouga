@@ -85,16 +85,3 @@ def check_by_arg[T: NonNestedLiteral](
 
         case _:
             return pc.Ok(try_iter(arg).cycle().take(length))
-
-
-def try_chain[T](vals: TryIter[T], other_vals: Iterable[T]) -> pc.Iter[T]:
-    """Try to chain a value that may or may not be iterable with another iterable.
-
-    Args:
-        vals (TryIter[T]): The value to try to chain.
-        other_vals (Iterable[T]): The other iterable to chain with.
-
-    Returns:
-        pc.Iter[T]: An iterator over the chained values.
-    """
-    return try_iter(vals).chain(other_vals)

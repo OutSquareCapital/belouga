@@ -11,7 +11,7 @@ import pyochain as pc
 from . import sql
 from ._meta import ExprKind, ExprMeta, Marker
 from .sql import SqlExpr
-from .sql.utils import TryIter, try_chain, try_iter
+from .sql.utils import TryIter, try_iter
 
 if TYPE_CHECKING:
     from ._datatypes import DataType
@@ -814,7 +814,8 @@ class Expr(sql.CoreHandler[SqlExpr]):
     ) -> Self:
         expr = partial(self.inner().over, descending=descending, nulls_last=nulls_last)
         return (
-            try_chain(partition_by, more_exprs)
+            try_iter(partition_by)
+            .chain(more_exprs)
             .map(lambda x: sql.into_expr(x, as_col=True))
             .into(
                 lambda partition_exprs: (

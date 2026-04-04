@@ -9,7 +9,7 @@ from sqlglot import exp
 from ._conversions import pql_into_glot
 from ._expr import SqlExpr
 from ._funcs import reduce
-from .utils import try_chain
+from .utils import try_iter
 
 if TYPE_CHECKING:
     from .typing import IntoExpr
@@ -19,7 +19,7 @@ _red_fn = partial(reduce, function=SqlExpr.and_)
 
 
 def when(predicates: TryIter[IntoExpr], *more_predicates: IntoExpr) -> When:
-    return _red_fn(try_chain(predicates, more_predicates)).pipe(When)
+    return try_iter(predicates).chain(more_predicates).into(_red_fn).pipe(When)
 
 
 @dataclass(slots=True)
@@ -44,7 +44,9 @@ class Then(SqlExpr):
     def when(
         self, predicates: TryIter[IntoExpr], *more_predicates: IntoExpr
     ) -> ChainedWhen:
-        return ChainedWhen(self, _red_fn(try_chain(predicates, more_predicates)))
+        return ChainedWhen(
+            self, try_iter(predicates).chain(more_predicates).into(_red_fn)
+        )
 
     def otherwise(self, statement: IntoExpr) -> SqlExpr:
         case = self.inner().copy()
@@ -71,7 +73,9 @@ class ChainedThen(SqlExpr):
     def when(
         self, predicates: TryIter[IntoExpr], *more_predicates: IntoExpr
     ) -> ChainedWhen:
-        return ChainedWhen(self, _red_fn(try_chain(predicates, more_predicates)))
+        return ChainedWhen(
+            self, try_iter(predicates).chain(more_predicates).into(_red_fn)
+        )
 
     def otherwise(self, statement: IntoExpr) -> SqlExpr:
         case = self.inner().copy()

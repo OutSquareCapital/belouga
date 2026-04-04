@@ -10,7 +10,7 @@ from ._meta import ExprKind, Marker, MultiMeta, Resolver, SingleMeta
 from .sql import SqlExpr
 from .sql._conversions import args_into_glot
 from .sql.typing import IntoExpr, IntoExprColumn, PythonLiteral
-from .sql.utils import TryIter, try_chain, try_iter
+from .sql.utils import TryIter, try_iter
 
 
 @final
@@ -55,7 +55,7 @@ def _agg_expr(
         expr = exp.Columns(this=inner_cols.into(args_into_glot))
         return SqlExpr(expr)
 
-    names = try_chain(cols, more_cols).collect().then_some()
+    names = try_iter(cols).chain(more_cols).collect().then_some()
     meta = MultiMeta(
         kind=ExprKind.SCALAR, resolver=Resolver.agg_expr(names), preserve_native=True
     )

@@ -10,7 +10,7 @@ from ._conversions import args_into_glot, pql_into_glot
 from ._core import DuckHandler
 from ._expr import SqlExpr
 from .typing import IntoExpr, IntoExprColumn, PythonLiteral
-from .utils import TryIter, try_chain, try_iter
+from .utils import TryIter, try_iter
 
 
 def reduce(
@@ -139,7 +139,7 @@ def coalesce(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
     Returns:
         SqlExpr: An expression representing the COALESCE operation.
     """
-    exprs = try_chain(exprs, more_exprs).into(args_into_glot)
+    exprs = try_iter(exprs).chain(more_exprs).into(args_into_glot)
     return SqlExpr(exp.Coalesce(this=exprs[0], expressions=exprs))
 
 
@@ -151,17 +151,21 @@ def _horizontal_fn(
     more_exprs: Iterable[IntoExpr],
     fn: Callable[[SqlExpr, *tuple[IntoExpr]], SqlExpr],
 ) -> SqlExpr:
-    return try_chain(exprs, more_exprs).into(
-        lambda all_exprs: (
-            all_exprs
-            .next()
-            .map(lambda value: into_expr(value, as_col=True))
-            .map(
-                lambda x: fn(
-                    x, *all_exprs.map(lambda value: into_expr(value, as_col=True))
+    return (
+        try_iter(exprs)
+        .chain(more_exprs)
+        .into(
+            lambda all_exprs: (
+                all_exprs
+                .next()
+                .map(lambda value: into_expr(value, as_col=True))
+                .map(
+                    lambda x: fn(
+                        x, *all_exprs.map(lambda value: into_expr(value, as_col=True))
+                    )
                 )
-            )
-        ).expect(_HORIZONTAL_ERR)
+            ).expect(_HORIZONTAL_ERR)
+        )
     )
 
 
@@ -174,23 +178,26 @@ def max_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
 
 
 def sum_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
-    return try_chain(exprs, more_exprs).into(
-        reduce, lambda lhs, rhs: lhs.add(coalesce(rhs, 0))
+    return (
+        try_iter(exprs)
+        .chain(more_exprs)
+        .into(reduce, lambda lhs, rhs: lhs.add(coalesce(rhs, 0)))
     )
 
 
 def all_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
-    return try_chain(exprs, more_exprs).into(reduce, SqlExpr.and_)
+    return try_iter(exprs).chain(more_exprs).into(reduce, SqlExpr.and_)
 
 
 def any_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
-    return try_chain(exprs, more_exprs).into(reduce, SqlExpr.or_)
+    return try_iter(exprs).chain(more_exprs).into(reduce, SqlExpr.or_)
 
 
 def mean_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
     dtype = exp.DType.BIGINT.into_expr()
     return (
-        try_chain(exprs, more_exprs)
+        try_iter(exprs)
+        .chain(more_exprs)
         .map(lambda value: into_expr(value, as_col=True))
         .collect()
         .then(

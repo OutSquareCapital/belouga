@@ -13,7 +13,7 @@ from sqlglot import exp
 from . import sql
 from ._schema import Schema
 from .sql import SqlExpr
-from .sql.utils import TryIter, try_chain, try_iter
+from .sql.utils import TryIter, try_iter
 
 if TYPE_CHECKING:
     from duckdb import DuckDBPyRelation, Expression
@@ -267,7 +267,11 @@ class ExprPlan:
             .collect()
         )
         self.projections = (
-            try_chain(exprs, more_exprs).flat_map(_resolve).chain(expr_map).collect()
+            try_iter(exprs)
+            .chain(more_exprs)
+            .flat_map(_resolve)
+            .chain(expr_map)
+            .collect()
         )
 
     def aliased_sql(self) -> pc.Iter[Expression]:

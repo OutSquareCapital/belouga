@@ -20,7 +20,7 @@ from ._joins import JoinBuilder, JoinKeys
 from ._meta import ExprPlan, Marker
 from ._schema import Schema
 from .sql import SqlExpr
-from .sql.utils import TryIter, TrySeq, check_by_arg, try_chain, try_iter, try_seq
+from .sql.utils import TryIter, TrySeq, check_by_arg, try_iter, try_seq
 
 if TYPE_CHECKING:
     import polars as pl
@@ -169,7 +169,8 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
             return sql.col(k).eq(sql.into_expr(val))
 
         expr = (
-            try_chain(predicates, more_predicates)
+            try_iter(predicates)
+            .chain(more_predicates)
             .map(lambda value: sql.into_expr(value, as_col=True))
             .chain(pc.Iter(constraints.items()).map_star(_constraint))
             .into(sql.reduce, SqlExpr.and_)
@@ -198,7 +199,8 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         from ._groupby import LazyGroupBy
 
         key_exprs = (
-            try_chain(keys, more_keys)
+            try_iter(keys)
+            .chain(more_keys)
             .map(lambda key: sql.into_expr(key, as_col=True))
             .collect()
         )
@@ -262,7 +264,8 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
             Self: A new LazyFrame with the sorted rows.
         """
         lf = (
-            try_chain(by, more_by)
+            try_iter(by)
+            .chain(more_by)
             .map(lambda v: sql.into_expr(v, as_col=True))
             .collect()
             .into(
@@ -389,7 +392,8 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
             Self: A new LazyFrame with the specified columns dropped.
         """
         to_drop = (
-            try_chain(columns, more_columns)
+            try_iter(columns)
+            .chain(more_columns)
             .map(lambda v: sql.into_expr(v, as_col=True))
             .filter_map(SqlExpr.root_column_name)
             .collect()
@@ -521,7 +525,8 @@ class LazyFrame(sql.CoreHandler[DuckDBPyRelation]):
         self, columns: TryIter[IntoExprColumn], *more_columns: IntoExprColumn
     ) -> Self:
         return self.__class__(
-            try_chain(columns, more_columns)
+            try_iter(columns)
+            .chain(more_columns)
             .collect()
             .into(
                 lambda unnest_cols: (
