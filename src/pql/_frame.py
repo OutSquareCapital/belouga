@@ -17,7 +17,6 @@ from ._datatypes import DataType
 from ._funcs import col
 from ._joins import JoinBuilder, JoinKeys
 from ._meta import ExprPlan, Marker
-from ._schema import Schema
 from .sql import ScanSource, SqlExpr
 from .sql.utils import TryIter, TrySeq, check_by_arg, try_iter, try_seq
 
@@ -63,6 +62,8 @@ PIVOT_AGG: dict[PivotAgg, Callable[[SqlExpr], SqlExpr]] = {
     "len": SqlExpr.count,
     "count": SqlExpr.count,
 }
+
+type Schema = pc.Dict[str, DataType]
 
 
 @dataclass(slots=True, init=False, repr=False)
@@ -736,7 +737,7 @@ class LazyFrame(sql.CoreHandler[ScanSource]):
 
     @property
     def schema(self) -> Schema:
-        return self.columns.iter().zip(self.dtypes, strict=True).collect(Schema)
+        return self.columns.iter().zip(self.dtypes, strict=True).collect(pc.Dict)
 
     def collect_schema(self) -> Schema:
         """Collect the schema (same as schema property for lazy).

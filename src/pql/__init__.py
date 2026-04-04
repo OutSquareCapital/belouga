@@ -38,7 +38,7 @@ from ._datatypes import (
     Union,
 )
 from ._expr import Expr
-from ._frame import LazyFrame
+from ._frame import LazyFrame, Schema
 from ._funcs import (
     all,
     all_horizontal,
@@ -68,7 +68,6 @@ from ._scans import (
     from_table,
     from_table_function,
 )
-from ._schema import Schema
 from ._when import when
 
 __all__ = [

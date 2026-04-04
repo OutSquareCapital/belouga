@@ -24,7 +24,6 @@ _OBJS = [
     pql.sql.when(1).then(2),
     pql.sql.when(1).then(2).when(3).then(4),
     pql.selectors.all(),
-    pql.Schema({}),
     *pql._datatypes.NON_NESTED_MAP.values(),  # pyright: ignore[reportPrivateUsage]
 ]
 
