@@ -254,18 +254,16 @@ class ExprPlan:
                     return ResolvedExpr.from_named(val, alias_override).into_iter()
 
         self.cols = cols
-        expr_map = (
-            pc
-            .Iter(named_exprs.items())
-            .map_star(lambda k, v: _resolve(v, pc.Some(k)))
-            .flatten()
-            .collect()
-        )
         self.projections = (
             try_iter(exprs)
             .chain(more_exprs)
             .flat_map(_resolve)
-            .chain(expr_map)
+            .chain(
+                pc
+                .Iter(named_exprs.items())
+                .map_star(lambda k, v: _resolve(v, pc.Some(k)))
+                .flatten()
+            )
             .collect()
         )
 
