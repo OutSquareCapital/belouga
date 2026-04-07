@@ -21,7 +21,6 @@ if TYPE_CHECKING:
 
     from . import namespaces as nm
     from .typing import (
-        Addable,
         ClosedInterval,
         FillNullStrategy,
         FrameMode,
@@ -105,8 +104,11 @@ class SqlExpr(Fns):  # noqa: PLW1641
     def _rbinop[T: exp.Binary](self, op: type[T], other: IntoExpr) -> Self:
         return self._build_op(op, pql_into_glot(other), self.inner())
 
-    def __add__(self, other: Addable) -> Self:
-        return self.add(other)
+    def __add__(self, other: IntoExpr) -> Self:
+        return self._binop(exp.Add, other)
+
+    def add(self, other: IntoExpr) -> Self:
+        return self.__add__(other)
 
     def __and__(self, other: IntoExpr) -> Self:
         return self._binop(exp.And, other)

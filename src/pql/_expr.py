@@ -26,7 +26,6 @@ if TYPE_CHECKING:
     )
     from ._typing import RankMethod
     from .sql.typing import (
-        Addable,
         ClosedInterval,
         FillNullStrategy,
         IntoExpr,
@@ -153,7 +152,7 @@ class Expr(sql.CoreHandler[SqlExpr]):
 
         return ExprDateTimeNameSpace(self)
 
-    def __add__(self, other: Addable) -> Self:
+    def __add__(self, other: IntoExpr) -> Self:
         return self.add(other)
 
     def __radd__(self, other: IntoExpr) -> Self:
@@ -240,7 +239,7 @@ class Expr(sql.CoreHandler[SqlExpr]):
     def __hash__(self) -> int:
         return hash(self.inner().get_name())
 
-    def add(self, other: Addable) -> Self:
+    def add(self, other: IntoExpr) -> Self:
         """Add another expression or value.
 
         Returns:
