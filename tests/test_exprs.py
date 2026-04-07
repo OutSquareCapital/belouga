@@ -359,6 +359,10 @@ def test_unique() -> None:
     )
 
 
+def test_composed_reducer_broadcast() -> None:
+    assert_eq(pql.col("x").sum().add(3), pl.col("x").sum().add(3))
+
+
 def test_is_close() -> None:
     assert_eq(
         pql.col("salary").is_close(

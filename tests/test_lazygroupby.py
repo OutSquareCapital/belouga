@@ -236,6 +236,23 @@ def test_agg_multi_exprs(sample_df: pl.DataFrame) -> None:
     )
 
 
+def test_agg_composed_reducer(sample_df: pl.DataFrame) -> None:
+    assert_eq(
+        pql
+        .LazyFrame(sample_df)
+        .group_by("department")
+        .agg(pql.col("salary").mean().add(1).alias("mean_plus"))
+        .sort("department")
+        .collect(),
+        sample_df
+        .lazy()
+        .group_by("department")
+        .agg(pl.col("salary").mean().add(1).alias("mean_plus"))
+        .sort("department")
+        .collect(),
+    )
+
+
 def test_agg_named_exprs(sample_df: pl.DataFrame) -> None:
     assert_eq(
         pql
