@@ -47,35 +47,17 @@ class MetaFnInfo:
             pc.Option(varargs_type),
         )
 
-    def _body_args(self) -> str:
-        return (
-            self.params
-            .iter()
-            .map_star(lambda n, _: n)
-            .chain(
-                self.varargs_type.map(lambda _: pc.Iter.once("*args")).unwrap_or_else(
-                    pc.Iter.new
-                )
-            )
-            .collect()
-            .then(lambda a: f", {a.join(', ')}")
-            .unwrap_or("")
-        )
+    def build(self) -> str:
+        return f'''
+def {self.final_name}({self._signature()}) -> duckdb.DuckDBPyRelation:
+    """{self._description()}.
 
-    def _args_section(self) -> str:
-        return (
-            self.params
-            .iter()
-            .map_star(lambda n, t: f"        {n} ({t} | None): Parameter")
-            .chain(
-                self.varargs_type.map(
-                    lambda t: pc.Iter.once(f"        *args ({t}): Variable arguments")
-                ).unwrap_or_else(pc.Iter.new)
-            )
-            .collect()
-            .then(lambda docs: f"\n\n    Args:\n{docs.join(chr(10))}")
-            .unwrap_or("")
-        )
+    **SQL name**: *{self.name}*{self._args_section()}
+
+    Returns:
+        duckdb.DuckDBPyRelation
+    """
+    return duckdb.table_function("{self.name}"{self._body_args()})'''
 
     def _signature(self) -> str:
         return (
@@ -97,17 +79,35 @@ class MetaFnInfo:
             )
         ).unwrap_or(f"SQL {self.name} table function")
 
-    def build(self) -> str:
-        return f'''
-def {self.final_name}({self._signature()}) -> duckdb.DuckDBPyRelation:
-    """{self._description()}.
+    def _args_section(self) -> str:
+        return (
+            self.params
+            .iter()
+            .map_star(lambda n, t: f"        {n} ({t} | None): Parameter")
+            .chain(
+                self.varargs_type.map(
+                    lambda t: pc.Iter.once(f"        *args ({t}): Variable arguments")
+                ).unwrap_or_else(pc.Iter.new)
+            )
+            .collect()
+            .then(lambda docs: f"\n\n    Args:\n{docs.join(chr(10))}")
+            .unwrap_or("")
+        )
 
-    **SQL name**: *{self.name}*{self._args_section()}
-
-    Returns:
-        duckdb.DuckDBPyRelation
-    """
-    return duckdb.table_function("{self.name}"{self._body_args()})'''
+    def _body_args(self) -> str:
+        return (
+            self.params
+            .iter()
+            .map_star(lambda n, _: n)
+            .chain(
+                self.varargs_type.map(lambda _: pc.Iter.once("*args")).unwrap_or_else(
+                    pc.Iter.new
+                )
+            )
+            .collect()
+            .then(lambda a: f", {a.join(', ')}")
+            .unwrap_or("")
+        )
 
 
 def run_pipeline(caller: Path, source: Path) -> str:

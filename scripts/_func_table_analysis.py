@@ -20,10 +20,16 @@ def _df_to_iter(df: pl.DataFrame) -> pc.Iter[tuple[Any, ...]]:  # pyright: ignor
     return pc.Iter(df.iter_rows())
 
 
+def analyze(path: Path) -> None:
+    lf = pl.scan_parquet(path).pipe(_filters, DuckCols())
+    _analyze_by_categories(lf)
+    _analyze_multi_category(lf)
+
+
 def _analyze_by_categories(lf: pl.LazyFrame) -> None:
     """Analyse par categories (exploded)."""
     CONSOLE.print(
-        "\n═══ Analyse par categories (1ère catégorie) ═══\n", style="bold cyan"
+        "\n---- Analyse par categories (1ère catégorie) ----\n", style="bold cyan"
     )
 
     df = (
@@ -54,7 +60,7 @@ def _analyze_by_categories(lf: pl.LazyFrame) -> None:
 
 def _analyze_multi_category(lf: pl.LazyFrame) -> None:
     """Analyse les fonctions avec plusieurs catégories."""
-    CONSOLE.print("\n═══ Fonctions multi-catégories ═══\n", style="bold cyan")
+    CONSOLE.print("\n---- Fonctions multi-catégories ----\n", style="bold cyan")
 
     df = (
         lf
@@ -80,9 +86,3 @@ def _analyze_multi_category(lf: pl.LazyFrame) -> None:
 
     CONSOLE.print(table)
     CONSOLE.print(f"\nTotal: {df.height} fonctions multi-catégories")
-
-
-def analyze(path: Path) -> None:
-    lf = pl.scan_parquet(path).pipe(_filters, DuckCols())
-    _analyze_by_categories(lf)
-    _analyze_multi_category(lf)

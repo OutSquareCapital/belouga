@@ -119,18 +119,6 @@ class _UnionCanonicalizer(ast.NodeTransformer):
                 return rewritten
 
 
-def normalize_annotation(annotation: str) -> str:
-
-    return extract_last_name(
-        SELF_PATTERN.sub(
-            "__SELF__",
-            extract_last_name(
-                ast.unparse(_normalize_expr(ast.parse(annotation, mode="eval")))
-            ),
-        )
-    )
-
-
 def annotations_compatible(reference_ann: str, target_ann: str) -> bool:
     normalized_reference = normalize_annotation(reference_ann)
     normalized_target = normalize_annotation(target_ann)
@@ -147,12 +135,57 @@ def annotations_compatible(reference_ann: str, target_ann: str) -> bool:
             )
 
 
+def normalize_annotation(annotation: str) -> str:
+
+    return extract_last_name(
+        SELF_PATTERN.sub(
+            "__SELF__",
+            extract_last_name(
+                ast.unparse(_normalize_expr(ast.parse(annotation, mode="eval")))
+            ),
+        )
+    )
+
+
 def _normalize_expr(parsed: ast.Expression) -> ast.expr:
     return ast.fix_missing_locations(  # pyright: ignore[reportAny]
         _UnionCanonicalizer().visit(  # pyright: ignore[reportAny]
             _GenericCanonicalizer().visit(_AliasExpander().visit(parsed))  # pyright: ignore[reportAny]
         )
     ).body
+
+
+def _generic_base_accepts(
+    target_base: CollectionsABC,
+    target_args: pc.Seq[ast.expr],
+    reference_base: ContainerType,
+    reference_args: pc.Seq[ast.expr],
+) -> bool:
+    return (
+        _collection_item_type(target_base, target_args)
+        .and_then(
+            lambda target_item: _collection_item_type(
+                reference_base, reference_args
+            ).map(
+                lambda reference_item: (
+                    CONTAINER_SUPERTYPES
+                    .get_item(target_base)
+                    .map(lambda accepted: accepted.contains(reference_base))
+                    .unwrap_or(default=False)
+                    and _annotation_accepts(target_item, reference_item)
+                )
+            )
+        )
+        .unwrap_or(
+            target_base == reference_base
+            and target_args.length() == reference_args.length()
+            and target_args
+            .iter()
+            .zip(reference_args)
+            .map_star(_annotation_accepts)
+            .all(bool)
+        )
+    )
 
 
 def _annotation_accepts(target: ast.expr, reference: ast.expr) -> bool:
@@ -192,14 +225,6 @@ def _member_accepts(target: ast.expr, reference: ast.expr) -> bool:
             )
 
 
-def _into_seq_args(target: ast.expr) -> pc.Seq[ast.expr]:
-    match target:
-        case ast.Tuple():
-            return pc.Seq(target.elts)
-        case _:
-            return pc.Seq((target,))
-
-
 def _generic_accepts(target: ast.Subscript, reference: ast.Subscript) -> bool:
     return (
         _type_name(target.value)
@@ -217,37 +242,12 @@ def _generic_accepts(target: ast.Subscript, reference: ast.Subscript) -> bool:
     )
 
 
-def _generic_base_accepts(
-    target_base: CollectionsABC,
-    target_args: pc.Seq[ast.expr],
-    reference_base: ContainerType,
-    reference_args: pc.Seq[ast.expr],
-) -> bool:
-    return (
-        _collection_item_type(target_base, target_args)
-        .and_then(
-            lambda target_item: _collection_item_type(
-                reference_base, reference_args
-            ).map(
-                lambda reference_item: (
-                    CONTAINER_SUPERTYPES
-                    .get_item(target_base)
-                    .map(lambda accepted: accepted.contains(reference_base))
-                    .unwrap_or(default=False)
-                    and _annotation_accepts(target_item, reference_item)
-                )
-            )
-        )
-        .unwrap_or(
-            target_base == reference_base
-            and target_args.length() == reference_args.length()
-            and target_args
-            .iter()
-            .zip(reference_args)
-            .map_star(_annotation_accepts)
-            .all(bool)
-        )
-    )
+def _into_seq_args(target: ast.expr) -> pc.Seq[ast.expr]:
+    match target:
+        case ast.Tuple():
+            return pc.Seq(target.elts)
+        case _:
+            return pc.Seq((target,))
 
 
 def _collection_item_type(base: str, args: pc.Seq[ast.expr]) -> pc.Option[ast.expr]:

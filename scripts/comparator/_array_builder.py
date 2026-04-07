@@ -32,10 +32,6 @@ class ArrayBuilder:
     def build(self) -> pc.Vec[str]:
         return self._row
 
-    def _add(self, element: str) -> Self:
-        self._row.append(element)
-        return self
-
     def count_cell(self) -> Self:
         return self._add(str(self._count_with()))
 
@@ -49,6 +45,19 @@ class ArrayBuilder:
 
     def with_name(self, name: str) -> Self:
         return self._add(name)
+
+    def _add(self, element: str) -> Self:
+        self._row.append(element)
+        return self
+
+    def _coverage_percent(self) -> float:
+        total = self._count_with()
+        matched = self._count_for_status(Status.MATCH)
+        match total:
+            case 0:
+                return 100.0
+            case _:
+                return (matched / total) * 100
 
     def _count_for_status(self, status: Status) -> int:
         return (
@@ -64,15 +73,6 @@ class ArrayBuilder:
             )
             .length()
         )
-
-    def _coverage_percent(self) -> float:
-        total = self._count_with()
-        matched = self._count_for_status(Status.MATCH)
-        match total:
-            case 0:
-                return 100.0
-            case _:
-                return (matched / total) * 100
 
     def _count_with(self) -> int:
         return (

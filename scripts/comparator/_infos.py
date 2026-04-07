@@ -13,14 +13,6 @@ from ._rules import IGNORED_PARAMS, Status
 type MapInfo = pc.Dict[str, ParamInfo]
 
 
-def annotations_differ(pl_param: ParamInfo, pql_param: ParamInfo) -> bool:
-    match (pl_param.annotation, pql_param.annotation):
-        case (pc.Some(pl_ann), pc.Some(pql_ann)):
-            return not annotations_compatible(pl_ann, pql_ann)
-        case _:
-            return False
-
-
 @dataclass(slots=True)
 class ParamInfo:
     """Information about a function parameter."""
@@ -177,24 +169,6 @@ class ComparisonInfos:
                 return Status.MISSING
 
 
-def _get_annotation_str(annotation: object) -> pc.Option[str]:
-    """Convert annotation to string representation.
-
-    Args:
-        annotation (object): The annotation to convert.
-
-    Returns:
-        pc.Option[str]: The string representation of the annotation, or pc.NONE if not available.
-    """
-    match annotation:
-        case inspect.Parameter.empty | inspect.Signature.empty:
-            return pc.NONE
-        case type():
-            return pc.Option(annotation.__name__)
-        case _:
-            return pc.Option(extract_last_name(str(annotation)))
-
-
 def _mismatch_against(target: MapInfo, other: MapInfo, ignored: pc.Set[str]) -> bool:
     target_filtered = _without_ignored_params(target, ignored)
     other_filtered = _without_ignored_params(other, ignored)
@@ -213,28 +187,6 @@ def _mismatch_against(target: MapInfo, other: MapInfo, ignored: pc.Set[str]) -> 
         )
     )
     return on_params or on_ann
-
-
-def _without_ignored_params(mapping: MapInfo, ignored: pc.Set[str]) -> MapInfo:
-    def _get_fn(current: pc.Dict[str, ParamInfo], param: ParamInfo) -> ParamInfo:
-        key = (
-            param.name.removeprefix("more_")
-            if param.is_var_positional and param.name.startswith("more_")
-            else param.name
-        )
-        return current.setdefault(key, param)
-
-    return (
-        mapping
-        .items()
-        .iter()
-        .filter_star(lambda k, _v: not ignored.contains(k))
-        .map_star(lambda _name, param: param)
-        .fold(
-            pc.Dict[str, ParamInfo].new(),
-            lambda acc, param: acc.inspect(_get_fn, param),
-        )
-    )
 
 
 def ignored_params_for(class_name: Pql, method_name: str) -> pc.Set[str]:
@@ -335,6 +287,24 @@ def _build_method_info(attr: object, name: str) -> pc.Option[MethodInfo]:
             return pc.NONE
 
 
+def _get_annotation_str(annotation: object) -> pc.Option[str]:
+    """Convert annotation to string representation.
+
+    Args:
+        annotation (object): The annotation to convert.
+
+    Returns:
+        pc.Option[str]: The string representation of the annotation, or pc.NONE if not available.
+    """
+    match annotation:
+        case inspect.Parameter.empty | inspect.Signature.empty:
+            return pc.NONE
+        case type():
+            return pc.Option(annotation.__name__)
+        case _:
+            return pc.Option(extract_last_name(str(annotation)))
+
+
 def _format_param_str(param: ParamInfo, highlight_names: pc.Set[str]) -> str:
     rendered = param.annotation.map(lambda a: f"{param.param_name()}: {a}").unwrap_or(
         param.param_name() + ("=..." if param.has_default else "")
@@ -371,3 +341,33 @@ def _diff_param_names(
         )
         .collect(pc.Set)
     )
+
+
+def _without_ignored_params(mapping: MapInfo, ignored: pc.Set[str]) -> MapInfo:
+    def _get_fn(current: pc.Dict[str, ParamInfo], param: ParamInfo) -> ParamInfo:
+        key = (
+            param.name.removeprefix("more_")
+            if param.is_var_positional and param.name.startswith("more_")
+            else param.name
+        )
+        return current.setdefault(key, param)
+
+    return (
+        mapping
+        .items()
+        .iter()
+        .filter_star(lambda k, _v: not ignored.contains(k))
+        .map_star(lambda _name, param: param)
+        .fold(
+            pc.Dict[str, ParamInfo].new(),
+            lambda acc, param: acc.inspect(_get_fn, param),
+        )
+    )
+
+
+def annotations_differ(pl_param: ParamInfo, pql_param: ParamInfo) -> bool:
+    match (pl_param.annotation, pql_param.annotation):
+        case (pc.Some(pl_ann), pc.Some(pql_ann)):
+            return not annotations_compatible(pl_ann, pql_ann)
+        case _:
+            return False

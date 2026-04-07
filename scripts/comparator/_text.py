@@ -61,18 +61,6 @@ Each summary cell is relative to Polars.
     return pc.Iter.once(txt)
 
 
-def _summary_header() -> pc.Seq[str]:
-    return pc.Seq((
-        "Class",
-        "Coverage",
-        "Implemented",
-        "Matched",
-        "Missing",
-        "Mismatched",
-        "Extra",
-    ))
-
-
 @dataclass(slots=True)
 class ClassComparison:
     """Converter between entry arguments and ComparisonReport."""
@@ -164,6 +152,18 @@ def _summary_widths(rows: pc.Seq[pc.Seq[str]]) -> pc.Iter[int]:
             .fold(0, lambda acc, length: max(length, acc))
         )
     )
+
+
+def _summary_header() -> pc.Seq[str]:
+    return pc.Seq((
+        "Class",
+        "Coverage",
+        "Implemented",
+        "Matched",
+        "Missing",
+        "Mismatched",
+        "Extra",
+    ))
 
 
 def _format_separator(widths: pc.Seq[int]) -> str:

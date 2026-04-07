@@ -39,16 +39,6 @@ def _varargs(dk: DuckCols, py: PyCols) -> pl.Expr:
     )
 
 
-def _dk_args(has_params: pl.Expr, p_lists: ParamLists) -> pl.Expr:
-    return pl.when(has_params.gt(1)).then(
-        format_kwords(", {args}", args=p_lists.names.list.slice(1).list.join(", "))
-    )
-
-
-def _dk_varargs(dk: DuckCols) -> pl.Expr:
-    return pl.when(dk.varargs.is_not_null()).then(pl.lit(", *args"))
-
-
 def _expr_call(
     has_params: pl.Expr, py: PyCols, p_lists: ParamLists, dk: DuckCols
 ) -> pl.Expr:
@@ -60,6 +50,16 @@ def _expr_call(
         expr_name=py.expr_name,
         ignore_nulls=True,
     )
+
+
+def _dk_args(has_params: pl.Expr, p_lists: ParamLists) -> pl.Expr:
+    return pl.when(has_params.gt(1)).then(
+        format_kwords(", {args}", args=p_lists.names.list.slice(1).list.join(", "))
+    )
+
+
+def _dk_varargs(dk: DuckCols) -> pl.Expr:
+    return pl.when(dk.varargs.is_not_null()).then(pl.lit(", *args"))
 
 
 def _args_section(

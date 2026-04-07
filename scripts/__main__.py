@@ -129,13 +129,6 @@ def check_sqlglot() -> None:
     console.print(f"Done with exit code {res}!", style="bold green")
 
 
-def _check_args(*, check_only: bool) -> Iterable[str]:
-    if check_only:
-        return ("check", "--unsafe-fixes", "--diff")
-
-    return ("check", "--fix", "--unsafe-fixes")
-
-
 def _run_ruff(*, check_only: bool, dest: Path) -> None:
 
     import subprocess
@@ -146,6 +139,13 @@ def _run_ruff(*, check_only: bool, dest: Path) -> None:
 
     _ = run_ruff((*uv_args, "format", str(dest)))
     _ = run_ruff((*uv_args, *_check_args(check_only=check_only), str(dest)))
+
+
+def _check_args(*, check_only: bool) -> Iterable[str]:
+    if check_only:
+        return ("check", "--unsafe-fixes", "--diff")
+
+    return ("check", "--fix", "--unsafe-fixes")
 
 
 if __name__ == "__main__":
