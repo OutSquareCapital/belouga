@@ -47,12 +47,11 @@ def _run_qry() -> str:
     patched = pl.col("patched")
 
     def _format(expr: pl.Expr) -> pl.Expr:
+        return expr.list.unique().list.sort().list.join(", ").pipe(_emphase)
+
+    def _emphase(expr: pl.Expr) -> pl.Expr:
         return (
-            pl
-            .lit("**")
-            .add(expr.list.unique().list.sort().list.join(", "))
-            .add("**")
-            .str.replace_all("****", "null", literal=True)
+            pl.lit("`").add(expr).add("`").str.replace_all("``", "null", literal=True)
         )
 
     return (
@@ -118,7 +117,7 @@ def _run_qry() -> str:
             )
         )
         .select(
-            function_name,
+            function_name.pipe(_emphase).alias("function_name"),
             patched,
             other_aliases
             .set_intersection(known_function_names)
