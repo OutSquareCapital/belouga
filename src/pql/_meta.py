@@ -124,9 +124,6 @@ class ExprMeta(ABC):
 
     alias_name: pc.Option[Callable[[str], str]] = field(default_factory=lambda: pc.NONE)
 
-    def set_alias_name(self, fn: Callable[[str], str]) -> Self:
-        return replace(self, alias_name=pc.Some(fn))
-
     @abstractmethod
     def into_resolved(
         self, template: SqlExpr, cols: Cols, alias_override: pc.Option[str]
@@ -165,7 +162,13 @@ class SingleMeta(ExprMeta):
     def into_resolved(
         self, template: SqlExpr, cols: Cols, alias_override: pc.Option[str]
     ) -> pc.Iter[ResolvedExpr]:
-        output_names = self.get_output_names(pc.Seq((self.root_name,)), alias_override)
+        match template.inner():
+            case exp.Alias():
+                base_names = pc.Seq((template.get_name(),))
+            case _:
+                base_names = pc.Seq((self.root_name,))
+
+        output_names = self.get_output_names(base_names, alias_override)
         return ResolvedExpr(template, output_names.first()).into_iter()
 
 

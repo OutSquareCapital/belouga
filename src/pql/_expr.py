@@ -46,7 +46,7 @@ class Expr(sql.CoreHandler[SqlExpr]):
         return self.__class__(value, self.meta)
 
     def _as_literal_name(self, expr: SqlExpr) -> Self:
-        return self.__class__(expr, self.meta.set_alias_name(lambda _: Marker.LIT))
+        return self.__class__(expr.alias(Marker.LIT), self.meta.clear_alias())
 
     def _clear_alias_name(self) -> Expr:
         return self.__class__(self.inner(), self.meta.clear_alias())
@@ -55,7 +55,7 @@ class Expr(sql.CoreHandler[SqlExpr]):
         return self.__class__(self.inner(), self.meta.with_alias_mapper(mapper))
 
     def _set_alias(self, alias: str) -> Self:
-        return self.__class__(self.inner(), self.meta.set_alias_name(lambda _: alias))
+        return self.__class__(self.inner().alias(alias), self.meta.clear_alias())
 
     def _rolling_agg(
         self,
