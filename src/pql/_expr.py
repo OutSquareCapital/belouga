@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable
 from dataclasses import dataclass, replace
+from decimal import Decimal
 from functools import partial
 from typing import TYPE_CHECKING, Self, override
 
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
     )
     from ._typing import RankMethod
     from .sql.typing import (
+        Addable,
         ClosedInterval,
         FillNullStrategy,
         IntoExpr,
@@ -154,7 +156,7 @@ class Expr(sql.CoreHandler[SqlExpr]):
 
         return ExprDateTimeNameSpace(self)
 
-    def __add__(self, other: IntoExpr) -> Self:
+    def __add__(self, other: Addable) -> Self:
         return self.add(other)
 
     def __radd__(self, other: IntoExpr) -> Self:
@@ -184,13 +186,13 @@ class Expr(sql.CoreHandler[SqlExpr]):
     def __rfloordiv__(self, other: IntoExpr) -> Self:
         return self._as_literal_name(self.inner().rfloordiv(other))
 
-    def __mod__(self, other: IntoExpr) -> Self:
+    def __mod__(self, other: IntoExprColumn | Decimal | float) -> Self:
         return self.mod(other)
 
     def __rmod__(self, other: IntoExpr) -> Self:
         return self._as_literal_name(self.inner().rmod(other))
 
-    def __pow__(self, other: IntoExpr) -> Self:
+    def __pow__(self, other: IntoExprColumn | float) -> Self:
         return self.pow(other)
 
     def __rpow__(self, other: IntoExpr) -> Self:
@@ -241,7 +243,7 @@ class Expr(sql.CoreHandler[SqlExpr]):
     def __hash__(self) -> int:
         return hash(self.inner().get_name())
 
-    def add(self, other: IntoExpr) -> Self:
+    def add(self, other: Addable) -> Self:
         """Add another expression or value.
 
         Returns:
@@ -261,10 +263,10 @@ class Expr(sql.CoreHandler[SqlExpr]):
     def floordiv(self, other: IntoExpr) -> Self:
         return self._cls(self.inner().floordiv(other))
 
-    def mod(self, other: IntoExpr) -> Self:
+    def mod(self, other: IntoExprColumn | Decimal | float) -> Self:
         return self._cls(self.inner().mod(other))
 
-    def pow(self, other: IntoExpr) -> Self:
+    def pow(self, other: IntoExprColumn | float) -> Self:
         return self._cls(self.inner().pow(other))
 
     def neg(self) -> Self:

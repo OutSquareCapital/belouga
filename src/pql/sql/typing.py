@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator, Mapping, Sequence
+from datetime import date, datetime, time, timedelta
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Literal, Protocol, Self, runtime_checkable
 
 import duckdb
@@ -153,3 +155,6 @@ ClosedInterval = Literal["both", "left", "right", "none"]
 TimeUnit = Literal["ms", "us", "ns"]
 EpochTimeUnit = Literal["ms", "us", "ns", "s", "d"]
 FillNullStrategy = Literal["forward", "backward", "min", "max", "mean", "zero", "one"]
+type Addable = (
+    IntoExprColumn | Decimal | date | datetime | float | time | timedelta | None
+)

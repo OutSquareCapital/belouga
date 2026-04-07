@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from datetime import date, datetime, time, timedelta
+from decimal import Decimal
 from typing import TYPE_CHECKING, ClassVar, Self
 
 from .._core import DuckHandler, NameSpaceHandler, anon, func
@@ -65,6 +66,31 @@ class Fns(DuckHandler):
             Self
         """
         return self._cls(func("ACOSH", self.inner()))
+
+    def add(
+        self,
+        col1: IntoExprColumn
+        | Decimal
+        | date
+        | datetime
+        | float
+        | time
+        | timedelta
+        | None = None,
+        *args: IntoExpr,
+    ) -> Self:
+        """SQL add function.
+
+        **SQL name**: *add*
+
+        Args:
+            col1 (IntoExprColumn | Decimal | date | datetime | float | int | time | timedelta | None): `BIGINT | BIGNUM | DATE | DECIMAL | DOUBLE | FLOAT | HUGEINT | INTEGER | INTERVAL | SMALLINT | TIME | TIME WITH TIME ZONE | TIMESTAMP | TINYINT | UBIGINT | UHUGEINT | UINTEGER | USMALLINT | UTINYINT` expression
+            *args (IntoExpr): `ANY[]` expression
+
+        Returns:
+            Self
+        """
+        return self._cls(anon("add", self.inner(), col1, *args))
 
     def age(self, timestamp: IntoExprColumn | datetime | None = None) -> Self:
         """Subtract arguments, resulting in the time difference between the two timestamps.
@@ -1065,6 +1091,19 @@ class Fns(DuckHandler):
             Self
         """
         return self._cls(func("DEGREES", self.inner()))
+
+    def divide(self, col1: IntoExprColumn | float) -> Self:
+        """SQL divide function.
+
+        **SQL name**: *divide*
+
+        Args:
+            col1 (IntoExprColumn | float | int): `BIGINT | DOUBLE | FLOAT | HUGEINT | INTEGER | SMALLINT | TINYINT | UBIGINT | UHUGEINT | UINTEGER | USMALLINT | UTINYINT` expression
+
+        Returns:
+            Self
+        """
+        return self._cls(anon("divide", self.inner(), col1))
 
     def element_at(self, key: IntoExprColumn) -> Self:
         """Returns a list containing the value for a given key or an empty list if the key is not contained in the map.
@@ -2159,6 +2198,19 @@ class Fns(DuckHandler):
         """
         return self._cls(func("MIN_BY", self.inner(), val, col2))
 
+    def mod(self, col1: IntoExprColumn | Decimal | float) -> Self:
+        """SQL mod function.
+
+        **SQL name**: *mod*
+
+        Args:
+            col1 (IntoExprColumn | Decimal | float | int): `BIGINT | DECIMAL | DOUBLE | FLOAT | HUGEINT | INTEGER | SMALLINT | TINYINT | UBIGINT | UHUGEINT | UINTEGER | USMALLINT | UTINYINT` expression
+
+        Returns:
+            Self
+        """
+        return self._cls(func("MOD", self.inner(), col1))
+
     def mode(self) -> Self:
         """Returns the most frequent value for the values within x.
 
@@ -2170,6 +2222,19 @@ class Fns(DuckHandler):
             Self
         """
         return self._cls(func("MODE", self.inner()))
+
+    def multiply(self, col1: IntoExprColumn | Decimal | float | timedelta) -> Self:
+        """SQL multiply function.
+
+        **SQL name**: *multiply*
+
+        Args:
+            col1 (IntoExprColumn | Decimal | float | int | timedelta): `BIGINT | DECIMAL | DOUBLE | FLOAT | HUGEINT | INTEGER | INTERVAL | SMALLINT | TINYINT | UBIGINT | UHUGEINT | UINTEGER | USMALLINT | UTINYINT` expression
+
+        Returns:
+            Self
+        """
+        return self._cls(anon("multiply", self.inner(), col1))
 
     def nextafter(self, y: IntoExprColumn | float) -> Self:
         """Returns the next floating point value after x in the direction of y.
@@ -2285,6 +2350,49 @@ class Fns(DuckHandler):
             Self
         """
         return self._cls(anon("parse_duckdb_log_message", self.inner(), message))
+
+    def pow(self, y: IntoExprColumn | float) -> Self:
+        """Computes x to the power of y.
+
+        **SQL name**: *pow*
+
+        See Also:
+            power
+
+        Args:
+            y (IntoExprColumn | float): `DOUBLE` expression
+
+        Examples:
+            ```sql
+            pow(2, 3)
+            power(2, 3)
+            ```
+
+        Returns:
+            Self
+        """
+        return self._cls(func("POW", self.inner(), y))
+
+    def power(self, y: IntoExprColumn | float) -> Self:
+        """Computes x to the power of y.
+
+        **SQL name**: *power*
+
+        See Also:
+            pow
+
+        Args:
+            y (IntoExprColumn | float): `DOUBLE` expression
+
+        Examples:
+            ```sql
+            power(2, 3)
+            ```
+
+        Returns:
+            Self
+        """
+        return self._cls(func("POWER", self.inner(), y))
 
     def product(self) -> Self:
         """Calculates the product of all tuples in arg.
@@ -2943,6 +3051,28 @@ class Fns(DuckHandler):
             Self
         """
         return self._cls(func("STDDEV_SAMP", self.inner()))
+
+    def subtract(
+        self,
+        col1: IntoExprColumn
+        | Decimal
+        | date
+        | datetime
+        | float
+        | timedelta
+        | None = None,
+    ) -> Self:
+        """SQL subtract function.
+
+        **SQL name**: *subtract*
+
+        Args:
+            col1 (IntoExprColumn | Decimal | date | datetime | float | int | timedelta | None): `BIGINT | BIGNUM | DATE | DECIMAL | DOUBLE | FLOAT | HUGEINT | INTEGER | INTERVAL | SMALLINT | TIMESTAMP | TINYINT | UBIGINT | UHUGEINT | UINTEGER | USMALLINT | UTINYINT` expression
+
+        Returns:
+            Self
+        """
+        return self._cls(anon("subtract", self.inner(), col1))
 
     def sum(self) -> Self:
         """Calculates the sum value for all tuples in arg.

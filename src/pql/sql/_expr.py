@@ -17,8 +17,11 @@ from ._core import DuckHandler, func
 from ._window import FrameBound, OverBuilder, get_order, get_partition, make_spec
 
 if TYPE_CHECKING:
+    from decimal import Decimal
+
     from . import namespaces as nm
     from .typing import (
+        Addable,
         ClosedInterval,
         FillNullStrategy,
         FrameMode,
@@ -102,11 +105,8 @@ class SqlExpr(Fns):  # noqa: PLW1641
     def _rbinop[T: exp.Binary](self, op: type[T], other: IntoExpr) -> Self:
         return self._build_op(op, pql_into_glot(other), self.inner())
 
-    def __add__(self, other: IntoExpr) -> Self:
-        return self._binop(exp.Add, other)
-
-    def add(self, other: IntoExpr) -> Self:
-        return self.__add__(other)
+    def __add__(self, other: Addable) -> Self:
+        return self.add(other)
 
     def __and__(self, other: IntoExpr) -> Self:
         return self._binop(exp.And, other)
@@ -166,11 +166,8 @@ class SqlExpr(Fns):  # noqa: PLW1641
     def lt(self, other: IntoExpr) -> Self:
         return self.__lt__(other)
 
-    def __mod__(self, other: IntoExpr) -> Self:
-        return self.fmod(other)
-
-    def mod(self, other: IntoExpr) -> Self:
-        return self.__mod__(other)
+    def __mod__(self, other: IntoExprColumn | Decimal | float) -> Self:
+        return self.mod(other)
 
     def __mul__(self, other: IntoExpr) -> Self:
         return self._binop(exp.Mul, other)
@@ -197,11 +194,8 @@ class SqlExpr(Fns):  # noqa: PLW1641
     def or_(self, other: IntoExpr) -> Self:
         return self.__or__(other)
 
-    def __pow__(self, other: IntoExpr) -> Self:
-        return self._binop(exp.Pow, other)
-
-    def pow(self, other: IntoExpr) -> Self:
-        return self.__pow__(other)
+    def __pow__(self, other: IntoExprColumn | float) -> Self:
+        return self.pow(other)
 
     def __radd__(self, other: IntoExpr) -> Self:
         return self._rbinop(exp.Add, other)

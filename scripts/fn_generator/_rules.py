@@ -75,13 +75,6 @@ SPECIAL_CASES = pc.Set({
     "!",
     "…",
     # Already exist in duckdb Expression methods
-    "mod",
-    "pow",
-    "power",
-    "add",
-    "subtract",
-    "multiply",
-    "divide",
     "alias",  # conflicts with duckdb alias method
     # Need arg swapping
     "log",  # Need to swap argument order to take self.inner() as value and not as base
