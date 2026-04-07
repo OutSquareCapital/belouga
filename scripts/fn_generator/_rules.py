@@ -74,7 +74,7 @@ SPECIAL_CASES = pc.Set({
     "!__postfix",
     "!",
     "…",
-    # Already exist in duckdb Expression methods
+    # Primary operators, we want to handle them manually
     "add",
     "subtract",
     "multiply",
