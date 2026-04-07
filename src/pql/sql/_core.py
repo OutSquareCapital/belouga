@@ -56,7 +56,7 @@ class CoreHandler[T]:
         """
         return function(self, *args, **kwargs)
 
-    def _new(self, value: T) -> Self:
+    def _cls(self, value: T) -> Self:
         """Create a new instance of *Self* with the given value.
 
         Args:
@@ -95,7 +95,7 @@ class NameSpaceHandler[T: DuckHandler]:
 
     _parent: T
 
-    def _new(self, expr: exp.Expr) -> T:
+    def _cls(self, expr: exp.Expr) -> T:
         return self._parent.__class__(expr)
 
     def inner(self) -> T:

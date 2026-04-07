@@ -50,8 +50,8 @@ class Sec(IntEnum):
 @dataclass(slots=True)
 class ExprNameSpaceBase(sql.CoreHandler[Expr]):
     @override
-    def _new(self, expr: SqlExpr) -> Expr:  # pyright: ignore[reportIncompatibleMethodOverride]
-        return self.inner()._new(expr)  # pyright: ignore[reportPrivateUsage]
+    def _cls(self, expr: SqlExpr) -> Expr:  # pyright: ignore[reportIncompatibleMethodOverride]
+        return self.inner()._cls(expr)  # pyright: ignore[reportPrivateUsage]
 
 
 @dataclass(slots=True)
@@ -80,7 +80,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().str.escape_regex())
+        return self._cls(self.inner().inner().str.escape_regex())
 
     def to_uppercase(self) -> Expr:
         """Convert to uppercase.
@@ -88,7 +88,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().str.upper())
+        return self._cls(self.inner().inner().str.upper())
 
     def to_lowercase(self) -> Expr:
         """Convert to lowercase.
@@ -96,7 +96,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().str.lower())
+        return self._cls(self.inner().inner().str.lower())
 
     def len_chars(self) -> Expr:
         """Get the length in characters.
@@ -104,7 +104,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().str.length())
+        return self._cls(self.inner().inner().str.length())
 
     def contains(self, pattern: IntoExprColumn, *, literal: bool = False) -> Expr:
         """Check if string contains a pattern.
@@ -114,9 +114,9 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         """
         match literal:
             case True:
-                return self._new(self.inner().inner().str.contains(pattern))
+                return self._cls(self.inner().inner().str.contains(pattern))
             case False:
-                return self._new(self.inner().inner().re.matches(pattern))
+                return self._cls(self.inner().inner().re.matches(pattern))
 
     def starts_with(self, prefix: IntoExprColumn) -> Expr:
         """Check if string starts with prefix.
@@ -124,7 +124,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().str.starts_with(prefix))
+        return self._cls(self.inner().inner().str.starts_with(prefix))
 
     def ends_with(self, suffix: IntoExprColumn) -> Expr:
         """Check if string ends with suffix.
@@ -132,7 +132,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().str.ends_with(suffix))
+        return self._cls(self.inner().inner().str.ends_with(suffix))
 
     def replace(
         self, pattern: str, value: IntoExprColumn, *, literal: bool = False, n: int = 1
@@ -149,9 +149,9 @@ class ExprStringNameSpace(ExprNameSpaceBase):
 
         match n:
             case 0:
-                return self._new(self.inner().inner())
+                return self._cls(self.inner().inner())
             case n_val if n_val < 0:
-                return self._new(
+                return self._cls(
                     self.inner().inner().re.replace(pattern_expr, value, Lit.G_PARAM)
                 )
             case _:
@@ -159,7 +159,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
                     pc
                     .Iter(range(n))
                     .fold(self.inner().inner(), lambda acc, _: _replace_once(acc))
-                    .pipe(self._new)
+                    .pipe(self._cls)
                 )
 
     def strip_chars(self, characters: IntoExprColumn | None = None) -> Expr:
@@ -168,7 +168,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().str.trim(characters))
+        return self._cls(self.inner().inner().str.trim(characters))
 
     def strip_chars_start(self, characters: IntoExprColumn | None = None) -> Expr:
         """Strip leading characters.
@@ -176,7 +176,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().str.ltrim(characters))
+        return self._cls(self.inner().inner().str.ltrim(characters))
 
     def strip_chars_end(self, characters: IntoExprColumn | None = None) -> Expr:
         """Strip trailing characters.
@@ -184,7 +184,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().str.rtrim(characters))
+        return self._cls(self.inner().inner().str.rtrim(characters))
 
     def slice(self, offset: int, length: int | None = None) -> Expr:
         """Extract a substring.
@@ -192,7 +192,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().str.substring(offset + 1, length))
+        return self._cls(self.inner().inner().str.substring(offset + 1, length))
 
     def len_bytes(self) -> Expr:
         """Get the length in bytes.
@@ -200,7 +200,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().encode().octet_length())
+        return self._cls(self.inner().inner().encode().octet_length())
 
     def split(self, by: IntoExprColumn) -> Expr:
         """Split string by separator.
@@ -208,7 +208,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().str.split(by))
+        return self._cls(self.inner().inner().str.split(by))
 
     def extract_all(self, pattern: IntoExprColumn) -> Expr:
         """Extract all regex matches.
@@ -216,7 +216,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().re.extract_all(pattern))
+        return self._cls(self.inner().inner().re.extract_all(pattern))
 
     def extract(self, pattern: IntoExprColumn, group_index: int = 1) -> Expr:
         """Extract a regex capture group.
@@ -224,7 +224,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().re.extract(pattern, group_index))
+        return self._cls(self.inner().inner().re.extract(pattern, group_index))
 
     def find(self, pattern: IntoExprColumn, *, literal: bool = False) -> Expr:
         """Return the first match offset as a zero-based index.
@@ -232,7 +232,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().str.find(pattern, literal=literal))
+        return self._cls(self.inner().inner().str.find(pattern, literal=literal))
 
     def json_path_match(self, json_path: IntoExprColumn) -> Expr:
         """Extract first JSONPath match from string JSON values.
@@ -240,7 +240,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().json.extract_string(json_path))
+        return self._cls(self.inner().inner().json.extract_string(json_path))
 
     def to_date(self, format: IntoExprColumn | None = None) -> Expr:  # noqa: A002
         """Parse string values as date.
@@ -252,7 +252,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
             case None:
                 return self.inner().cast(dt.Date())
             case _:
-                return self._new(self.inner().inner().str.strptime(format)).cast(
+                return self._cls(self.inner().inner().str.strptime(format)).cast(
                     dt.Date()
                 )
 
@@ -262,7 +262,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().dt.to_datetime(format))
+        return self._cls(self.inner().inner().dt.to_datetime(format))
 
     def to_time(self, format: IntoExprColumn | None = None) -> Expr:  # noqa: A002
         """Parse string values as time.
@@ -270,7 +270,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().dt.to_time(format))
+        return self._cls(self.inner().inner().dt.to_time(format))
 
     def strptime(self, format: IntoExprColumn) -> Expr:  # noqa: A002
         """Parse string values into datetime using one or more formats.
@@ -278,7 +278,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().str.strptime(format))
+        return self._cls(self.inner().inner().str.strptime(format))
 
     def encode(self, encoding: TransferEncoding = "base64") -> Expr:
         """Encode UTF-8 strings as binary values.
@@ -288,9 +288,9 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         """
         match encoding:
             case "base64":
-                return self._new(self.inner().inner().encode().str.to_base64())
+                return self._cls(self.inner().inner().encode().str.to_base64())
             case "hex":
-                return self._new(self.inner().inner().encode().str.to_hex().str.lower())
+                return self._cls(self.inner().inner().encode().str.to_hex().str.lower())
 
     def normalize(self) -> Expr:
         """Normalize strings using NFC normalization.
@@ -298,7 +298,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().str.nfc_normalize())
+        return self._cls(self.inner().inner().str.nfc_normalize())
 
     def to_decimal(self, scale: int) -> Expr:
         """Parse string values as decimal with the requested scale.
@@ -314,7 +314,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(
+        return self._cls(
             self.inner().inner().str.count_matches(pattern, literal=literal)
         )
 
@@ -324,7 +324,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().str.strip_prefix(prefix))
+        return self._cls(self.inner().inner().str.strip_prefix(prefix))
 
     def strip_suffix(self, suffix: IntoExpr) -> Expr:
         """Strip suffix from string.
@@ -332,7 +332,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().str.strip_suffix(suffix))
+        return self._cls(self.inner().inner().str.strip_suffix(suffix))
 
     def head(self, n: int) -> Expr:
         """Get first n characters.
@@ -340,7 +340,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().str.left(n))
+        return self._cls(self.inner().inner().str.left(n))
 
     def tail(self, n: int) -> Expr:
         """Get last n characters.
@@ -348,7 +348,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().str.right(n))
+        return self._cls(self.inner().inner().str.right(n))
 
     def reverse(self) -> Expr:
         """Reverse the string.
@@ -356,16 +356,16 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().str.reverse())
+        return self._cls(self.inner().inner().str.reverse())
 
     def pad_start(self, length: int, fill_char: IntoExprColumn = Lit.ESCAPE) -> Expr:
-        return self._new(self.inner().inner().str.lpad(length, fill_char))
+        return self._cls(self.inner().inner().str.lpad(length, fill_char))
 
     def pad_end(self, length: int, fill_char: IntoExprColumn = Lit.ESCAPE) -> Expr:
-        return self._new(self.inner().inner().str.rpad(length, fill_char))
+        return self._cls(self.inner().inner().str.rpad(length, fill_char))
 
     def zfill(self, width: int) -> Expr:
-        return self._new(self.inner().inner().str.lpad(width, Lit.ZERO))
+        return self._cls(self.inner().inner().str.lpad(width, Lit.ZERO))
 
     def replace_all(
         self, pattern: IntoExprColumn, value: IntoExprColumn, *, literal: bool = False
@@ -375,7 +375,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(
+        return self._cls(
             self.inner().inner().str.replace_all(pattern, value, literal=literal)
         )
 
@@ -385,7 +385,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().str.to_titlecase())
+        return self._cls(self.inner().inner().str.to_titlecase())
 
 
 @dataclass(slots=True)
@@ -409,10 +409,10 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         Returns:
             Expr
         """
-        return self._new(self._vec.eval(expr.inner()))
+        return self._cls(self._vec.eval(expr.inner()))
 
     def filter(self, predicate: Expr) -> Expr:
-        return self._new(self._vec.filter(predicate.inner()))
+        return self._cls(self._vec.filter(predicate.inner()))
 
     def drop_nulls(self) -> Expr:
         """Drop null values in each list.
@@ -420,7 +420,7 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         Returns:
             Expr
         """
-        return self._new(self._vec.filter(sql.element().is_not_null()))
+        return self._cls(self._vec.filter(sql.element().is_not_null()))
 
     def contains(self, item: IntoExpr) -> Expr:
         """Check if subarrays contain the given item.
@@ -428,7 +428,7 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         Returns:
             Expr
         """
-        return self._new(self._vec.contains(item))
+        return self._cls(self._vec.contains(item))
 
     def all(self) -> Expr:
         """Return whether all values in the list are true.
@@ -436,7 +436,7 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().list.bool_and())
+        return self._cls(self.inner().inner().list.bool_and())
 
     def any(self) -> Expr:
         """Return whether any value in the listis true.
@@ -444,7 +444,7 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().list.bool_or())
+        return self._cls(self.inner().inner().list.bool_or())
 
     def len(self) -> Expr:
         """Return the number of elements in each array.
@@ -452,7 +452,7 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         Returns:
             Expr
         """
-        return self._new(self._vec.length())
+        return self._cls(self._vec.length())
 
     def unique(self) -> Expr:
         """Return unique values in each array.
@@ -460,7 +460,7 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         Returns:
             Expr
         """
-        return self._new(self._vec.distinct())
+        return self._cls(self._vec.distinct())
 
     def reverse(self) -> Expr:
         """Reverse the arrays of the expression.
@@ -468,7 +468,7 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         Returns:
             Expr
         """
-        return self._new(self._vec.reverse())
+        return self._cls(self._vec.reverse())
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Expr:
         """Sort the lists of the column.
@@ -476,7 +476,7 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         Returns:
             Expr
         """
-        return self._new(
+        return self._cls(
             self._vec.sort(
                 sql.lit(sql.SortClause.order(desc=descending)),
                 sql.lit(sql.NullsClause.order(last=nulls_last)),
@@ -489,7 +489,7 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().list.first())
+        return self._cls(self.inner().inner().list.first())
 
     def last(self) -> Expr:
         """Get the last element of each array.
@@ -497,7 +497,7 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().list.last())
+        return self._cls(self.inner().inner().list.last())
 
     def min(self) -> Expr:
         """Compute the min value of the arrays in the column.
@@ -505,7 +505,7 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().list.min())
+        return self._cls(self.inner().inner().list.min())
 
     def max(self) -> Expr:
         """Compute the max value of the arrays in the column.
@@ -513,7 +513,7 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().list.max())
+        return self._cls(self.inner().inner().list.max())
 
     def mean(self) -> Expr:
         """Compute the mean value of the arrays in the column.
@@ -521,7 +521,7 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().list.avg())
+        return self._cls(self.inner().inner().list.avg())
 
     def median(self) -> Expr:
         """Compute the median value of the arrays in the column.
@@ -529,7 +529,7 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().list.median())
+        return self._cls(self.inner().inner().list.median())
 
     def sum(self) -> Expr:
         """Compute the sum value of the arrays in the column.
@@ -537,7 +537,7 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().list.sum())
+        return self._cls(self.inner().inner().list.sum())
 
     def std(self, ddof: int = 1) -> Expr:
         """Compute the standard deviation of the arrays in the column.
@@ -545,7 +545,7 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().list.std(ddof))
+        return self._cls(self.inner().inner().list.std(ddof))
 
     def var(self, ddof: int = 1) -> Expr:
         """Compute the variance of the arrays in the column.
@@ -553,7 +553,7 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().list.var(ddof))
+        return self._cls(self.inner().inner().list.var(ddof))
 
     def get(self, index: int) -> Expr:
         """Return the value by index in each array.
@@ -561,16 +561,16 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         Returns:
             Expr
         """
-        return self._new(self._vec.extract(index + 1 if index >= 0 else index))
+        return self._cls(self._vec.extract(index + 1 if index >= 0 else index))
 
     def join(self, separator: IntoExprColumn, *, ignore_nulls: bool = True) -> Expr:
-        return self._new(self._vec.join(separator, ignore_nulls=ignore_nulls))
+        return self._cls(self._vec.join(separator, ignore_nulls=ignore_nulls))
 
     def n_unique(self) -> Expr:
-        return self._new(self._vec.n_unique())
+        return self._cls(self._vec.n_unique())
 
     def count_matches(self, element: IntoExpr) -> Expr:
-        return self._new(self._vec.count_matches(element))
+        return self._cls(self._vec.count_matches(element))
 
     def explode(self) -> Expr:
         """Explode arrays into multiple rows.
@@ -578,7 +578,7 @@ class _VecNameSpace[T: nm.SqlExprListNameSpace | nm.SqlExprArrayNameSpace](
         Returns:
             Expr
         """
-        return self._new(self._vec.explode())
+        return self._cls(self._vec.explode())
 
 
 @dataclass(slots=True)
@@ -623,7 +623,7 @@ class ExprStructNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().struct.extract(sql.lit(name))).alias(name)
+        return self._cls(self.inner().inner().struct.extract(sql.lit(name))).alias(name)
 
     def json_encode(self) -> Expr:
         """Encode struct values as JSON strings.
@@ -631,7 +631,7 @@ class ExprStructNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._new(self.inner().inner().to_json())
+        return self._cls(self.inner().inner().to_json())
 
     def with_fields(
         self, exprs: TryIter[IntoExpr], *more_exprs: IntoExpr, **named_exprs: IntoExpr
@@ -644,7 +644,7 @@ class ExprStructNameSpace(ExprNameSpaceBase):
         return (
             ExprPlan(pc.Seq[str].new(), exprs, more_exprs, named_exprs)
             .with_fields_context(self.inner().inner())
-            .pipe(self._new)
+            .pipe(self._cls)
         )
 
 
@@ -658,7 +658,7 @@ class ExprNameNameSpace(ExprNameSpaceBase):
 
     def _with_alias_mapper(self, mapper: Callable[[str], str]) -> Expr:
         meta = pc.Some(self.inner().meta.with_alias_mapper(mapper))
-        return self.inner()._new(self.inner().inner(), meta)  # pyright: ignore[reportPrivateUsage]
+        return self.inner()._cls(self.inner().inner(), meta)  # pyright: ignore[reportPrivateUsage]
 
     def keep(self) -> Expr:
         return self.inner()._clear_alias_name()  # pyright: ignore[reportPrivateUsage]
@@ -698,58 +698,58 @@ class ExprDateTimeNameSpace(ExprNameSpaceBase):
     """
 
     def millennium(self) -> Expr:
-        return self._new(self.inner().inner().dt.millennium())
+        return self._cls(self.inner().inner().dt.millennium())
 
     def century(self) -> Expr:
-        return self._new(self.inner().inner().dt.century())
+        return self._cls(self.inner().inner().dt.century())
 
     def year(self) -> Expr:
-        return self._new(self.inner().inner().dt.year())
+        return self._cls(self.inner().inner().dt.year())
 
     def iso_year(self) -> Expr:
-        return self._new(self.inner().inner().dt.isoyear())
+        return self._cls(self.inner().inner().dt.isoyear())
 
     def quarter(self) -> Expr:
-        return self._new(self.inner().inner().dt.quarter())
+        return self._cls(self.inner().inner().dt.quarter())
 
     def month(self) -> Expr:
-        return self._new(self.inner().inner().dt.month())
+        return self._cls(self.inner().inner().dt.month())
 
     def week(self) -> Expr:
-        return self._new(self.inner().inner().dt.week())
+        return self._cls(self.inner().inner().dt.week())
 
     def weekday(self) -> Expr:
-        return self._new(self.inner().inner().dt.isodow())
+        return self._cls(self.inner().inner().dt.isodow())
 
     def day(self) -> Expr:
-        return self._new(self.inner().inner().dt.day())
+        return self._cls(self.inner().inner().dt.day())
 
     def ordinal_day(self) -> Expr:
-        return self._new(self.inner().inner().dt.dayofyear())
+        return self._cls(self.inner().inner().dt.dayofyear())
 
     def hour(self) -> Expr:
-        return self._new(self.inner().inner().dt.hour())
+        return self._cls(self.inner().inner().dt.hour())
 
     def minute(self) -> Expr:
-        return self._new(self.inner().inner().dt.minute())
+        return self._cls(self.inner().inner().dt.minute())
 
     def second(self) -> Expr:
-        return self._new(self.inner().inner().dt.second())
+        return self._cls(self.inner().inner().dt.second())
 
     def millisecond(self) -> Expr:
-        return self._new(self.inner().inner().dt.millisecond().mod(Sec.TO_MILLI))
+        return self._cls(self.inner().inner().dt.millisecond().mod(Sec.TO_MILLI))
 
     def microsecond(self) -> Expr:
-        return self._new(self.inner().inner().dt.microsecond().mod(Sec.TO_MICRO))
+        return self._cls(self.inner().inner().dt.microsecond().mod(Sec.TO_MICRO))
 
     def nanosecond(self) -> Expr:
-        return self._new(self.inner().inner().dt.nanosecond().mod(Sec.TO_NANO))
+        return self._cls(self.inner().inner().dt.nanosecond().mod(Sec.TO_NANO))
 
     def month_start(self) -> Expr:
-        return self._new(self.inner().inner().dt.month_start())
+        return self._cls(self.inner().inner().dt.month_start())
 
     def month_end(self) -> Expr:
-        return self._new(self.inner().inner().dt.month_end())
+        return self._cls(self.inner().inner().dt.month_end())
 
     def date(self) -> Expr:
         return self.inner().cast(dt.Date())
@@ -758,16 +758,16 @@ class ExprDateTimeNameSpace(ExprNameSpaceBase):
         return self.inner().cast(dt.Time())
 
     def to_string(self, format: IntoExprColumn) -> Expr:  # noqa: A002
-        return self._new(self.inner().inner().str.strftime(format))
+        return self._cls(self.inner().inner().str.strftime(format))
 
     def strftime(self, format: IntoExprColumn) -> Expr:  # noqa: A002
-        return self._new(self.inner().inner().str.strftime(format))
+        return self._cls(self.inner().inner().str.strftime(format))
 
     def epoch(self, time_unit: EpochTimeUnit = "us") -> Expr:
         expr = self.inner().inner().dt
         match time_unit:
             case "d":
-                return self._new(
+                return self._cls(
                     self
                     .inner()
                     .inner()
@@ -776,22 +776,22 @@ class ExprDateTimeNameSpace(ExprNameSpaceBase):
                     .floor()
                 )
             case "s":
-                return self._new(expr.epoch_us().truediv(Sec.TO_MICRO).floor())
+                return self._cls(expr.epoch_us().truediv(Sec.TO_MICRO).floor())
             case "ms":
-                return self._new(expr.epoch_ms())
+                return self._cls(expr.epoch_ms())
             case "us":
-                return self._new(expr.epoch_us())
+                return self._cls(expr.epoch_us())
             case "ns":
-                return self._new(expr.epoch_ns())
+                return self._cls(expr.epoch_ns())
 
     def timestamp(self, time_unit: TimeUnit = "us") -> Expr:
         return self.epoch(time_unit)
 
     def truncate(self, every: str) -> Expr:
-        return self._new(self.inner().inner().dt.trunc(sql.lit(every)))
+        return self._cls(self.inner().inner().dt.trunc(sql.lit(every)))
 
     def round(self, every: str) -> Expr:
-        return self._new(self.inner().inner().dt.trunc(sql.lit(every)))
+        return self._cls(self.inner().inner().dt.trunc(sql.lit(every)))
 
     def offset_by(self, by: IntoExpr) -> Expr:
-        return self._new(self.inner().inner().dt.offset_by(by))
+        return self._cls(self.inner().inner().dt.offset_by(by))

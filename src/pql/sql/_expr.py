@@ -94,7 +94,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
                     return expr
 
         expr = exp.Paren(this=op(this=_cols_op(left), expression=_cols_op(right)))
-        return self._new(expr)
+        return self._cls(expr)
 
     def _binop[T: exp.Binary](self, op: type[T], other: IntoExpr) -> Self:
         return self._build_op(op, self.inner(), pql_into_glot(other))
@@ -149,7 +149,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
         return self.__gt__(other)
 
     def __invert__(self) -> Self:
-        return self._new(exp.Not(this=self.inner()))
+        return self._cls(exp.Not(this=self.inner()))
 
     def not_(self) -> Self:
         return self.__invert__()
@@ -186,7 +186,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
         return self.__ne__(other)
 
     def __neg__(self) -> Self:
-        return self._new(exp.Neg(this=self.inner()))
+        return self._cls(exp.Neg(this=self.inner()))
 
     def neg(self) -> Self:
         return self.__neg__()
@@ -264,27 +264,27 @@ class SqlExpr(Fns):  # noqa: PLW1641
         return self.__sub__(other)
 
     def alias(self, name: str) -> Self:
-        return self._new(exp.Alias(this=self.inner(), alias=exp.to_identifier(name)))
+        return self._cls(exp.Alias(this=self.inner(), alias=exp.to_identifier(name)))
 
     def asc(self) -> Self:
-        return self._new(exp.Ordered(this=self.inner(), desc=False))
+        return self._cls(exp.Ordered(this=self.inner(), desc=False))
 
     def between(self, lower: IntoExpr, upper: IntoExpr) -> Self:
-        return self._new(
+        return self._cls(
             exp.Between(
                 this=self.inner(), low=pql_into_glot(lower), high=pql_into_glot(upper)
             )
         )
 
     def cast(self, dtype: exp.DataType) -> Self:
-        return self._new(exp.Cast(this=self.inner(), to=dtype))
+        return self._cls(exp.Cast(this=self.inner(), to=dtype))
 
     def collate(self, collation: str) -> Self:
         expr = exp.Collate(this=self.inner(), expression=exp.to_identifier(collation))
-        return self._new(expr)
+        return self._cls(expr)
 
     def desc(self) -> Self:
-        return self._new(exp.Ordered(this=self.inner(), desc=True))
+        return self._cls(exp.Ordered(this=self.inner(), desc=True))
 
     def get_name(self) -> str:
         return self.inner().output_name
@@ -297,22 +297,22 @@ class SqlExpr(Fns):  # noqa: PLW1641
                 return pc.NONE
 
     def is_in(self, *args: IntoExpr) -> Self:
-        return self._new(exp.In(this=self.inner(), expressions=args_into_glot(args)))
+        return self._cls(exp.In(this=self.inner(), expressions=args_into_glot(args)))
 
     def is_not_in(self, *args: IntoExpr) -> Self:
-        return self._new(exp.Not(this=self.is_in(*args).inner()))
+        return self._cls(exp.Not(this=self.is_in(*args).inner()))
 
     def is_not_null(self) -> Self:
-        return self._new(exp.Not(this=self.is_null().inner()))
+        return self._cls(exp.Not(this=self.is_null().inner()))
 
     def is_null(self) -> Self:
-        return self._new(exp.Is(this=self.inner(), expression=exp.Null()))
+        return self._cls(exp.Is(this=self.inner(), expression=exp.Null()))
 
     def nulls_first(self) -> Self:
-        return self._new(exp.Ordered(this=self.inner(), nulls_first=True))
+        return self._cls(exp.Ordered(this=self.inner(), nulls_first=True))
 
     def nulls_last(self) -> Self:
-        return self._new(exp.Ordered(this=self.inner(), nulls_first=False))
+        return self._cls(exp.Ordered(this=self.inner(), nulls_first=False))
 
     def show(self) -> None:
         print(self.inner().sql(dialect="duckdb"))
@@ -433,7 +433,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
                     msg = "must specify either a fill `value` or `strategy`"
                     return pc.Err(ValueError(msg))
 
-        return _get_strat().map(lambda e: self._new(e.inner())).unwrap()
+        return _get_strat().map(lambda e: self._cls(e.inner())).unwrap()
 
     def cum_count(self, *, reverse: bool = False) -> Self:
         """Cumulative non-null count.
@@ -559,7 +559,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
         Returns:
             Self: A expression representing the count of distinct values.
         """
-        return self._new(self.implode().list.distinct().list.length().inner())
+        return self._cls(self.implode().list.distinct().list.length().inner())
 
     def has_nulls(self) -> Self:
         """Return whether the expression contains nulls.
@@ -576,7 +576,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
             Self: A list expression with repeated values.
         """
         expr = self.new(by, as_col=True).list.range().list.eval(self).inner()
-        return self._new(expr)
+        return self._cls(expr)
 
     def replace(self, old: IntoExpr, new: IntoExpr) -> Self:
         """Replace values.
@@ -586,7 +586,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
         """
         from ._when import when
 
-        return self._new(when(self.eq(old)).then(new).otherwise(self).inner())
+        return self._cls(when(self.eq(old)).then(new).otherwise(self).inner())
 
     def is_close(
         self,
@@ -611,7 +611,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
             case False:
                 return close
             case True:
-                return self._new(
+                return self._cls(
                     when(self.is_nan().and_(other_expr.is_nan()))
                     .then(value=True)
                     .otherwise(close)
@@ -647,7 +647,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
         """
         from ._funcs import all
 
-        return self._new(all().count().over(pc.Some(self)).gt(1).inner())
+        return self._cls(all().count().over(pc.Some(self)).gt(1).inner())
 
     def is_unique(self) -> Self:
         """Check if value is unique.
@@ -657,7 +657,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
         """
         from ._funcs import all
 
-        return self._new(all().count().over(pc.Some(self)).eq(1).inner())
+        return self._cls(all().count().over(pc.Some(self)).eq(1).inner())
 
     def arg_sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """Return indices that would sort the expression."""
@@ -698,7 +698,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
         """
         from ._when import when
 
-        return self._new(when(self.is_nan()).then(value).otherwise(self).inner())
+        return self._cls(when(self.is_nan()).then(value).otherwise(self).inner())
 
     def dot(self, other: IntoExpr) -> Self:
         """Compute the dot product with another expression.
@@ -738,7 +738,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
         Returns:
             Self
         """
-        return self._new(func("LOG", x, self.inner()))
+        return self._cls(func("LOG", x, self.inner()))
 
     def greatest(self, *args: IntoExpr) -> Self:
         """Returns the largest value.
@@ -756,7 +756,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
             Self
         """
         expr = exp.Greatest(this=self.inner(), expressions=args_into_glot(args))
-        return self._new(expr)
+        return self._cls(expr)
 
     def least(self, *args: IntoExpr) -> Self:
         """Returns the smallest value.
@@ -774,7 +774,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
             Self
         """
         expr = exp.Least(this=self.inner(), expressions=args_into_glot(args))
-        return self._new(expr)
+        return self._cls(expr)
 
     def over(  # noqa: PLR0913, PLR0917
         self,
@@ -844,7 +844,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
         Returns:
             Self
         """
-        return self._new(exp.DenseRank())
+        return self._cls(exp.DenseRank())
 
     def cume_dist(
         self,
@@ -861,7 +861,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
         Returns:
             Self
         """
-        return self._new(
+        return self._cls(
             OverBuilder(exp.CumeDist()).build_fn(
                 fn_order_by=pc.Option(order_by),
                 ignore_nulls=ignore_nulls,
@@ -885,7 +885,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
         Returns:
             Self
         """
-        return self._new(
+        return self._cls(
             OverBuilder(exp.PercentRank()).build_fn(
                 fn_order_by=pc.Option(order_by),
                 ignore_nulls=ignore_nulls,
@@ -909,7 +909,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
         Returns:
             Self
         """
-        return self._new(
+        return self._cls(
             OverBuilder(exp.Rank()).build_fn(
                 fn_order_by=pc.Option(order_by),
                 ignore_nulls=ignore_nulls,
@@ -933,7 +933,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
         Returns:
             Self
         """
-        return self._new(
+        return self._cls(
             OverBuilder(exp.RowNumber()).build_fn(
                 fn_order_by=pc.Option(order_by),
                 ignore_nulls=ignore_nulls,
@@ -958,6 +958,6 @@ class SqlExpr(Fns):  # noqa: PLW1641
         Returns:
             Self
         """
-        return self._new(
+        return self._cls(
             exp.BitwiseXor(this=self.inner(), expression=pql_into_glot(right))
         )

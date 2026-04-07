@@ -156,5 +156,5 @@ def _txt() -> str:
         Returns:
             {self_type}
         """
-        return self._new({expr_call})
+        return self._cls({expr_call})
         '''

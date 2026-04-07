@@ -65,7 +65,7 @@ class SqlExprStringNameSpace(StringFns[SqlExpr]):
         Returns:
             SqlExpr
         """
-        return self._new(func("CONCAT", self.inner(), *args))
+        return self._cls(func("CONCAT", self.inner(), *args))
 
     def to_titlecase(self) -> SqlExpr:
         """Convert to title case.
@@ -260,7 +260,7 @@ class SqlExprDateTimeNameSpace(DateTimeFns[SqlExpr]):
         Returns:
             T
         """
-        return self._new(func("DATE_TRUNC", precision, self.inner()))
+        return self._cls(func("DATE_TRUNC", precision, self.inner()))
 
     def month_start(self) -> SqlExpr:
         """Get the first day of the month.
@@ -407,7 +407,7 @@ class SqlExprListNameSpace(ListFns[SqlExpr]):
         """
         from ._funcs import fn_once
 
-        return self._new(func("LIST_FILTER", self.inner(), fn_once(lambda_arg)))
+        return self._cls(func("LIST_FILTER", self.inner(), fn_once(lambda_arg)))
 
     def join(self, separator: IntoExprColumn, *, ignore_nulls: bool = True) -> SqlExpr:
         """Join string values in each list with a separator.
@@ -493,7 +493,7 @@ class SqlExprArrayNameSpace(ArrayFns[SqlExpr]):
         """
         from ._funcs import fn_once
 
-        return self._new(func("ARRAY_FILTER", self.inner(), fn_once(lambda_arg)))
+        return self._cls(func("ARRAY_FILTER", self.inner(), fn_once(lambda_arg)))
 
     def join(self, separator: IntoExprColumn, *, ignore_nulls: bool = True) -> SqlExpr:
         """Join string values in each array with a separator.
