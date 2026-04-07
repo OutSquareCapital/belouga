@@ -13,11 +13,11 @@ desc_param = pytest.mark.parametrize("descending", [True, False])
 
 
 def test_rand() -> None:
-    assert_eq((True & pql.col("a").alias("r")), (True & pl.col("a")).alias("r"))
+    assert_eq((True & pql.col("a")), (True & pl.col("a")))
 
 
 def test_ror() -> None:
-    assert_eq((False | pql.col("a").alias("r")), (False | pl.col("a")).alias("r"))
+    assert_eq((False | pql.col("a")), (False | pl.col("a")))
 
 
 def test_hash() -> None:
@@ -35,34 +35,22 @@ def test_xor() -> None:
 
 @pytest.mark.parametrize("by", ["age", "n", 2])
 def test_repeat_by(by: int | str) -> None:
-    assert_eq(
-        pql.col("x").repeat_by(by).alias("repeated"),
-        (pl.col("x").repeat_by(by).alias("repeated")),
-    )
+    assert_eq(pql.col("x").repeat_by(by), pl.col("x").repeat_by(by))
 
 
 def test_mul() -> None:
     assert_eq(pql.col("x").mul(5), pl.col("x").__mul__(5))
-    assert_eq(
-        pql.col("salary").mul(2).alias("double_salary"),
-        pl.col("salary").__mul__(2).alias("double_salary"),
-    )
+    assert_eq(pql.col("salary").mul(2), pl.col("salary").__mul__(2))
 
 
 def test_truediv() -> None:
     assert_eq((pql.col("x") / 5), (pl.col("x") / 5))
 
-    assert_eq(
-        (pql.col("salary").truediv(1000).alias("salary_k"),),
-        (pl.col("salary").__truediv__(1000).alias("salary_k"),),
-    )
+    assert_eq(pql.col("salary").truediv(1000), pl.col("salary").__truediv__(1000))
 
 
 def test_replace() -> None:
-    assert_eq(
-        pql.col("x").replace(2, 99).alias("rep"),
-        pl.col("x").replace(2, 99).alias("rep"),
-    )
+    assert_eq(pql.col("x").replace(2, 99), pl.col("x").replace(2, 99))
 
 
 def test_repr() -> None:
@@ -89,15 +77,15 @@ def test_not() -> None:
 
 
 def test_radd() -> None:
-    assert_eq((10 + pql.col("x").alias("r")), (10 + pl.col("x")).alias("r"))
+    assert_eq((10 + pql.col("x")), (10 + pl.col("x")))
 
 
 def test_rmul() -> None:
-    assert_eq((10 * pql.col("x").alias("r")), (10 * pl.col("x")).alias("r"))
+    assert_eq((10 * pql.col("x")), (10 * pl.col("x")))
 
 
 def test_rtruediv() -> None:
-    assert_eq((10 / pql.col("x").alias("r")), (10 / pl.col("x")).alias("r"))
+    assert_eq((10 / pql.col("x")), (10 / pl.col("x")))
 
 
 def test_eq() -> None:
@@ -117,27 +105,24 @@ def test_ge() -> None:
 
 
 def test_rsub() -> None:
-    assert_eq((10 - pql.col("x")).alias("r"), (10 - pl.col("x")).alias("r"))
+    assert_eq((10 - pql.col("x")), (10 - pl.col("x")))
 
 
 def test_rfloordiv() -> None:
-    assert_eq((10 // pql.col("x")).alias("r"), (10 // pl.col("x")).alias("r"))
+    assert_eq((10 // pql.col("x")), (10 // pl.col("x")))
 
 
 def test_rmod() -> None:
-    assert_eq((10 % pql.col("x")).alias("r"), (10 % pl.col("x")).alias("r"))
+    assert_eq((10 % pql.col("x")), (10 % pl.col("x")))
 
 
 def test_rpow() -> None:
-    assert_eq((2 ** pql.col("x")).alias("r"), (2 ** pl.col("x")).alias("r"))
+    assert_eq((2 ** pql.col("x")), (2 ** pl.col("x")))
 
 
 def test_neg() -> None:
     assert_eq((-pql.col("x")), (-pl.col("x")))
-    assert_eq(
-        pql.col("x").neg().alias("neg"),
-        pl.col("x").neg().alias("neg"),
-    )
+    assert_eq(pql.col("x").neg(), pl.col("x").neg())
 
 
 def test_ne() -> None:
@@ -365,14 +350,8 @@ def test_implode() -> None:
 def test_unique() -> None:
     assert_eq(pql.col("x").unique(), pl.col("x").unique(), with_cols=False)
     assert_eq(
-        (
-            pql.col("x").unique().alias("x_unique_left"),
-            pql.col("x").unique().add(3).alias("x_unique_right"),
-        ),
-        (
-            pl.col("x").unique().alias("x_unique_left"),
-            pl.col("x").unique().add(3).alias("x_unique_right"),
-        ),
+        (pql.col("x").unique(), pql.col("x").unique().add(3).alias("x_unique_right")),
+        (pl.col("x").unique(), pl.col("x").unique().add(3).alias("x_unique_right")),
         with_cols=False,
     )
 
@@ -387,18 +366,12 @@ def test_is_close() -> None:
         ),
     )
     assert_eq(
-        pql
-        .col("salary")
-        .is_close(
+        pql.col("salary").is_close(
             pql.col("salary").add(0.001), abs_tol=0.01, rel_tol=0.0, nans_equal=True
-        )
-        .alias("salary_close_nans_equal"),
-        pl
-        .col("salary")
-        .is_close(
+        ),
+        pl.col("salary").is_close(
             pl.col("salary").add(0.001), abs_tol=0.01, rel_tol=0.0, nans_equal=True
-        )
-        .alias("salary_close_nans_equal"),
+        ),
     )
 
 
