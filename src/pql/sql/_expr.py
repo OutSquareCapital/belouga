@@ -99,8 +99,11 @@ class SqlExpr(Fns):  # noqa: PLW1641
     def eq(self, other: IntoExpr) -> Self:
         return self.__eq__(other)
 
+    def _floordiv_op(self, left: exp.Expr, right: exp.Expr) -> Self:
+        return self._build_op(exp.Div, left, right).floor()
+
     def __floordiv__(self, other: IntoExpr) -> Self:
-        return self._binop(exp.IntDiv, other)
+        return self._floordiv_op(self.inner(), pql_into_glot(other))
 
     def floordiv(self, other: IntoExpr) -> Self:
         return self.__floordiv__(other)
@@ -185,7 +188,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
         return self.__rand__(other)
 
     def __rfloordiv__(self, other: IntoExpr) -> Self:
-        return self._rbinop(exp.IntDiv, other)
+        return self._floordiv_op(pql_into_glot(other), self.inner())
 
     def rfloordiv(self, other: IntoExpr) -> Self:
         return self.__rfloordiv__(other)
