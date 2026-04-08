@@ -6,7 +6,8 @@ from sqlglot import exp
 
 from . import sql
 from ._expr import Expr
-from ._meta import Marker, MultiMeta, Resolver, SingleMeta
+from ._meta import Marker, MultiMeta, SingleMeta
+from .selectors import Resolver
 from .sql import SqlExpr
 from .sql._conversions import args_into_glot
 from .sql.typing import IntoExpr, IntoExprColumn, PythonLiteral

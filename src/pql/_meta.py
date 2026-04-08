@@ -17,12 +17,10 @@ from .sql.utils import TryIter, try_iter
 if TYPE_CHECKING:
     from duckdb import DuckDBPyRelation, Expression
     from narwhals.typing import IntoFrameT
-    from pyochain.traits import PyoCollection, PyoIterable
+    from pyochain.traits import PyoIterable
 
-    from .selectors import Selector
-    from .sql.typing import IntoExpr, IntoExprColumn
-
-type Cols = PyoCollection[str]
+    from .selectors import Cols, Resolver
+    from .sql.typing import IntoExpr
 
 
 class Marker(StrEnum):
@@ -479,100 +477,3 @@ class ExprPlan:
         plan = self.projections.iter().flat_map(_lower_projection)
 
         return keys.iter().chain(plan).into(aggregator)
-
-
-@dataclass(slots=True, repr=False)
-class Resolver:
-    _fn: Callable[[Cols], Cols]
-
-    @override
-    def __repr__(self) -> str:
-        fn = self._fn.__name__.replace("_", " ").title()
-        return f"{self.__class__.__name__}({fn})"
-
-    def __call__(self, cols: Cols) -> Cols:
-        return self._fn(cols)
-
-    def into_selector(self) -> Selector:
-        from .selectors import Selector
-
-        return Selector(sql.all(), MultiMeta(resolver=self))
-
-    @classmethod
-    def all_columns(cls) -> Self:
-        def _all_columns(cols: Cols) -> Cols:
-            return cols
-
-        return cls(_all_columns)
-
-    @classmethod
-    def fixed(cls, names: Cols) -> Self:
-        def _fixed(_: Cols) -> Cols:
-            return names
-
-        return cls(_fixed)
-
-    @classmethod
-    def all_fn(cls, exclude: pc.Option[TryIter[IntoExprColumn]]) -> Self:
-        return exclude.map(
-            lambda exc: (
-                try_iter(exc)
-                .map(lambda value: SqlExpr.new(value, as_col=True))
-                .filter_map(SqlExpr.root_column_name)
-                .collect(pc.Set)
-                .into(cls.exclude)
-            )
-        ).unwrap_or(cls.all_columns())
-
-    @classmethod
-    def exclude(cls, excluded: Cols) -> Self:
-        def _exclude(cols: Cols) -> Cols:
-            return cols.iter().filter(lambda n: n not in excluded).collect()
-
-        return cls(_exclude)
-
-    @classmethod
-    def agg_expr(cls, cols: pc.Option[pc.Seq[str]]) -> Self:
-        return cols.map(cls.fixed).unwrap_or(cls.all_columns())
-
-    @classmethod
-    def ordered_name(cls, names: Iterable[str]) -> Self:
-        def _ordered(cols: Cols) -> Cols:
-            return pc.Iter(names).filter(lambda name: name in cols).collect()
-
-        return cls(_ordered)
-
-    @classmethod
-    def name(cls, predicate: Callable[[str], bool]) -> Self:
-        def _name(cols: Cols) -> Cols:
-            return cols.iter().filter(predicate).collect()
-
-        return cls(_name)
-
-    def difference(self, right_fn: Self) -> Self:
-        def _difference(cols: Cols) -> Cols:
-            right = right_fn(cols)
-            return self(cols).iter().filter(lambda n: n not in right).collect()
-
-        return self.__class__(_difference)
-
-    def complement(self) -> Self:
-        def _complement(cols: Cols) -> Cols:
-            excluded = self(cols)
-            return cols.iter().filter(lambda n: n not in excluded).collect()
-
-        return self.__class__(_complement)
-
-    def intersection(self, right: Self) -> Self:
-        def _intersection(cols: Cols) -> Cols:
-            right_set = right(cols)
-            return self(cols).iter().filter(lambda n: n in right_set).collect()
-
-        return self.__class__(_intersection)
-
-    def union(self, right: Self) -> Self:
-        def _union(cols: Cols) -> Cols:
-            selected = self(cols).iter().chain(right(cols)).collect(pc.Set)
-            return cols.iter().filter(lambda n: n in selected).collect()
-
-        return self.__class__(_union)
