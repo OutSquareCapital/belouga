@@ -49,9 +49,8 @@ class Expr(sql.CoreHandler[SqlExpr]):
         return self.__class__(expr.alias(Marker.LIT), self.meta.clear_alias())
 
     def _clear_alias_name(self) -> Expr:
-        return self.__class__(
-            SqlExpr(self.inner().inner().unalias()), self.meta.clear_alias()
-        )
+        expr = self.inner().inner().unalias().pipe(SqlExpr)
+        return self.__class__(expr, self.meta.clear_alias())
 
     def _with_alias_mapper(self, mapper: Callable[[str], str]) -> Expr:
         return self.__class__(self.inner(), self.meta.with_alias_mapper(mapper))
@@ -70,7 +69,7 @@ class Expr(sql.CoreHandler[SqlExpr]):
         spec = sql.BoundsValues.rolling(window_size, center=center)
 
         def _clause(e: SqlExpr) -> SqlExpr:
-            return SqlExpr(sql.rolling_agg(e.inner(), Marker.TEMP, spec))
+            return e.inner().pipe(sql.rolling_agg, Marker.TEMP, spec).pipe(SqlExpr)
 
         return (
             sql
