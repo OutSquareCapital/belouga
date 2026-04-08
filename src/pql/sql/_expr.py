@@ -282,9 +282,6 @@ class SqlExpr(Fns):  # noqa: PLW1641
     def desc(self) -> Self:
         return self._cls(exp.Ordered(this=self.inner(), desc=True))
 
-    def get_name(self) -> str:
-        return self.inner().output_name
-
     def root_column_name(self) -> pc.Option[str]:
         match self.inner().unalias():
             case exp.Column() as col:

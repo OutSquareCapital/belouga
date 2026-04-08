@@ -65,7 +65,7 @@ class Resolver:
                 .collect(pc.Set)
                 .into(cls.exclude)
             )
-        ).unwrap_or(cls.all_columns())
+        ).unwrap_or_else(cls.all_columns)
 
     @classmethod
     def exclude(cls, excluded: Cols) -> Self:
@@ -76,7 +76,7 @@ class Resolver:
 
     @classmethod
     def agg_expr(cls, cols: pc.Option[pc.Seq[str]]) -> Self:
-        return cols.map(cls.fixed).unwrap_or(cls.all_columns())
+        return cols.map(cls.fixed).unwrap_or_else(cls.all_columns)
 
     @classmethod
     def ordered_name(cls, names: Iterable[str]) -> Self:

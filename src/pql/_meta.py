@@ -160,7 +160,7 @@ class SingleMeta(ExprMeta):
     ) -> pc.Iter[ResolvedExpr]:
         match template.inner():
             case exp.Alias():
-                base_name = template.get_name()
+                base_name = template.inner().output_name
             case _:
                 base_name = self.root_name
 
@@ -187,7 +187,7 @@ class MultiMeta(ExprMeta):
 
         match alias_override.is_none(), self._is_multi(template):
             case True, True:
-                return ResolvedExpr(template, template.get_name()).into_iter()
+                return ResolvedExpr(template, template.inner().output_name).into_iter()
             case True, _:
                 return _get_builder().overriden()
             case False, _:
@@ -230,7 +230,7 @@ class ResolvedExpr(NamedTuple):
     @classmethod
     def from_named(cls, val: IntoExpr, alias_override: pc.Option[str]) -> Self:
         resolved = SqlExpr.new(val, as_col=True)
-        output_name = alias_override.unwrap_or(resolved.get_name())
+        output_name = alias_override.unwrap_or(resolved.inner().output_name)
         return cls(resolved, output_name)
 
     def is_multi(self) -> bool:
