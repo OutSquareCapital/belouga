@@ -46,7 +46,7 @@ class DuckDbSqlLexer(SqlLexer):
     @override
     def get_tokens_unprocessed(self, text: str) -> pc.Iter[ProcessedToken]:  # pyright: ignore[reportIncompatibleMethodOverride]
         process = partial(self._process, pc.Dict(duckdb.tokenize(text)))
-        return pc.Iter(super().get_tokens_unprocessed()).map_star(process)  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType, reportCallIssue]
+        return pc.Iter(super().get_tokens_unprocessed(text)).map_star(process)
 
     def _process(  # noqa: PLR6301
         self,
