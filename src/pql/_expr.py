@@ -49,7 +49,9 @@ class Expr(sql.CoreHandler[SqlExpr]):
         return self.__class__(expr.alias(Marker.LIT), self.meta.clear_alias())
 
     def _clear_alias_name(self) -> Expr:
-        return self.__class__(self.inner(), self.meta.clear_alias())
+        return self.__class__(
+            SqlExpr(self.inner().inner().unalias()), self.meta.clear_alias()
+        )
 
     def _with_alias_mapper(self, mapper: Callable[[str], str]) -> Expr:
         return self.__class__(self.inner(), self.meta.with_alias_mapper(mapper))
