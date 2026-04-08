@@ -422,7 +422,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
                     msg = "can only specify `limit` when strategy is set to 'backward' or 'forward'"
                     return pc.Err(ValueError(msg))
                 case (pc.Some(val), pc.NONE, pc.NONE):
-                    return pc.Ok(coalesce(self.inner(), val))
+                    return pc.Ok(coalesce((self.inner(), val)))
                 case (_, pc.Some(strat), pc.NONE):
                     return pc.Ok(self.pipe(_fill_strategy()[strat]))
                 case _:

@@ -5,7 +5,6 @@ from enum import StrEnum
 from typing import Any, override
 
 import pyochain as pc
-from sqlglot import exp
 
 from .typing import NonNestedLiteral
 
@@ -50,8 +49,8 @@ def try_iter[T](val: TryIter[T]) -> pc.Iter[T]:
     match val:
         case None:
             return pc.Iter[T].new()
-        case str() | bytes() | bytearray() | exp.Expr():
-            return pc.Iter[T].once(val)  # pyright: ignore[reportReturnType]
+        case str() | bytes() | bytearray():
+            return pc.Iter[T].once(val)
         case Iterable():
             return pc.Iter(val)  # pyright: ignore[reportUnknownArgumentType]
         case _:
