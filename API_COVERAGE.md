@@ -9,7 +9,7 @@ Each summary cell is relative to Polars.
 
 | Class               | Coverage                                                                                     | Implemented | Matched | Missing | Mismatched | Extra |
 | ------------------- | -------------------------------------------------------------------------------------------- | ----------- | ------- | ------- | ---------- | ----- |
-| LazyFrame           | <span style="color: #f39c12;">███</span><span style="color: #bdc3c7;">░░░░░░░</span> (37.5%) | 80          | 30      | 25      | 25         | 7     |
+| LazyFrame           | <span style="color: #f39c12;">███</span><span style="color: #bdc3c7;">░░░░░░░</span> (38.8%) | 80          | 31      | 24      | 25         | 7     |
 | Expr                | <span style="color: #f39c12;">████</span><span style="color: #bdc3c7;">░░░░░░</span> (43.0%) | 214         | 92      | 90      | 32         | 1     |
 | LazyGroupBy         | <span style="color: #27ae60;">██████</span><span style="color: #bdc3c7;">░░░░</span> (62.5%) | 16          | 10      | 4       | 2          | 0     |
 | ExprStrNameSpace    | <span style="color: #e74c3c;">██</span><span style="color: #bdc3c7;">░░░░░░░░</span> (29.8%) | 47          | 14      | 10      | 23         | 2     |
@@ -18,14 +18,14 @@ Each summary cell is relative to Polars.
 | ExprNameNameSpace   | <span style="color: #27ae60;">███████</span><span style="color: #bdc3c7;">░░░</span> (70.0%) | 10          | 7       | 3       | 0          | 2     |
 | ExprArrNameSpace    | <span style="color: #f39c12;">█████</span><span style="color: #bdc3c7;">░░░░░</span> (54.8%) | 31          | 17      | 9       | 5          | 4     |
 | ExprDtNameSpace     | <span style="color: #f39c12;">████</span><span style="color: #bdc3c7;">░░░░░░</span> (48.9%) | 45          | 22      | 18      | 5          | 2     |
-| ModuleFunctions     | <span style="color: #e74c3c;">█</span><span style="color: #bdc3c7;">░░░░░░░░░</span> (14.3%) | 168         | 24      | 119     | 25         | 13    |
+| ModuleFunctions     | <span style="color: #e74c3c;">█</span><span style="color: #bdc3c7;">░░░░░░░░░</span> (14.3%) | 168         | 24      | 120     | 24         | 13    |
 | selectors           | <span style="color: #f39c12;">█████</span><span style="color: #bdc3c7;">░░░░░</span> (54.3%) | 35          | 19      | 12      | 4          | 0     |
-| DataType            | <span style="color: #f39c12;">█████</span><span style="color: #bdc3c7;">░░░░░</span> (57.1%) | 14          | 8       | 5       | 1          | 0     |
-| Schema              | <span style="color: #f39c12;">███</span><span style="color: #bdc3c7;">░░░░░░░</span> (35.3%) | 17          | 6       | 10      | 1          | 34    |
+| DataType            | <span style="color: #f39c12;">█████</span><span style="color: #bdc3c7;">░░░░░</span> (57.1%) | 14          | 8       | 5       | 1          | 2     |
+| Schema              | <span style="color: #e74c3c;"></span><span style="color: #bdc3c7;">░░░░░░░░░░</span> (0.0%)  | 17          | 0       | 17      | 0          | 0     |
 
 ## LazyFrame
 
-### [x] Missing Methods (25)
+### [x] Missing Methods (24)
 
 - `collect_async`
   - **Polars**: (gevent: bool, engine: EngineType, optimizations: QueryOptFlags) -> Awaitable[DataFrame] | _GeventDataFrameResult[DataFrame]
@@ -33,8 +33,6 @@ Each summary cell is relative to Polars.
   - **Polars**: (chunk_size: int | None, maintain_order: bool, lazy: bool, engine: EngineType, optimizations: QueryOptFlags) -> Iterator[DataFrame]
 - `deserialize`
   - **Polars**: (source: str | bytes | Path | IOBase, format: SerializationFormat) -> LazyFrame
-- `dtypes`
-  - **Polars**: () -> list[DataType]
 - `group_by_dynamic`
   - **Polars**: (index_column: IntoExpr, every: str | timedelta, period: str | timedelta | None, offset: str | timedelta | None, include_boundaries: bool, closed: ClosedInterval, label: Label, group_by: IntoExpr | Iterable[IntoExpr] | None, start_by: StartBy) -> LazyGroupBy
 - `inspect`
@@ -154,7 +152,7 @@ Each summary cell is relative to Polars.
   - **pql**: (`on: TryIter[str]`, `index: TryIter[str]`, variable_name: str, value_name: str, `order_by: TryIter[str]`) -> Self
 - `with_row_index`
   - **Polars**: (name: str, `offset: int`) -> LazyFrame
-  - **pql**: (name: str, `order_by: TrySeq[str]`) -> Self
+  - **pql**: (name: str, `order_by: TryIter[str]`) -> Self
 
 ### [+] Extra Methods (pql-only) (7)
 
@@ -409,7 +407,7 @@ Each summary cell is relative to Polars.
   - **pql**: (n: int) -> Self
 - `pow`
   - **Polars**: (`exponent: IntoExprColumn | int | float`) -> Expr
-  - **pql**: (`other: IntoExpr`) -> Self
+  - **pql**: (`other: IntoExprColumn | float`) -> Self
 - `quantile`
   - **Polars**: (`quantile: float | list_[float] | Expr`, interpolation: QuantileMethod) -> Expr
   - **pql**: (quantile: float, interpolation: bool) -> Self
@@ -791,7 +789,7 @@ Each summary cell is relative to Polars.
 
 ## ModuleFunctions
 
-### [x] Missing Methods (119)
+### [x] Missing Methods (120)
 
 - `BaseExtension`
   - **Polars**: (name: str, storage: PolarsDataType, metadata: str | None) -> None
@@ -813,6 +811,8 @@ Each summary cell is relative to Polars.
   - **Polars**: ()
 - `ScanCastOptions`
   - **Polars**: (integer_cast: Literal['forbid'] | IntegerCastOption | Collection[IntegerCastOption], float_cast: Literal['forbid'] | FloatCastOption | Collection[FloatCastOption], datetime_cast: Literal['forbid'] | DatetimeCastOption | Collection[DatetimeCastOption], missing_struct_fields: Literal['insert', 'raise'], extra_struct_fields: Literal['ignore', 'raise'], categorical_to_string: Literal['allow', 'forbid'],_internal_call: bool) -> None
+- `Schema`
+  - **Polars**: (schema: Mapping[str, SchemaInitDataType] | Iterable[tuple[str, SchemaInitDataType] | ArrowSchemaExportable] | ArrowSchemaExportable | None, check_dtypes: bool) -> None
 - `Unknown`
   - **Polars**: ()
 - `align_frames`
@@ -1032,7 +1032,7 @@ Each summary cell is relative to Polars.
 - `zeros`
   - **Polars**: (n: int | Expr, dtype: PolarsDataType, eager: bool) -> Expr | Series
 
-### [!] Signature Mismatches (25)
+### [!] Signature Mismatches (24)
 
 - `Array`
   - **Polars**: (`inner: PolarsDataType | PythonDataType`, `shape: int | tuple[int, ...] | None`, `width: int | None`) -> None
@@ -1051,16 +1051,13 @@ Each summary cell is relative to Polars.
   - **pql**: (`categories: Iterable[str] | type[PyEnum]`) -> None
 - `Expr`
   - **Polars**: ()
-  - **pql**: (`inner: SqlExpr`, `meta: ExprMeta`) -> None
+  - **pql**: (`_inner: SqlExpr`, `meta: ExprMeta`) -> None
 - `LazyFrame`
   - **Polars**: (`data: FrameInitTypes | None`, `schema: SchemaDefinition | None`, `schema_overrides: SchemaDict | None`, `strict: bool`, `orient: Orientation | None`, `infer_schema_length: int | None`, `nan_to_null: bool`, `height: int | None`) -> None
   - **pql**: (`data: IntoRel`, orient: Orientation) -> None
 - `List`
   - **Polars**: (`inner: PolarsDataType | PythonDataType`) -> None
   - **pql**: (`inner: DataType`) -> None
-- `Schema`
-  - **Polars**: (`schema: Mapping[str, SchemaInitDataType] | Iterable[tuple[str, SchemaInitDataType] | ArrowSchemaExportable] | ArrowSchemaExportable | None`, `check_dtypes: bool`) -> None
-  - **pql**: (`data: DictConvertible[K, V]`) -> None
 - `Struct`
   - **Polars**: (`fields: Sequence[Field] | SchemaDict`) -> None
   - **pql**: (`fields: IntoDict[str, DataType]`) -> None
@@ -1191,10 +1188,17 @@ Each summary cell is relative to Polars.
   - **Polars**: (`other: PolarsDataType`) -> bool
   - **pql**: (`other: T`) -> TypeIs[T]
 
+### [+] Extra Methods (pql-only) (2)
+
+- `from_duckdb`
+- `from_sql`
+
 ## Schema
 
-### [x] Missing Methods (10)
+### [x] Missing Methods (19)
 
+- `clear`
+  - **Polars**: ()
 - `contains_dtype`
   - **Polars**: (dtype: DataType, recursive: bool) -> bool
 - `copy`
@@ -1203,58 +1207,29 @@ Each summary cell is relative to Polars.
   - **Polars**: () -> list[DataType]
 - `fromkeys`
   - **Polars**: (iterable, value=...)
+- `get`
+  - **Polars**: (key, default=...)
+- `items`
+  - **Polars**: ()
+- `keys`
+  - **Polars**: ()
 - `len`
   - **Polars**: () -> int
 - `move_to_end`
   - **Polars**: (key, last=...)
 - `names`
   - **Polars**: () -> list[str]
+- `pop`
+- `popitem`
+  - **Polars**: (last=...)
+- `setdefault`
+  - **Polars**: (key, default=...)
 - `to_arrow`
   - **Polars**: (compat_level: CompatLevel | None) -> Schema
 - `to_frame`
   - **Polars**: (eager: bool) -> DataFrame | LazyFrame
 - `to_python`
   - **Polars**: () -> dict[str, type]
-
-### [!] Signature Mismatches (1)
-
-- `popitem`
-  - **Polars**: (`last=...`)
-  - **pql**: ()
-
-### [+] Extra Methods (pql-only) (34)
-
-- `all`
-- `any`
-- `contains`
-- `first`
-- `from_frame`
-- `from_kwargs`
-- `from_object`
-- `from_ref`
-- `get_item`
-- `insert`
-- `inspect`
-- `into`
-- `is_empty`
-- `iter`
-- `join`
-- `last`
-- `length`
-- `max`
-- `max_by`
-- `min`
-- `min_by`
-- `new`
-- `ok_or`
-- `ok_or_else`
-- `pop`
-- `remove`
-- `remove_entry`
-- `repeat`
-- `second`
-- `sum`
-- `then`
-- `then_some`
-- `try_insert`
 - `update`
+- `values`
+  - **Polars**: ()
