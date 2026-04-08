@@ -391,14 +391,7 @@ class LazyFrame(sql.CoreHandler[ScanSource]):
         Returns:
             Self: A new LazyFrame with the specified columns dropped.
         """
-        expr = (
-            try_iter(columns)
-            .chain(more_columns)
-            .map(lambda v: SqlExpr.new(v, as_col=True))
-            .filter_map(SqlExpr.root_column_name)
-            .into(sql.all)
-            .into_duckdb()
-        )
+        expr = try_iter(columns).chain(more_columns).into(sql.all).into_duckdb()
         return self.__class__(self.inner().relation.select(expr))
 
     def drop_nulls(self, subset: TryIter[str] = None) -> Self:
