@@ -128,15 +128,13 @@ class ExprMeta(ABC):
     ) -> pc.Iter[ResolvedExpr]: ...
 
     def get_output_names(self, base_names: Cols, forced_name: pc.Option[str]) -> Cols:
-        match forced_name:
-            case pc.Some(name):
+        match forced_name, self.alias_name:
+            case pc.Some(name), _:
                 return pc.Seq((name,))
+            case _, pc.Some(alias_fn):
+                return base_names.iter().map(alias_fn).collect()
             case _:
-                match self.alias_name:
-                    case pc.Some(alias_fn):
-                        return base_names.iter().map(alias_fn).collect()
-                    case _:
-                        return base_names
+                return base_names
 
     def with_alias_mapper(self, mapper: Callable[[str], str]) -> Self:
         def _get_mapper() -> Callable[[str], str]:
@@ -162,12 +160,14 @@ class SingleMeta(ExprMeta):
     ) -> pc.Iter[ResolvedExpr]:
         match template.inner():
             case exp.Alias():
-                base_names = pc.Seq((template.get_name(),))
+                base_name = template.get_name()
             case _:
-                base_names = pc.Seq((self.root_name,))
+                base_name = self.root_name
 
-        output_names = self.get_output_names(base_names, alias_override)
-        return ResolvedExpr(template, output_names.first()).into_iter()
+        output_name = self.get_output_names(
+            pc.Seq((base_name,)), alias_override
+        ).first()
+        return ResolvedExpr(template, output_name).into_iter()
 
 
 @dataclass(slots=True)
@@ -185,18 +185,20 @@ class MultiMeta(ExprMeta):
             output_names = self.get_output_names(base_names, alias_override)
             return NamesBuilder(base_names, output_names, template)
 
-        is_multi = (
+        match alias_override.is_none(), self._is_multi(template):
+            case True, True:
+                return ResolvedExpr(template, template.get_name()).into_iter()
+            case True, _:
+                return _get_builder().overriden()
+            case False, _:
+                return _get_builder().not_overriden()
+
+    def _is_multi(self, template: SqlExpr) -> bool:
+        return (
             self.preserve_native
             and self.alias_name.is_none()
             and (isinstance(template.inner(), exp.Columns) or template.inner().is_star)
         )
-        match (alias_override.is_none(), is_multi):
-            case (True, True):
-                return ResolvedExpr(template, template.get_name()).into_iter()
-            case (True, _):
-                return _get_builder().overriden()
-            case (False, _):
-                return _get_builder().not_overriden()
 
 
 class NamesBuilder(NamedTuple):
@@ -213,6 +215,10 @@ class NamesBuilder(NamedTuple):
     def not_overriden(self) -> pc.Iter[ResolvedExpr]:
         res = partial(self._to_resolved, output=self.output.first())
         return self.base.iter().map(res)
+
+
+def _find_all(expr: exp.Expr, *exprs: type[exp.Expr]) -> pc.Iter[exp.Expr]:
+    return pc.Iter(expr.find_all(*exprs))
 
 
 class ResolvedExpr(NamedTuple):
@@ -248,19 +254,13 @@ class ResolvedExpr(NamedTuple):
         return SqlExpr(self.expr.inner().transform(_strip))  # pyright: ignore[reportUnknownMemberType, reportAny]
 
     def is_pure_reducer(self) -> bool:
-        def _has_unwindowed_reducer() -> bool:
-            return pc.Iter(
-                self.lowered_expr().inner().find_all(exp.AggFunc, exp.List)
-            ).any(lambda node: not _has_window_ancestor(node))
+        search = partial(_find_all, self.lowered_expr().inner())
 
-        def _has_free_column() -> bool:
-            return pc.Iter(self.lowered_expr().inner().find_all(exp.Column)).any(
-                lambda col: pc.Option(
-                    col.find_ancestor(exp.AggFunc, exp.List, exp.Window)
-                ).is_none()
-            )
-
-        return _has_unwindowed_reducer() and not _has_free_column()
+        return search(exp.AggFunc, exp.List).any(
+            lambda node: not _has_window_ancestor(node)
+        ) and not search(exp.Column).any(
+            lambda col: col.find_ancestor(exp.AggFunc, exp.List, exp.Window) is None
+        )
 
     def implode_or_scalar(self) -> SqlExpr:
         expr = self.lowered_expr()
@@ -268,14 +268,14 @@ class ResolvedExpr(NamedTuple):
             case (True, True):
                 return expr
             case (False, True):
-                return _resolve_exploded(
-                    expr, is_distinct=self.has_projection_distinct()
+                return expr.pipe(
+                    _resolve_exploded, is_distinct=self.has_projection_distinct()
                 )
             case (True, False):
                 return expr.alias(self.name)
             case (False, False):
-                return _resolve_exploded(
-                    expr, is_distinct=self.has_projection_distinct()
+                return expr.pipe(
+                    _resolve_exploded, is_distinct=self.has_projection_distinct()
                 ).alias(self.name)
 
     def as_aliased(self, *, broadcast_agg: bool) -> SqlExpr:
@@ -298,8 +298,8 @@ class ResolvedExpr(NamedTuple):
                 .unwrap_or(default=False)
             )
 
-        return self.name != marker and pc.Iter(
-            self.expr.inner().find_all(exp.Column)
+        return self.name != marker and self.expr.inner().pipe(
+            lambda e: pc.Iter(e.find_all(exp.Column))
         ).any(_check_temp)
 
 
@@ -353,8 +353,11 @@ class ExprPlan:
         ) -> DuckDBPyRelation:
             match projs.all(ResolvedExpr.has_projection_distinct):
                 case True:
-                    return self.aliased_sql(broadcast_agg=False).into(
-                        lambda exprs: lf.select(*exprs).distinct()
+                    return (
+                        self
+                        .aliased_sql(broadcast_agg=False)
+                        .into(lambda exprs: lf.select(*exprs))
+                        .distinct()
                     )
                 case False:
                     match projs.all(lambda r: r.is_pure_reducer()):
@@ -450,7 +453,11 @@ class ExprPlan:
 
             def _into_duck(name: str) -> Expression:
                 return (
-                    ResolvedExpr(sql.col(name), name).implode_or_scalar().into_duckdb()
+                    sql
+                    .col(name)
+                    .pipe(ResolvedExpr, name)
+                    .implode_or_scalar()
+                    .into_duckdb()
                 )
 
             match proj.expr.inner():
@@ -464,8 +471,10 @@ class ExprPlan:
                     )
                 case exp.Explode(this=exp.Expr() as inner):
                     return pc.Iter.once(
-                        _resolve_exploded(
-                            SqlExpr(inner), is_distinct=proj.has_projection_distinct()
+                        SqlExpr(inner)
+                        .pipe(
+                            _resolve_exploded,
+                            is_distinct=proj.has_projection_distinct(),
                         )
                         .list.flatten()
                         .alias(proj.name)
