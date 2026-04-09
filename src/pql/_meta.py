@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Collection, Iterable
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from enum import StrEnum, auto
 from functools import partial
 from typing import TYPE_CHECKING, NamedTuple, Self, override
@@ -21,6 +21,9 @@ if TYPE_CHECKING:
 
     from .selectors import Cols, Resolver
     from .sql.typing import IntoExpr
+
+type Aliaser = Callable[[str], str]
+"""Alias function type, used for generating deferred column aliases."""
 
 
 class Marker(StrEnum):
@@ -120,7 +123,7 @@ def _resolve_exploded(expr: SqlExpr, *, is_distinct: bool) -> SqlExpr:
 class ExprMeta(ABC):
     """Metadata for expressions, used for tracking properties that affect query generation."""
 
-    alias_name: pc.Option[Callable[[str], str]] = field(default_factory=lambda: pc.NONE)
+    alias_name: pc.Option[Aliaser] = field(default_factory=lambda: pc.NONE)
 
     @abstractmethod
     def into_resolved(
@@ -136,18 +139,20 @@ class ExprMeta(ABC):
             case _:
                 return base_names
 
-    def with_alias_mapper(self, mapper: Callable[[str], str]) -> Self:
-        def _get_mapper() -> Callable[[str], str]:
+    def with_alias_mapper(self, mapper: Aliaser) -> Self:
+        def _get_mapper() -> Aliaser:
             match self.alias_name:
                 case pc.Some(current):
                     return lambda name: mapper(current(name))
                 case _:
                     return mapper
 
-        return replace(self, alias_name=pc.Some(_get_mapper()))
+        self.alias_name = pc.Some(_get_mapper())
+        return self
 
-    def clear_alias(self) -> Self:
-        return replace(self, alias_name=pc.NONE)
+    def unalias(self) -> Self:
+        self.alias_name = pc.NONE
+        return self
 
 
 @dataclass(slots=True)

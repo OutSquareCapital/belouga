@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import TYPE_CHECKING, override
@@ -11,7 +10,7 @@ import pyochain as pc
 
 from . import _datatypes as dt, sql  # pyright: ignore[reportPrivateUsage]
 from ._expr import Expr
-from ._meta import ExprPlan
+from ._meta import Aliaser, ExprPlan
 from .sql import SqlExpr, namespaces as nm
 
 if TYPE_CHECKING:
@@ -656,16 +655,16 @@ class ExprNameNameSpace(ExprNameSpaceBase):
         Expr
     """
 
-    def _with_alias_mapper(self, mapper: Callable[[str], str]) -> Expr:
+    def _with_alias_mapper(self, mapper: Aliaser) -> Expr:
         meta = self.inner().meta.with_alias_mapper(mapper)
         return self.inner().inner().pipe(Expr, meta)
 
     def keep(self) -> Expr:
         expr = self.inner()
-        meta = expr.meta.clear_alias()
+        meta = expr.meta.unalias()
         return expr.inner().inner().unalias().pipe(SqlExpr).pipe(Expr, meta)
 
-    def map(self, function: Callable[[str], str]) -> Expr:
+    def map(self, function: Aliaser) -> Expr:
         return self._with_alias_mapper(function)
 
     def prefix(self, prefix: str) -> Expr:

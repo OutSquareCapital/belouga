@@ -45,8 +45,8 @@ class Expr(sql.CoreHandler[SqlExpr]):
     def _cls(self, value: SqlExpr) -> Self:
         return self.__class__(value, self.meta)
 
-    def _as_literal_name(self, expr: SqlExpr) -> Self:
-        return self.__class__(expr.alias(Marker.LIT), self.meta.clear_alias())
+    def _as_lit(self, expr: SqlExpr) -> Self:
+        return self.__class__(expr.alias(Marker.LIT), self.meta.unalias())
 
     def _rolling_agg(
         self,
@@ -139,43 +139,43 @@ class Expr(sql.CoreHandler[SqlExpr]):
         return self.add(other)
 
     def __radd__(self, other: IntoExpr) -> Self:
-        return self._as_literal_name(self.inner().radd(other))
+        return self._as_lit(self.inner().radd(other))
 
     def __sub__(self, other: IntoExpr) -> Self:
         return self.sub(other)
 
     def __rsub__(self, other: IntoExpr) -> Self:
-        return self._as_literal_name(self.inner().rsub(other))
+        return self._as_lit(self.inner().rsub(other))
 
     def __mul__(self, other: IntoExpr) -> Self:
         return self.mul(other)
 
     def __rmul__(self, other: IntoExpr) -> Self:
-        return self._as_literal_name(self.inner().rmul(other))
+        return self._as_lit(self.inner().rmul(other))
 
     def __truediv__(self, other: IntoExpr) -> Self:
         return self.truediv(other)
 
     def __rtruediv__(self, other: IntoExpr) -> Self:
-        return self._as_literal_name(self.inner().rtruediv(other))
+        return self._as_lit(self.inner().rtruediv(other))
 
     def __floordiv__(self, other: IntoExpr) -> Self:
         return self.floordiv(other)
 
     def __rfloordiv__(self, other: IntoExpr) -> Self:
-        return self._as_literal_name(self.inner().rfloordiv(other))
+        return self._as_lit(self.inner().rfloordiv(other))
 
     def __mod__(self, other: IntoExprColumn | Decimal | float) -> Self:
         return self.mod(other)
 
     def __rmod__(self, other: IntoExpr) -> Self:
-        return self._as_literal_name(self.inner().rmod(other))
+        return self._as_lit(self.inner().rmod(other))
 
     def __pow__(self, other: IntoExprColumn | float) -> Self:
         return self.pow(other)
 
     def __rpow__(self, other: IntoExpr) -> Self:
-        return self._as_literal_name(self.inner().rpow(other))
+        return self._as_lit(self.inner().rpow(other))
 
     def __neg__(self) -> Self:
         return self.neg()
@@ -204,7 +204,7 @@ class Expr(sql.CoreHandler[SqlExpr]):
         return self.and_(other)
 
     def __rand__(self, other: IntoExpr) -> Self:
-        return self._as_literal_name(self.inner().rand(other))
+        return self._as_lit(self.inner().rand(other))
 
     def __or__(self, other: IntoExpr) -> Self:
         return self.or_(other)
@@ -213,7 +213,7 @@ class Expr(sql.CoreHandler[SqlExpr]):
         return self.xor(other)
 
     def __ror__(self, other: IntoExpr) -> Self:
-        return self._as_literal_name(self.inner().ror(other))
+        return self._as_lit(self.inner().ror(other))
 
     def __invert__(self) -> Self:
         return self.not_()
@@ -299,7 +299,7 @@ class Expr(sql.CoreHandler[SqlExpr]):
         Returns:
             Self: A new expression with the given alias.
         """
-        return self.__class__(self.inner().alias(name), self.meta.clear_alias())
+        return self.__class__(self.inner().alias(name), self.meta.unalias())
 
     def is_null(self) -> Self:
         """Check if the expression is NULL.
