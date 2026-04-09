@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Collection, Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import StrEnum, auto
 from functools import partial
 from typing import TYPE_CHECKING, NamedTuple, Self, override
@@ -147,12 +147,10 @@ class ExprMeta(ABC):
                 case _:
                     return mapper
 
-        self.alias_name = pc.Some(_get_mapper())
-        return self
+        return replace(self, alias_name=pc.Some(_get_mapper()))
 
     def unalias(self) -> Self:
-        self.alias_name = pc.NONE
-        return self
+        return replace(self, alias_name=pc.NONE)
 
 
 @dataclass(slots=True)
