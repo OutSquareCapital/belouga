@@ -126,14 +126,14 @@ class ExprMeta(ABC):
     alias_name: pc.Option[Aliaser] = field(default_factory=lambda: pc.NONE)
 
     @abstractmethod
-    def into_resolved(
-        self, template: SqlExpr, cols: Cols, alias_override: pc.Option[str]
-    ) -> pc.Iter[ResolvedExpr]: ...
+    def into_resolved(self, template: SqlExpr, cols: Cols) -> pc.Iter[ResolvedExpr]: ...
 
-    def get_output_names(self, base_names: Cols, forced_name: pc.Option[str]) -> Cols:
-        match forced_name, self.alias_name:
-            case pc.Some(name), _:
-                return pc.Seq((name,))
+    def get_output_names(self, base_names: Cols, template: SqlExpr) -> Cols:
+        match template.inner(), self.alias_name:
+            case exp.Alias() as expr, pc.Some(alias_fn):
+                return pc.Iter.once(expr.output_name).map(alias_fn).collect()
+            case exp.Alias() as expr, pc.NONE:
+                return pc.Seq((expr.output_name,))
             case _, pc.Some(alias_fn):
                 return base_names.iter().map(alias_fn).collect()
             case _:
@@ -160,18 +160,14 @@ class SingleMeta(ExprMeta):
     root_name: str = field(kw_only=True)
 
     @override
-    def into_resolved(
-        self, template: SqlExpr, cols: Cols, alias_override: pc.Option[str]
-    ) -> pc.Iter[ResolvedExpr]:
+    def into_resolved(self, template: SqlExpr, cols: Cols) -> pc.Iter[ResolvedExpr]:
         match template.inner():
             case exp.Alias():
                 base_name = template.inner().output_name
             case _:
                 base_name = self.root_name
 
-        output_name = self.get_output_names(
-            pc.Seq((base_name,)), alias_override
-        ).first()
+        output_name = self.get_output_names(pc.Seq((base_name,)), template).first()
         return ResolvedExpr(template, output_name).into_iter()
 
 
@@ -181,22 +177,20 @@ class MultiMeta(ExprMeta):
     preserve_native: bool = field(default=False, kw_only=True)
 
     @override
-    def into_resolved(
-        self, template: SqlExpr, cols: Cols, alias_override: pc.Option[str]
-    ) -> pc.Iter[ResolvedExpr]:
+    def into_resolved(self, template: SqlExpr, cols: Cols) -> pc.Iter[ResolvedExpr]:
 
         def _get_builder() -> NamesBuilder:
             base_names = self.resolver(cols)
-            output_names = self.get_output_names(base_names, alias_override)
+            output_names = self.get_output_names(base_names, template)
             return NamesBuilder(base_names, output_names, template)
 
-        match alias_override.is_none(), self._is_multi(template):
-            case True, True:
+        match template.inner(), self._is_multi(template):
+            case exp.Alias(), _:
+                return _get_builder().aliased()
+            case _, True:
                 return ResolvedExpr(template, template.inner().output_name).into_iter()
-            case True, _:
-                return _get_builder().overriden()
-            case False, _:
-                return _get_builder().not_overriden()
+            case _, _:
+                return _get_builder().resolved()
 
     def _is_multi(self, template: SqlExpr) -> bool:
         return (
@@ -214,12 +208,15 @@ class NamesBuilder(NamedTuple):
     def _to_resolved(self, name: str, output: str) -> ResolvedExpr:
         return ResolvedExpr(Marker.replace_col(self.template, name), output)
 
-    def overriden(self) -> pc.Iter[ResolvedExpr]:
+    def resolved(self) -> pc.Iter[ResolvedExpr]:
         return self.base.iter().zip(self.output).map_star(self._to_resolved)
 
-    def not_overriden(self) -> pc.Iter[ResolvedExpr]:
-        res = partial(self._to_resolved, output=self.output.first())
-        return self.base.iter().map(res)
+    def aliased(self) -> pc.Iter[ResolvedExpr]:
+        template = SqlExpr(self.template.inner().unalias())
+        alias = self.output.first()
+        return self.base.iter().map(
+            lambda name: ResolvedExpr(Marker.replace_col(template, name), alias)
+        )
 
 
 def _find_all[T: exp.Expr](expr: exp.Expr, *exprs: type[T]) -> pc.Iter[T]:
@@ -233,10 +230,9 @@ class ResolvedExpr(NamedTuple):
     name: str
 
     @classmethod
-    def from_named(cls, val: IntoExpr, alias_override: pc.Option[str]) -> Self:
+    def from_named(cls, val: IntoExpr) -> Self:
         resolved = SqlExpr.new(val, as_col=True)
-        output_name = alias_override.unwrap_or(resolved.inner().output_name)
-        return cls(resolved, output_name)
+        return cls(resolved, resolved.inner().output_name)
 
     def is_multi(self) -> bool:
         return isinstance(self.expr.inner(), exp.Columns) or self.expr.inner().is_star
@@ -318,29 +314,29 @@ class ExprPlan:
         more_exprs: Iterable[IntoExpr],
         named_exprs: dict[str, IntoExpr],
     ) -> None:
+        from ._expr import Expr
 
-        def _resolve(
-            val: IntoExpr, alias_override: pc.Option[str] = pc.NONE
-        ) -> pc.Iter[ResolvedExpr]:
-            from ._expr import Expr
-
+        def _resolve(val: IntoExpr) -> pc.Iter[ResolvedExpr]:
             match val:
                 case Expr() as expr:
-                    return expr.meta.into_resolved(expr.inner(), cols, alias_override)
+                    return expr.meta.into_resolved(expr.inner(), cols)
                 case _:
-                    return ResolvedExpr.from_named(val, alias_override).into_iter()
+                    return ResolvedExpr.from_named(val).into_iter()
 
         self.cols = cols
         self.projections = (
             try_iter(exprs)
             .chain(more_exprs)
-            .flat_map(_resolve)
             .chain(
-                pc
-                .Iter(named_exprs.items())
-                .map_star(lambda k, v: _resolve(v, pc.Some(k)))
-                .flatten()
+                pc.Iter(named_exprs.items()).map_star(
+                    lambda name, val: (
+                        val.alias(name)
+                        if isinstance(val, Expr)
+                        else SqlExpr.new(val, as_col=True).alias(name)
+                    )
+                )
             )
+            .flat_map(_resolve)
             .collect()
         )
 
@@ -378,7 +374,6 @@ class ExprPlan:
         ).unwrap_or_else(lambda: ScanSource.from_none().relation)
 
     def with_columns_context(self, lf: DuckDBPyRelation) -> DuckDBPyRelation:
-
         def _resolve() -> pc.Iter[Expression]:
             def _into_update(proj: ResolvedExpr) -> pc.Option[tuple[str, SqlExpr]]:
                 match proj.is_multi():
