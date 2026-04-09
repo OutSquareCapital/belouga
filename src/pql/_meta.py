@@ -316,6 +316,13 @@ class ExprPlan:
     ) -> None:
         from ._expr import Expr
 
+        def _alias_named_expr(name: str, val: IntoExpr) -> IntoExpr:
+            match val:
+                case Expr() as expr:
+                    return expr.alias(name)
+                case _:
+                    return SqlExpr.new(val, as_col=True).alias(name)
+
         def _resolve(val: IntoExpr) -> pc.Iter[ResolvedExpr]:
             match val:
                 case Expr() as expr:
@@ -327,15 +334,7 @@ class ExprPlan:
         self.projections = (
             try_iter(exprs)
             .chain(more_exprs)
-            .chain(
-                pc.Iter(named_exprs.items()).map_star(
-                    lambda name, val: (
-                        val.alias(name)
-                        if isinstance(val, Expr)
-                        else SqlExpr.new(val, as_col=True).alias(name)
-                    )
-                )
-            )
+            .chain(pc.Iter(named_exprs.items()).map_star(_alias_named_expr))
             .flat_map(_resolve)
             .collect()
         )

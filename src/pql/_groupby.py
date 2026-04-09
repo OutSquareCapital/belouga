@@ -19,19 +19,19 @@ if TYPE_CHECKING:
 
 @final
 class LazyGroupBy:
-    __slots__ = ("_aggregator", "_frame", "_keys", "_schema")
+    __slots__ = ("_aggregator", "_cols", "_constructor", "_keys")
 
     def __init__(
         self, frame: LazyFrame, keys: pc.Seq[SqlExpr], group_expr: pc.Option[str]
     ) -> None:
-        self._frame = frame
+        self._constructor = frame.__class__
         self._keys = keys
         keys_names = keys.iter().filter_map(SqlExpr.root_column_name).collect(pc.Set)
-        self._schema = (
+        self._cols = (
             frame.columns.iter().filter(lambda name: name not in keys_names).collect()
         )
         self._aggregator = partial(
-            self._frame.inner().relation.aggregate,
+            frame.inner().relation.aggregate,
             group_expr=group_expr.unwrap_or_else(
                 lambda: keys.iter().map(str).join(", ")
             ),
@@ -39,7 +39,7 @@ class LazyGroupBy:
 
     def _agg_columns(self, func: Callable[[Expr], Expr]) -> LazyFrame:
         return (
-            self._schema
+            self._cols
             .iter()
             .map(lambda name: col(name).pipe(func).alias(name))
             .into(self.agg)
@@ -87,7 +87,7 @@ class LazyGroupBy:
         **named_aggs: IntoExpr,
     ) -> LazyFrame:
         keys = self._keys.iter().map(lambda c: c.into_duckdb())
-        rel = self._schema.into(ExprPlan, aggs, more_aggs, named_aggs).agg_context(
+        rel = self._cols.into(ExprPlan, aggs, more_aggs, named_aggs).agg_context(
             keys, self._aggregator
         )
-        return self._frame.__class__(rel)
+        return self._constructor(rel)
