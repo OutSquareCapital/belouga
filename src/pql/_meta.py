@@ -178,26 +178,21 @@ class MultiMeta(ExprMeta):
 
     @override
     def into_resolved(self, template: SqlExpr, cols: Cols) -> pc.Iter[ResolvedExpr]:
-
         def _get_builder() -> NamesBuilder:
             base_names = self.resolver(cols)
             output_names = self.get_output_names(base_names, template)
             return NamesBuilder(base_names, output_names, template)
 
-        match template.inner(), self._is_multi(template):
-            case exp.Alias(), _:
+        expr = template.inner()
+        match expr:
+            case exp.Alias():
                 return _get_builder().aliased()
-            case _, True:
-                return ResolvedExpr(template, template.inner().output_name).into_iter()
-            case _, _:
+            case starred if (
+                expr.is_star and self.preserve_native and self.alias_name.is_none()
+            ):
+                return ResolvedExpr(template, starred.output_name).into_iter()
+            case _:
                 return _get_builder().resolved()
-
-    def _is_multi(self, template: SqlExpr) -> bool:
-        return (
-            self.preserve_native
-            and self.alias_name.is_none()
-            and (isinstance(template.inner(), exp.Columns) or template.inner().is_star)
-        )
 
 
 class NamesBuilder(NamedTuple):
