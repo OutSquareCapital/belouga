@@ -173,20 +173,22 @@ class MultiMeta(ExprMeta):
         base_names = self.resolver(cols)
         output_names = self.get_output_names(base_names, template)
 
+        def _resolved(expr: SqlExpr, col_name: str, name: str) -> ResolvedExpr:
+            return ResolvedExpr(Marker.replace_col(expr, col_name), name)
+
         match template.inner():
             case exp.Alias():
                 expr = template.inner().unalias().pipe(SqlExpr)
                 alias = output_names.first()
-                return base_names.iter().map(
-                    lambda name: ResolvedExpr(Marker.replace_col(expr, name), alias)
-                )
+                return base_names.iter().map(lambda name: _resolved(expr, name, alias))
 
             case _:
-
-                def _to_resolved(name: str, output: str) -> ResolvedExpr:
-                    return ResolvedExpr(Marker.replace_col(template, name), output)
-
-                return base_names.iter().zip(output_names).map_star(_to_resolved)
+                return (
+                    base_names
+                    .iter()
+                    .zip(output_names)
+                    .map_star(lambda name, output: _resolved(template, name, output))
+                )
 
 
 def _find_all[T: exp.Expr](expr: exp.Expr, *exprs: type[T]) -> pc.Iter[T]:
