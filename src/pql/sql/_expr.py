@@ -688,12 +688,12 @@ class SqlExpr(Fns):  # noqa: PLW1641
         Returns:
             Self: An expression with null values filled with the next non-null value.
         """
-        expr = self.any_value()
+        expr = self.any_value().over
         return (
             pc
             .Option(limit)
-            .map(lambda lmt: expr.over(frame_start=pc.Some(0), frame_end=pc.Some(lmt)))
-            .unwrap_or_else(lambda: expr.over(frame_start=pc.Some(0)))
+            .map(lambda lmt: expr(frame_start=pc.Some(0), frame_end=pc.Some(lmt)))
+            .unwrap_or_else(lambda: expr(frame_start=pc.Some(0)))
         )
 
     def fill_nan(self, value: float | IntoExprColumn | None) -> Self:
