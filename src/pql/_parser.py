@@ -71,14 +71,14 @@ class DuckDbSqlLexer(SqlLexer):
 
 
 def _get_kwords() -> dict[str, Any]:  # pyright: ignore[reportExplicitAny]
-    from sqlparse.tokens import Keyword
+    from sqlparse.tokens import Keyword  # pyright: ignore[reportUnknownVariableType]
 
     from .sql import col, lit, when
 
     name = col("keyword_name")
 
-    return (
-        meta
+    return (  # pyright: ignore[reportUnknownVariableType]
+        meta  # pyright: ignore[reportUnknownMemberType]
         .keywords()
         .select(
             when(col("keyword_category").is_in(lit("reserved"), lit("unreserved")))
@@ -88,7 +88,7 @@ def _get_kwords() -> dict[str, Any]:  # pyright: ignore[reportExplicitAny]
         .fetch_all()
         .iter()
         .flatten()
-        .map(lambda x: (x, Keyword))  # pyright: ignore[reportAny]
+        .map(lambda x: (x, Keyword))  # pyright: ignore[reportAny, reportUnknownLambdaType]
         .collect(dict)
     )
 
