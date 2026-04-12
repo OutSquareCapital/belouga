@@ -5,16 +5,25 @@ from functools import partial
 from typing import TYPE_CHECKING, final
 
 import pyochain as pc
+from sqlglot import exp
 
 from ._expr import Expr
 from ._funcs import col, len
 from ._meta import ExprPlan
-from .sql import SqlExpr
 
 if TYPE_CHECKING:
     from ._frame import LazyFrame
+    from .sql import SqlExpr
     from .sql.typing import IntoExpr
     from .sql.utils import TryIter
+
+
+def _root_column_name(expr: SqlExpr) -> pc.Option[str]:
+    match expr.inner().unalias():
+        case exp.Column() as column:
+            return pc.Option.if_some(column.parts[-1]).map(lambda part: part.name)
+        case _:
+            return pc.NONE
 
 
 @final
@@ -26,7 +35,7 @@ class LazyGroupBy:
     ) -> None:
         self._constructor = frame.__class__
         self._keys = keys
-        keys_names = keys.iter().filter_map(SqlExpr.root_column_name).collect(pc.Set)
+        keys_names = keys.iter().filter_map(_root_column_name).collect(pc.Set)
         self._cols = (
             frame.columns.iter().filter(lambda name: name not in keys_names).collect()
         )

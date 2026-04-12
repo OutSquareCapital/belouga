@@ -282,13 +282,6 @@ class SqlExpr(Fns):  # noqa: PLW1641
     def desc(self) -> Self:
         return self._cls(exp.Ordered(this=self.inner(), desc=True))
 
-    def root_column_name(self) -> pc.Option[str]:
-        match self.inner().unalias():
-            case exp.Column() as col:
-                return pc.Option.if_some(col.parts[-1]).map(lambda part: part.name)
-            case _:
-                return pc.NONE
-
     def is_in(self, *args: IntoExpr) -> Self:
         return self._cls(exp.In(this=self.inner(), expressions=args_into_glot(args)))
 

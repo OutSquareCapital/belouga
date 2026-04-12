@@ -60,8 +60,7 @@ class Resolver:
         return exclude.map(
             lambda exc: (
                 try_iter(exc)
-                .map(lambda value: SqlExpr.new(value, as_col=True))
-                .filter_map(SqlExpr.root_column_name)
+                .map(lambda value: SqlExpr.new(value, as_col=True).inner().name)
                 .collect(pc.Set)
                 .into(cls.exclude)
             )

@@ -411,7 +411,7 @@ class ExprPlan:
                     .Option(star.args.get("except_"))
                     .map(pc.Iter[exp.Expr])
                     .unwrap_or_else(pc.Iter[exp.Expr].new)
-                    .filter_map(lambda e: SqlExpr(e).root_column_name())
+                    .map(lambda e: e.name)
                     .collect(pc.Set)
                 )
 
