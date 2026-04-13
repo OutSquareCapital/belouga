@@ -22,32 +22,31 @@
 
 ## Architecture cible
 
-### ScanSource (inchangé)
+### ScanSource (gère relation + colonnes)
 
 ```python
 @dataclass(slots=True)
 class ScanSource:
     relation: duckdb.DuckDBPyRelation   # source de données brute
-    columns: pc.Vec[str]                 # noms de colonnes de la source
+    columns: pc.Vec[str]                 # noms de colonnes, mutable (Vec), muté in-place par les ops
 ```
 
-Rôle : construire une relation DuckDB à partir de n'importe quelle source (dict, numpy, table, scan, etc.). Pas d'AST ici. C'est le point d'entrée des données et le point de matérialisation via `from_query`.
+Rôle : stocker la relation de base et les colonnes. `columns` est un `Vec` (mutable) — les transformations LazyFrame le mutent in-place, pas de recréation de `ScanSource` à chaque opération. C'est aussi le point de matérialisation via `from_query`.
 
 ### LazyFrame (porte l'AST)
 
 ```python
 @dataclass(slots=True, init=False, repr=False)
 class LazyFrame(sql.CoreHandler[ScanSource]):
-    _inner: ScanSource      # source de base (données brutes + colonnes initiales)
+    _inner: ScanSource      # relation de base + colonnes mutables
     _ast: exp.Select         # arbre SQL construit par les transformations
-    _columns: pc.Vec[str]    # colonnes trackées à travers les ops
 ```
 
-- `_inner` = le `ScanSource` de base. Ne change plus après init (sauf joins qui accumulent des sources).
+- `_inner` = le `ScanSource`. Contient la relation de base et les colonnes. Les colonnes sont mutées in-place par chaque transformation (le `Vec` est mutable, c'est pour ça qu'il est là).
 - `_ast` = l'arbre sqlglot qui grandit à chaque transformation. Initialisé à `SELECT * FROM base_alias`.
-- `_columns` = trackés manuellement à chaque opération.
+- Les colonnes s'accèdent via `self.inner().columns` — exactement comme aujourd'hui.
 
-Matérialisation = `ScanSource.from_query(self._ast.sql(dialect="duckdb"), base=self._inner.relation)`.
+Matérialisation = `ScanSource.from_query(self._ast.sql(dialect="duckdb"), base=self.inner().relation)`.
 
 ---
 
@@ -74,9 +73,9 @@ Les terminaux matérialisent l'AST :
 |---|---|
 | `collect()` | `_materialize().relation.pl()` |
 | `lazy()` | `_materialize().relation.pl(lazy=True)` |
-| `columns` | retourne `self._columns` (tracké, pas de matérialisation) |
+| `columns` | retourne `self.inner().columns` (tracké dans ScanSource, pas de matérialisation) |
 | `dtypes` | matérialisation nécessaire |
-| `schema` | = `_columns` + `dtypes` |
+| `schema` | = `self.inner().columns` + `dtypes` |
 | `shape` | matérialisation nécessaire |
 | `explain()` | `_materialize().relation.explain()` |
 | `show()` | `_materialize().relation.show()` |
@@ -85,16 +84,16 @@ Les terminaux matérialisent l'AST :
 | `sql_query()` | `_ast.sql(dialect="duckdb")` directement |
 | `describe()` | matérialisation nécessaire |
 
-Avec `_materialize()` = `ScanSource.from_query(self._ast.sql(dialect="duckdb"), base=self._inner.relation)`.
+Avec `_materialize()` = `ScanSource.from_query(self._ast.sql(dialect="duckdb"), base=self.inner().relation)`.
 
 ---
 
-## Column tracking
+## Column tracking (mutation in-place du Vec)
 
-Chaque opération sur LazyFrame met à jour `_columns` :
+Chaque transformation LazyFrame mute `self.inner().columns` in-place (c'est un `pc.Vec`, mutable). Pas de recréation de `ScanSource`.
 
-| Opération | Impact sur `_columns` |
-|-----------|---------------------|
+| Opération | Impact sur `ScanSource.columns` |
+|-----------|-------------------------------|
 | `select()` | Remplace : output = noms des expressions résolues |
 | `with_columns()` | Étend/remplace : existant + nouveau, dédup par nom |
 | `filter()` | Passthrough |
@@ -107,9 +106,9 @@ Chaque opération sur LazyFrame met à jour `_columns` :
 | `pivot()` | Nouveau set (data-dependent mais `on_columns` est explicite) |
 | `union()` | Left side wins |
 
-`_columns` est déjà tracké via `ScanSource.columns` aujourd'hui. La seule différence : on ne peut plus faire `relation.columns` pour vérifier — on se fie au tracking. C'est correct tant que le tracking est fidèle.
+La seule différence avec aujourd'hui : on ne peut plus faire `relation.columns` pour vérifier — on se fie au tracking dans `ScanSource.columns`. C'est correct tant que le tracking est fidèle.
 
-Multi-column selectors (`cs.all()`, `*`) résolvent contre `_columns` : déjà le cas via `ExprPlan`.
+Multi-column selectors (`cs.all()`, `*`) résolvent contre `self.inner().columns` : déjà le cas via `ExprPlan`.
 
 ---
 
@@ -162,7 +161,7 @@ Déjà le pattern cible : construit un AST sqlglot, passe à `from_query`. Pas d
 
 ### `_iter_agg` / `_iter_slct`
 
-Ces helpers itèrent sur `_columns` et construisent des expressions. Actuellement appellent `relation.aggregate` / `select`. Cible : construisent un `exp.Select` à la place.
+Ces helpers itèrent sur `self.inner().columns` et construisent des expressions. Actuellement appellent `relation.aggregate` / `select`. Cible : construisent un `exp.Select` à la place.
 
 ### `describe()` / `shape`
 
@@ -176,9 +175,9 @@ Chaque phase laisse la test suite verte.
 
 **Phase 1 — Foundation**
 
-1. Ajouter `_ast: exp.Select` et `_columns: pc.Vec[str]` à `LazyFrame`. Init `_ast` à `SELECT * FROM base_alias`, init `_columns` depuis `ScanSource.columns`.
+1. Ajouter `_ast: exp.Select` à `LazyFrame`. Init à `SELECT * FROM base_alias`. Les colonnes restent dans `ScanSource.columns` comme aujourd'hui.
 2. `ScanSource` reste inchangé.
-3. Migrer les passthrough simples : `filter`, `sort`, `limit` → manipulent `_ast`, retournent un nouveau LazyFrame avec AST mis à jour.
+3. Migrer les passthrough simples : `filter`, `sort`, `limit` → manipulent `_ast`. Les colonnes ne changent pas (passthrough), donc pas de mutation du Vec.
 4. Les terminaux matérialisent via `_materialize()` → `ScanSource.from_query(_ast.sql(...))`.
 
 **Phase 2 — ExprPlan**
