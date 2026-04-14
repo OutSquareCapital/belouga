@@ -182,15 +182,21 @@ class LazyFrame(sql.CoreHandler[ScanSource]):
         def _constraint(k: str, val: IntoExpr) -> SqlExpr:
             return sql.col(k).eq(SqlExpr.new(val))
 
-        expr = (
+        condition = (
             try_iter(predicates)
             .chain(more_predicates)
             .map(lambda value: SqlExpr.new(value, as_col=True))
             .chain(pc.Iter(constraints.items()).map_star(_constraint))
             .reduce(SqlExpr.and_)
-            .into_duckdb()
+            .inner()
         )
-        return self.__class__(self.inner().relation.filter(expr))
+        return (
+            exp
+            .select("*")
+            .from_("src")
+            .where(condition)
+            .pipe(self._from_sql_expr, src=self.inner())
+        )
 
     def group_by(
         self,
