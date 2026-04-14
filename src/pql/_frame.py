@@ -26,7 +26,6 @@ if TYPE_CHECKING:
         ExplainTypeLiteral,
         RenderModeLiteral,
     )
-    from duckdb import Expression
     from pyochain.traits import PyoIterable
 
     from ._expr import Expr
@@ -782,7 +781,7 @@ class LazyFrame(sql.CoreHandler[ScanSource]):
         ).unwrap()
         builder = JoinBuilder(suffix, self.columns, join_keys.right)
 
-        def _cols_how() -> pc.Iter[str | Expression]:
+        def _cols_how() -> pc.Iter[exp.Expr | str]:
             left = builder.left.iter()
             right = other.columns.iter()
             match how:
@@ -791,14 +790,14 @@ class LazyFrame(sql.CoreHandler[ScanSource]):
                         left
                         .map(builder.lhs)
                         .chain(right.filter_map(builder.for_inner_left))
-                        .map(lambda c: c.into_duckdb())
+                        .map(lambda c: c.inner())
                     )
                 case "outer":
                     return (
                         left
                         .map(builder.lhs)
                         .chain(right.map(builder.for_outer))
-                        .map(lambda c: c.into_duckdb())
+                        .map(lambda c: c.inner())
                     )
                 case "right":
                     return (
@@ -806,27 +805,28 @@ class LazyFrame(sql.CoreHandler[ScanSource]):
                         .filter(lambda name: name not in join_keys.left)
                         .map(builder.lhs)
                         .chain(right.map(builder.for_right))
-                        .map(lambda c: c.into_duckdb())
+                        .map(lambda c: c.inner())
                     )
                 case "semi" | "anti":
                     return pc.Iter.once("lhs.*")
 
-        return self.__class__(
-            self
+        join_type = "full outer" if how == "outer" else how
+        return (
+            join_keys.left
+            .iter()
+            .zip(join_keys.right)
+            .map_star(builder.equals)
+            .reduce(SqlExpr.and_)
             .inner()
-            .relation.set_alias("lhs")
-            .join(
-                other.inner().relation.set_alias("rhs"),
-                condition=join_keys.left
-                .iter()
-                .zip(join_keys.right)
-                .map_star(builder.equals)
-                .reduce(SqlExpr.and_)
-                .into_duckdb(),
-                how=how,
+            .pipe(
+                lambda condition: (
+                    _cols_how()
+                    .into(lambda exprs: exp.select(*exprs))
+                    .from_("lhs")
+                    .join("rhs", on=condition, join_type=join_type)
+                    .pipe(self._from_sql_expr, lhs=self.inner(), rhs=other)
+                )
             )
-            .select(*_cols_how())
-            .set_alias(self.inner().relation.alias)
         )
 
     def join_cross(self, other: Self, *, suffix: str = "_right") -> Self:
@@ -840,19 +840,16 @@ class LazyFrame(sql.CoreHandler[ScanSource]):
             Self: A new LazyFrame resulting from the cross join.
         """
         builder = JoinBuilder(suffix, self.columns, other.columns)
-        return self.__class__(
-            self
-            .inner()
-            .relation.set_alias("lhs")
-            .cross(other.inner().relation.set_alias("rhs"))
-            .select(
-                *builder.left
-                .iter()
-                .map(builder.lhs)
-                .chain(builder.right.iter().map(builder.for_outer))
-                .map(lambda c: c.into_duckdb())
-            )
-            .set_alias(self.inner().relation.alias)
+        return (
+            builder.left
+            .iter()
+            .map(builder.lhs)
+            .chain(builder.right.iter().map(builder.for_outer))
+            .map(lambda c: c.inner())
+            .into(lambda exprs: exp.select(*exprs))
+            .from_("lhs")
+            .join("rhs", join_type="cross")
+            .pipe(self._from_sql_expr, lhs=self.inner(), rhs=other)
         )
 
     def join_asof(  # noqa: PLR0913
