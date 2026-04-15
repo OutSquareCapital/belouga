@@ -234,7 +234,11 @@ class ResolvedExpr(Pipeable):
                 self.expr = expr
 
     def maybe_alias(self, expr: SqlExpr) -> SqlExpr:
-        return expr if self.is_multi else expr.alias(self.name)
+        match self.is_multi:
+            case True:
+                return expr
+            case False:
+                return expr.inner().unalias().pipe(SqlExpr).alias(self.name)
 
     def implode_or_scalar(self) -> SqlExpr:
         match self.is_pure_reducer:
@@ -309,6 +313,12 @@ class ExprPlan:
     def aliased_sql(self, *, broadcast_agg: bool) -> pc.Iter[Expression]:
         def _into_expr(resolved: ResolvedExpr) -> Expression:
             return resolved.as_aliased(broadcast_agg=broadcast_agg).into_duckdb()
+
+        return self.projections.iter().map(_into_expr)
+
+    def aliased_glot(self, *, broadcast_agg: bool) -> pc.Iter[exp.Expr]:
+        def _into_expr(resolved: ResolvedExpr) -> exp.Expr:
+            return resolved.as_aliased(broadcast_agg=broadcast_agg).inner()
 
         return self.projections.iter().map(_into_expr)
 
@@ -396,8 +406,14 @@ class ExprPlan:
             .into(lambda args: expr.struct.insert(*args))
         )
 
-    def group_by_all_ctx(self, lf: DuckDBPyRelation) -> DuckDBPyRelation:
-        return self.aliased_sql(broadcast_agg=False).into(lf.aggregate, "ALL")
+    def group_by_all_ctx(self) -> exp.Select:
+        return (
+            self
+            .aliased_glot(broadcast_agg=False)
+            .into(lambda exprs: exp.select(*exprs))
+            .from_("src")
+            .group_by("ALL")
+        )
 
     def agg_ctx(
         self,

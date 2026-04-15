@@ -85,7 +85,7 @@ class LazyFrame(sql.CoreHandler[ScanSource]):
                 self._ast = exp.from_(exp.to_table(source_name))
 
     def _from_sql_expr(self, expr: exp.Expr, **kwargs: IntoRel) -> Self:
-        qry = sql.ScanSource.from_query(expr.sql(dialect="duckdb"), **kwargs).relation
+        qry = ScanSource.from_query(expr.sql(dialect="duckdb"), **kwargs).relation
         return self.__class__(qry)
 
     def _iter_slct(self, func: Callable[[str], SqlExpr]) -> Self:
@@ -258,10 +258,11 @@ class LazyFrame(sql.CoreHandler[ScanSource]):
         Returns:
             Self: A new LazyFrame with the aggregated rows.
         """
-        return self.__class__(
-            self.columns.into(
-                ExprPlan, exprs, more_exprs, named_exprs
-            ).group_by_all_ctx(self.inner().relation)
+        return (
+            self.columns
+            .into(ExprPlan, exprs, more_exprs, named_exprs)
+            .group_by_all_ctx()
+            .pipe(self._from_sql_expr, src=self.inner())
         )
 
     def sort(
