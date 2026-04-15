@@ -3,6 +3,7 @@ import pytest
 
 import pql
 
+from ._data import sample_lf, sample_pql
 from ._utils import Fns, FnsCat, assert_eq, assert_lf_eq
 
 
@@ -29,8 +30,6 @@ _MULTI_FNS = FnsCat(
     (pql.min, pl.min),
     (pql.max, pl.max),
     (pql.sum_horizontal, pl.sum_horizontal),
-    (pql.min_horizontal, pl.min_horizontal),
-    (pql.max_horizontal, pl.max_horizontal),
     (pql.mean_horizontal, pl.mean_horizontal),
     (pql.coalesce, pl.coalesce),
 )
@@ -46,6 +45,24 @@ def test_simple_fn(fns: Fns) -> None:
 @pytest.mark.parametrize("fns", _MULTI_FNS, ids=_MULTI_FNS.into_ids())
 def test_multi_col(fns: Fns) -> None:
     assert_eq(*fns.call("x", "n"))
+
+
+_NULL_PROP_FNS = FnsCat(
+    (pql.min_horizontal, pl.min_horizontal), (pql.max_horizontal, pl.max_horizontal)
+)
+
+
+@pytest.mark.parametrize("fns", _NULL_PROP_FNS, ids=_NULL_PROP_FNS.into_ids())
+def test_horizontal_minmax_propagates_null(fns: Fns) -> None:
+    """DuckDB `LEAST`/`GREATEST` propagate NULL, unlike Polars which ignores them.
+
+    We drop nulls before testing to get identical results.
+    """
+    pql_expr, pl_expr = fns.call("x", "n")
+    assert_lf_eq(
+        sample_lf().drop_nulls("n").select(pl_expr),
+        sample_pql().drop_nulls("n").select(pql_expr),
+    )
 
 
 def test_all_horizontal() -> None:
