@@ -3,8 +3,10 @@ from __future__ import annotations
 import polars as pl
 import pyochain as pc
 import pytest
+from sqlglot import exp
 
 import pql
+import pql._meta as m  # noqa: PLC2701
 import pql._typing as t  # noqa: PLC2701
 
 from ._utils import assert_lf_eq
@@ -305,17 +307,15 @@ def test_rename(lf: pql.LazyFrame, mapping: dict[str, str]) -> None:
 
 
 def test_with_columns_add_only_uses_star(lf: pql.LazyFrame) -> None:
-    """Add-only with_columns must generate SELECT * instead of enumerating existing columns."""
-    parsed = lf.with_columns(pql.col("age").mul(2).alias("age2")).sql_query()
-    outermost_select = parsed.raw.split("FROM")[0]
-    assert "SELECT *" in outermost_select
+    expr = pql.col("age").mul(2).alias("age2")
+    parsed = m.ExprPlan(lf.columns, expr, (), {}).with_columns_ctx().find(exp.Star)
+    assert parsed is not None
 
 
 def test_with_columns_override_enumerates_columns(lf: pql.LazyFrame) -> None:
-    """Override with_columns must enumerate columns (no SELECT *) to preserve order."""
-    parsed = lf.with_columns(pql.col("age").mul(2).alias("age")).sql_query()
-    outermost_select = parsed.raw.split("FROM")[0]
-    assert "SELECT *" not in outermost_select
+    expr = pql.col("age").mul(2).alias("age")
+    parsed = m.ExprPlan(lf.columns, expr, (), {}).with_columns_ctx().find(exp.Star)
+    assert parsed is None
 
 
 def test_with_columns_single_expr(lf: pql.LazyFrame) -> None:
