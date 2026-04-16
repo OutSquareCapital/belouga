@@ -129,7 +129,7 @@ class SqlExprStringNameSpace(StringFns[SqlExpr]):
         Returns:
             SqlExpr: A new expression that evaluates to the joined string.
         """
-        aggregated = self.agg(delimiter)
+        aggregated = self.agg(self.inner().new(delimiter))
         match ignore_nulls:
             case True:
                 return aggregated
@@ -216,6 +216,27 @@ class SqlExprStringNameSpace(StringFns[SqlExpr]):
                         )
                     )
                 )
+
+    def zfill(self, length: IntoExprColumn | int) -> SqlExpr:
+        """Pad string values on the left with zeros without truncating.
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the zero-filled string.
+        """
+        expr = self.inner()
+        width = expr.new(length, as_col=True)
+        signed = expr.str.starts_with(lit("-")).or_(expr.str.starts_with(lit("+")))
+        return (
+            when(self.length().ge(width))
+            .then(expr)
+            .when(signed)
+            .then(
+                self.left(1).str.concat(
+                    self.substring(2).str.lpad(width.sub(1), Lit.ZERO)
+                )
+            )
+            .otherwise(self.lpad(width, Lit.ZERO))
+        )
 
     def replace_all(
         self, pattern: IntoExprColumn, value: IntoExprColumn, *, literal: bool = False
@@ -304,11 +325,12 @@ class SqlExprDateTimeNameSpace(DateTimeFns[SqlExpr]):
             SqlExpr: A new expression that evaluates to the parsed time.
         """
         dtype = exp.DType.TIME.into_expr()
+        expr = self.inner()
         match format:
             case None:
-                return self.inner().cast(dtype)
+                return expr.cast(dtype)
             case _:
-                return self.inner().str.strptime(format).cast(dtype)
+                return expr.str.strptime(expr.new(format)).cast(dtype)
 
     def offset_by(self, by: IntoExpr) -> SqlExpr:
         """Offset datetime by an interval.
