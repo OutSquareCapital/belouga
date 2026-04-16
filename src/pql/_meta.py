@@ -16,7 +16,6 @@ from .sql import SqlExpr
 from .sql.utils import TryIter, try_iter
 
 if TYPE_CHECKING:
-    from duckdb import DuckDBPyRelation
     from narwhals.typing import IntoFrameT
     from pyochain.traits import PyoIterable
 
@@ -68,20 +67,7 @@ class Marker(StrEnum):
                 return result
 
     @classmethod
-    def windowed(
-        cls, lf: DuckDBPyRelation, cols: PyoIterable[ResolvedExpr]
-    ) -> DuckDBPyRelation:
-        match cols.any(lambda p: p.is_windowed(cls.TEMP)):
-            case True:
-                row_nb = sql.row_number().over().sub(1).alias(cls.TEMP).into_duckdb()
-                return lf.select(row_nb, sql.all().into_duckdb())
-            case False:
-                return lf
-
-    @classmethod
-    def windowed_glot(
-        cls, source: exp.Expr, cols: PyoIterable[ResolvedExpr]
-    ) -> exp.Expr:
+    def windowed(cls, source: exp.Expr, cols: PyoIterable[ResolvedExpr]) -> exp.Expr:
         match cols.any(lambda p: p.is_windowed(cls.TEMP)):
             case True:
                 row_nb = sql.row_number().over().sub(1).alias(cls.TEMP).inner()
@@ -344,7 +330,7 @@ class ExprPlan:
 
         return self.projections.then(
             lambda projs: _non_empty_slct(
-                projs, exp.to_table("src").pipe(Marker.windowed_glot, projs)
+                projs, exp.to_table("src").pipe(Marker.windowed, projs)
             )
         )
 
@@ -395,7 +381,7 @@ class ExprPlan:
                 .into(_resolved)
             )
 
-        source = exp.to_table("src").pipe(Marker.windowed_glot, self.projections)
+        source = exp.to_table("src").pipe(Marker.windowed, self.projections)
         return exp.select(*_resolve()).from_(source)
 
     def with_fields_ctx(self, expr: SqlExpr) -> SqlExpr:
