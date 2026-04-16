@@ -23,12 +23,12 @@ if TYPE_CHECKING:
         ExprStringNameSpace,
         ExprStructNameSpace,
     )
-    from ._typing import RankMethod
     from .sql.typing import (
         ClosedInterval,
         FillNullStrategy,
         IntoExpr,
         IntoExprColumn,
+        RankMethod,
         RoundMode,
     )
 
@@ -185,7 +185,9 @@ class Expr(sql.CoreHandler[SqlExpr]):
     def __or__(self, other: IntoExpr) -> Self:
         return self.or_(other)
 
-    def __xor__(self, other: IntoExpr) -> Self:
+    def __xor__(
+        self, other: IntoExprColumn | bytes | bytearray | memoryview[int] | int
+    ) -> Self:
         return self.xor(other)
 
     def __ror__(self, other: IntoExpr) -> Self:
@@ -258,16 +260,18 @@ class Expr(sql.CoreHandler[SqlExpr]):
         return self._cls(self.inner().not_())
 
     def bitwise_and(self) -> Self:
-        return self._cls(self.inner().bit_and())
+        return self._cls(self.inner().bitwise_and())
 
     def bitwise_or(self) -> Self:
-        return self._cls(self.inner().bit_or())
+        return self._cls(self.inner().bitwise_or())
 
     def bitwise_xor(self) -> Self:
-        return self._cls(self.inner().bit_xor())
+        return self._cls(self.inner().bitwise_xor())
 
-    def xor(self, other: IntoExpr) -> Self:
-        return self._cls(self.inner().xor(SqlExpr.new(other)))
+    def xor(
+        self, other: IntoExprColumn | bytes | bytearray | memoryview[int] | int
+    ) -> Self:
+        return self._cls(self.inner().xor(other))
 
     def alias(self, name: str) -> Self:
         """Rename the expression.
@@ -715,36 +719,7 @@ class Expr(sql.CoreHandler[SqlExpr]):
         Returns:
             Self: A new expression that evaluates to the rank of values according to the specified method.
         """
-        base_rank = (
-            self
-            .inner()
-            .rank()
-            .over(order_by=pc.Some(self.inner()), descending=descending)
-        )
-        peer_count = sql.all().count().over(pc.Some(self.inner()))
-        match method:
-            case "average":
-                max_rank = base_rank.add(peer_count).sub(1)
-                expr = base_rank.add(max_rank).truediv(2)
-            case "min":
-                expr = base_rank
-            case "max":
-                expr = base_rank.add(peer_count).sub(1)
-            case "dense":
-                expr = (
-                    self
-                    .inner()
-                    .dense_rank()
-                    .over(order_by=pc.Some(self.inner()), descending=descending)
-                )
-            case "ordinal":
-                expr = (
-                    self
-                    .inner()
-                    .row_number()
-                    .over(order_by=pc.Some(self.inner()), descending=descending)
-                )
-        return self._cls(expr)
+        return self._cls(self.inner().rank(method, descending=descending))
 
     def cum_count(self, *, reverse: bool = False) -> Self:
         """Cumulative non-null count.
@@ -841,7 +816,7 @@ class Expr(sql.CoreHandler[SqlExpr]):
         Returns:
             Self
         """
-        return self._cls(self.inner().trunc(decimals))
+        return self._cls(self.inner().truncate(decimals))
 
     def sqrt(self) -> Self:
         """Compute the square root.
@@ -881,7 +856,7 @@ class Expr(sql.CoreHandler[SqlExpr]):
         Returns:
             Self
         """
-        return self._cls(self.inner().add(1).ln())
+        return self._cls(self.inner().log1p())
 
     def exp(self) -> Self:
         """Compute the exponential.
@@ -1049,7 +1024,7 @@ class Expr(sql.CoreHandler[SqlExpr]):
         Returns:
             Self
         """
-        return self._cls(self.inner().is_nan().not_())
+        return self._cls(self.inner().is_not_nan())
 
     def is_finite(self) -> Self:
         """Check if value is finite.
@@ -1065,7 +1040,7 @@ class Expr(sql.CoreHandler[SqlExpr]):
         Returns:
             Self
         """
-        return self._cls(self.inner().is_inf())
+        return self._cls(self.inner().is_infinite())
 
     def fill_nan(self, value: float | IntoExprColumn | None) -> Self:
         """Fill NaN values.
@@ -1094,7 +1069,7 @@ class Expr(sql.CoreHandler[SqlExpr]):
         Returns:
             Self
         """
-        return self._cls(self.inner().str.hash(seed))
+        return self._cls(self.inner().hash(seed))
 
     def replace(self, old: IntoExpr, new: IntoExpr) -> Self:
         """Replace values.

@@ -5,7 +5,6 @@ import polars as pl
 import pytest
 
 import pql
-from pql import _typing as t  # noqa: PLC2701
 
 from ._utils import assert_eq, on_simple_fn
 
@@ -549,8 +548,8 @@ def test_any() -> None:
 
 
 @desc_param
-@pytest.mark.parametrize("method", t.RankMethod.__args__)
-def test_rank(method: t.RankMethod, descending: bool) -> None:
+@pytest.mark.parametrize("method", pql.sql.typing.RankMethod.__args__)
+def test_rank(method: pql.sql.typing.RankMethod, descending: bool) -> None:
     assert_eq(
         pql.col("x").rank(method, descending=descending),
         pl.col("x").rank(method, descending=descending),

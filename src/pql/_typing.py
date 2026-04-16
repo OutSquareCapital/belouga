@@ -8,7 +8,6 @@ JoinStrategy = Literal["inner", "left", "right", "outer", "semi", "anti"]
 AsofJoinStrategy = Literal["backward", "forward"]
 UniqueKeepStrategy = Literal["any", "none", "first", "last"]
 type TransferEncoding = Literal["hex", "base64"]
-RankMethod = Literal["average", "min", "max", "dense", "ordinal"]
 PivotAgg = Literal[
     "min", "max", "first", "last", "sum", "mean", "median", "len", "count"
 ]

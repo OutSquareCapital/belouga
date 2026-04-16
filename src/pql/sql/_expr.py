@@ -33,6 +33,7 @@ if TYPE_CHECKING:
         FrameMode,
         IntoExpr,
         IntoExprColumn,
+        RankMethod,
         RoundMode,
         WindowExclude,
     )
@@ -1055,29 +1056,47 @@ class SqlExpr(Fns):  # noqa: PLW1641
             )
         )
 
-    def rank(
-        self,
-        *,
-        order_by: TryIter[IntoExprColumn] = None,
-        ignore_nulls: bool = False,
-        descending: TryIter[bool] = False,
-        nulls_last: TryIter[bool] = False,
-    ) -> Self:
-        """The rank of the current row with gaps; same as row_number of its first peer.
-
-        If an `ORDER BY` clause is specified, the rank is computed within the frame using the provided ordering instead of the frame ordering.
+    def rank(self, method: RankMethod = "average", *, descending: bool = False) -> Self:
+        """Compute rank values.
 
         Returns:
-            Self
+            Self: A new expression that evaluates to the rank of values according to the specified method.
         """
-        return self._cls(
-            OverBuilder(exp.Rank()).build_fn(
-                fn_order_by=pc.Option(order_by),
-                ignore_nulls=ignore_nulls,
-                fn_descending=descending,
-                fn_nulls_last=nulls_last,
+
+        def _peer_count() -> SqlExpr:
+            from ._funcs import all
+
+            return all().count().over(pc.Some(self.inner()))
+
+        def _base_rank() -> Self:
+            return (
+                OverBuilder(exp.Rank())
+                .build_fn(
+                    fn_order_by=pc.NONE,
+                    ignore_nulls=False,
+                    fn_descending=descending,
+                    fn_nulls_last=False,
+                )
+                .pipe(self._cls)
+                .pipe(_over)
             )
-        )
+
+        def _over(expr: Self) -> Self:
+            return expr.over(order_by=pc.Some(self.inner()), descending=descending)
+
+        match method:
+            case "average":
+                br = _base_rank()
+                max_rank = br.add(_peer_count()).sub(1)
+                return br.add(max_rank).truediv(2)
+            case "min":
+                return _base_rank()
+            case "max":
+                return _base_rank().add(_peer_count()).sub(1)
+            case "dense":
+                return self.dense_rank().pipe(_over)
+            case "ordinal":
+                return self.row_number().pipe(_over)
 
     def row_number(
         self,
@@ -1122,3 +1141,60 @@ class SqlExpr(Fns):  # noqa: PLW1641
         return self._cls(
             exp.BitwiseXor(this=self.inner(), expression=pql_into_glot(right))
         )
+
+    def truncate(self, decimals: int = 0) -> Self:
+        """Truncate numeric value to given number of decimal places.
+
+        Returns:
+            Self
+        """
+        return self.trunc(decimals)
+
+    def log1p(self) -> Self:
+        """Compute the natural logarithm of 1+x.
+
+        Returns:
+            Self
+        """
+        return self.add(1).ln()
+
+    def is_not_nan(self) -> Self:
+        """Check if value is not NaN.
+
+        Returns:
+            Self
+        """
+        return self.is_nan().not_()
+
+    def is_infinite(self) -> Self:
+        """Check if value is infinite.
+
+        Returns:
+            Self
+        """
+        return self.is_inf()
+
+    def approx_n_unique(self) -> Self:
+        """Approximate the number of unique values.
+
+        Returns:
+            Self: A new expression that evaluates to the approximate number of unique values.
+        """
+        return self.approx_count_distinct()
+
+    def bitwise_and(self) -> Self:
+        return self.bit_and()
+
+    def bitwise_or(self) -> Self:
+        return self.bit_or()
+
+    def bitwise_xor(self) -> Self:
+        return self.bit_xor()
+
+    def hash(self, seed: int = 0) -> Self:
+        """Compute a hash.
+
+        Returns:
+            Self
+        """
+        return self._cls(self.str.hash(seed).inner())
