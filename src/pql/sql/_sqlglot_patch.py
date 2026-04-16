@@ -34,15 +34,11 @@ def _object_insert(source: exp.Expr, field: exp.Expr) -> exp.ObjectInsert:
         case exp.PropertyEQ(this=exp.Expr() as key, expression=exp.Expr() as value):
             return exp.ObjectInsert(this=source, key=key, value=value)
         case exp.Alias(this=exp.Expr() as value) as alias:
-            return exp.ObjectInsert(
-                this=source, key=exp.to_identifier(alias.output_name), value=value
-            )
+            key = exp.to_identifier(alias.output_name)
+            return exp.ObjectInsert(this=source, key=key, value=value)
         case _:
-            return exp.ObjectInsert(
-                this=source,
-                key=exp.to_identifier(field.output_name),
-                value=field.unalias(),
-            )
+            key = exp.to_identifier(field.output_name)
+            return exp.ObjectInsert(this=source, key=key, value=field.unalias())
 
 
 def _struct_insert(args: list[exp.Expr]) -> exp.Expr:
