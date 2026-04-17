@@ -736,10 +736,10 @@ class ExprDateTimeNameSpace(ExprNameSpaceBase):
         return self._cls(self._base.month_end())
 
     def date(self) -> Expr:
-        return self.inner().cast(dt.Date())
+        return self._cls(self._base.date())
 
     def time(self) -> Expr:
-        return self.inner().cast(dt.Time())
+        return self._cls(self._base.time())
 
     def to_string(self, format: IntoExprColumn) -> Expr:  # noqa: A002
         return self._cls(self.inner().inner().str.strftime(format))
@@ -754,15 +754,11 @@ class ExprDateTimeNameSpace(ExprNameSpaceBase):
                 return self._cls(expr.epoch_us().truediv(nm.Sec.micro_by_day()).floor())
             case "s":
                 return self._cls(expr.epoch_us().truediv(nm.Sec.TO_MICRO).floor())
-            case "ms":
-                return self._cls(expr.epoch_ms())
-            case "us":
-                return self._cls(expr.epoch_us())
-            case "ns":
-                return self._cls(expr.epoch_ns())
+            case _:
+                return self.timestamp(time_unit)
 
     def timestamp(self, time_unit: TimeUnit = "us") -> Expr:
-        return self.epoch(time_unit)
+        return self._cls(self._base.timestamp(time_unit))
 
     def truncate(self, every: str) -> Expr:
         return self._cls(self._base.truncate(every))

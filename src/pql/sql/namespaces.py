@@ -28,7 +28,7 @@ from ._funcs import coalesce, element, lit
 from ._when import when
 
 if TYPE_CHECKING:
-    from .typing import IntoExpr, IntoExprColumn
+    from .typing import IntoExpr, IntoExprColumn, TimeUnit
 
 
 class Sec(IntEnum):
@@ -437,6 +437,39 @@ class SqlExprDateTimeNameSpace(DateTimeFns[SqlExpr]):
             SqlExpr: A new expression that evaluates to the rounded datetime.
         """
         return self.trunc(lit(every))
+
+    def timestamp(self, time_unit: TimeUnit = "us") -> SqlExpr:
+        """Return the number of time units since the Unix epoch.
+
+        Args:
+            time_unit (TimeUnit): The time unit to use for the epoch time. Defaults to "us".
+
+        Returns:
+            SqlExpr: A new expression that evaluates to the epoch time in the specified time unit.
+        """
+        match time_unit:
+            case "ms":
+                return self.epoch_ms()
+            case "us":
+                return self.epoch_us()
+            case "ns":
+                return self.epoch_ns()
+
+    def date(self) -> SqlExpr:
+        """Returns a new expression that evaluates to the date component of the datetime.
+
+        Returns:
+            SqlExpr
+        """
+        return self.inner().cast(dt.Date())
+
+    def time(self) -> SqlExpr:
+        """Returns a new expression that evaluates to the time component of the datetime.
+
+        Returns:
+            SqlExpr
+        """
+        return self.inner().cast(dt.Time())
 
 
 @dataclass(slots=True)
