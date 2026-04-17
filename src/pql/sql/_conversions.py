@@ -11,15 +11,30 @@ class PQLConversionError(ValueError):
     """Raised when a conversion from a sqlglot expression to a DuckDB expression fails."""
 
 
-def args_into_glot(args: Iterable[IntoExpr]) -> list[exp.Expr]:
-    return Iter(args).filter_map(Option).map(pql_into_glot).collect(list)
+def args_into_glot(args: Iterable[IntoExpr], *, as_col: bool = False) -> list[exp.Expr]:
+    """Convert an `Iterable` of `IntoExpr` values into a list of sqlglot `Expr` nodes.
+
+    Args:
+        args (Iterable[IntoExpr]): The values to convert.
+        as_col (bool): Whether to treat string values as column names. Defaults to `False`.
+
+    Returns:
+        list[exp.Expr]: A list of sqlglot expressions.
+    """
+    return (
+        Iter(args)
+        .filter_map(Option)
+        .map(lambda x: pql_into_glot(x, as_col=as_col))
+        .collect(list)
+    )
 
 
-def pql_into_glot(value: IntoExpr) -> exp.Expr:
-    """Convert an IntoExpr value into a sqlglot expression node.
+def pql_into_glot(value: IntoExpr, *, as_col: bool = True) -> exp.Expr:
+    """Convert an `IntoExpr` value into a sqlglot `Expr` node.
 
     Args:
         value (IntoExpr): The value to convert.
+        as_col (bool): Whether to treat string values as column names. Defaults to `True`.
 
     Returns:
         exp.Expr: The resulting sqlglot expression.
@@ -32,7 +47,7 @@ def pql_into_glot(value: IntoExpr) -> exp.Expr:
             return value.inner()
         case Expr():
             return value.inner().inner()
-        case str():
+        case str() if as_col:
             return exp.column(value)
         case _:
             return exp.convert(value)
