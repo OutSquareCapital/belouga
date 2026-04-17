@@ -139,7 +139,7 @@ def coalesce(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
     Returns:
         SqlExpr: An expression representing the COALESCE operation.
     """
-    exprs = try_iter(exprs).chain(more_exprs).into(args_into_glot)
+    exprs = try_iter(exprs).chain(more_exprs).into(args_into_glot, as_col=True)
     return SqlExpr(exp.Coalesce(this=exprs[0], expressions=exprs))
 
 

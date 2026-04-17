@@ -446,7 +446,7 @@ class Expr(sql.CoreHandler[SqlExpr]):
         Returns:
             Self: A new expression that evaluates to the value corresponding to the maximum of another expression.
         """
-        return self._cls(self.inner().max_by(by))
+        return self._cls(self.inner().max_by(SqlExpr.new(by, as_col=True)))
 
     def min_by(self, by: IntoExpr) -> Self:
         """Return the value corresponding to the minimum of another expression.
@@ -454,7 +454,7 @@ class Expr(sql.CoreHandler[SqlExpr]):
         Returns:
             Self: A new expression that evaluates to the value corresponding to the minimum of another expression.
         """
-        return self._cls(self.inner().min_by(by))
+        return self._cls(self.inner().min_by(SqlExpr.new(by, as_col=True)))
 
     def implode(self) -> Self:
         """Aggregate values into a list.
