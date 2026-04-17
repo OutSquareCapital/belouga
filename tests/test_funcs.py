@@ -6,6 +6,11 @@ import pql
 from ._data import sample_lf, sample_pql
 from ._utils import Fns, FnsCat, assert_eq, assert_lf_eq
 
+pql_x = pql.col("x")
+pql_age = pql.col("age")
+pl_x = pl.col("x")
+pl_age = pl.col("age")
+
 
 def test_all_add() -> None:
     data = {"a": [1, 2], "b": [3, 4]}
@@ -76,13 +81,13 @@ def test_any_horizontal() -> None:
 def test_when_then_simple() -> None:
     pql_expr = (
         pql
-        .when(pql.col("x").eq(5))
+        .when(pql_x.eq(5))
         .then(pql.lit("equal_to_5"))
         .otherwise(pql.lit("not_equal_to_5"))
     )
     pl_expr = (
         pl
-        .when(pl.col("x").eq(5))
+        .when(pl_x.eq(5))
         .then(pl.lit("equal_to_5"))
         .otherwise(pl.lit("not_equal_to_5"))
     )
@@ -92,21 +97,21 @@ def test_when_then_simple() -> None:
 def test_when_then_chained() -> None:
     pql_expr = (
         pql
-        .when(pql.col("x") > 5)
+        .when(pql_x.gt(5))
         .then(pql.lit("high"))
-        .when(pql.col("x") < 5)
+        .when(pql_x.lt(5))
         .then(pql.lit("low"))
-        .when(pql.col("x") == 5)
+        .when(pql_x.eq(5))
         .then(pql.lit("equal"))
         .otherwise(pql.lit("mid"))
     )
     pl_expr = (
         pl
-        .when(pl.col("x") > 5)
+        .when(pl_x.gt(5))
         .then(pl.lit("high"))
-        .when(pl.col("x") < 5)
+        .when(pl_x.lt(5))
         .then(pl.lit("low"))
-        .when(pl.col("x") == 5)
+        .when(pl_x.eq(5))
         .then(pl.lit("equal"))
         .otherwise(pl.lit("mid"))
     )
@@ -122,7 +127,7 @@ def test_when_with_multiple_predicates() -> None:
     )
     pl_expr = (
         pl
-        .when(pl.col("a") & pl.col("b"))
+        .when(pl.col("a"), (pl.col("b")))
         .then(pl.lit("both_true"))
         .otherwise(pl.lit("not_both_true"))
     )
@@ -130,18 +135,18 @@ def test_when_with_multiple_predicates() -> None:
 
 
 def test_when_without_otherwise() -> None:
-    pql_expr = pql.when(pql.col("x") > 10).then(pql.lit("high"))
-    pl_expr = pl.when(pl.col("x") > 10).then(pl.lit("high"))
+    pql_expr = pql.when(pql_x.gt(10)).then(pql.lit("high"))
+    pl_expr = pl.when(pl_x.gt(10)).then(pl.lit("high"))
     assert_eq(pql_expr, pl_expr)
 
 
 def test_when_nested_conditions() -> None:
     pql_expr = (
         pql
-        .when(pql.col("x") > 15)
+        .when(pql_x.gt(15))
         .then(
             pql
-            .when(pql.col("age") > 30)
+            .when(pql_age.gt(30))
             .then(pql.lit("x_high_age_high"))
             .otherwise(pql.lit("x_high_age_low"))
         )
@@ -149,10 +154,10 @@ def test_when_nested_conditions() -> None:
     )
     pl_expr = (
         pl
-        .when(pl.col("x") > 15)
+        .when(pl_x.gt(15))
         .then(
             pl
-            .when(pl.col("age") > 30)
+            .when(pl_age.gt(30))
             .then(pl.lit("x_high_age_high"))
             .otherwise(pl.lit("x_high_age_low"))
         )

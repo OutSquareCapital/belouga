@@ -24,25 +24,27 @@ def tst_funcs() -> None:
         "macro_definition",
         "internal",
     )
+    pattern = "xor"
+    fn_name = "function_name"
 
     assert_lf_eq(
         pl_lf
         .lazy()
         .drop(unwanted)
-        .filter(pl.col("function_name").str.contains(pl.lit("xor")))
-        .group_by("function_name")
+        .filter(pl.col(fn_name).str.contains(pattern))
+        .group_by(fn_name)
         .agg(
-            pl.all().exclude(("parameter_types", "function_name")).unique(),
+            pl.all().exclude(("parameter_types", fn_name)).unique(),
             pl.col("parameter_types").list.unique().list.sort().list.explode(),
         )
-        .sort("function_name"),
+        .sort(fn_name),
         pql_lf
         .drop(unwanted)
-        .filter(pql.col("function_name").str.contains(pql.lit("xor")))
-        .group_by("function_name")
+        .filter(pql.col(fn_name).str.contains(pattern))
+        .group_by(fn_name)
         .agg(
-            pql.all(exclude=("parameter_types", "function_name")).unique(),
+            pql.all(exclude=("parameter_types", fn_name)).unique(),
             pql.col("parameter_types").list.unique().list.sort().list.explode(),
         )
-        .sort("function_name"),
+        .sort(fn_name),
     )

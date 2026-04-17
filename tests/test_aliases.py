@@ -36,8 +36,8 @@ def test_alias_mutability() -> None:
             pl.when(pl_x.gt(0)).then(pl_y).otherwise(pl_x),
         ),
         ExprPair(
-            pql.when(pql_x.gt(0)).then(pql.lit(1)).otherwise(pql_x),
-            pl.when(pl_x.gt(0)).then(pl.lit(1)).otherwise(pl_x),
+            pql.when(pql_x.gt(0)).then(1).otherwise(pql_x),
+            pl.when(pl_x.gt(0)).then(1).otherwise(pl_x),
         ),
         ExprPair(
             pql.when(pql_x.gt(0)).then(pql_y.mul(2)).otherwise(pql_y),

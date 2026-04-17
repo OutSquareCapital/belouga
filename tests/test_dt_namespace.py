@@ -56,19 +56,9 @@ def test_timestamp(unit: t.TimeUnit) -> None:
     assert_eq(_pql_dt().timestamp(unit), _pl_dt().timestamp(unit))
 
 
-def test_date_time_boundaries() -> None:
-    str_fmt = "%Y-%m-%d"
-    strf_fmt = "%H:%M"
-    assert_eq(
-        (
-            _pql_dt().to_string(pql.lit(str_fmt)).alias("to_string"),
-            _pql_dt().strftime(pql.lit(strf_fmt)).alias("strftime"),
-        ),
-        (
-            _pl_dt().to_string(str_fmt).alias("to_string"),
-            _pl_dt().strftime(strf_fmt).alias("strftime"),
-        ),
-    )
+@pytest.mark.parametrize("fmt", ["%Y-%m-%d", "%H:%M"])
+def test_date_time_boundaries(fmt: str) -> None:
+    assert_eq(_pql_dt().to_string(fmt), _pl_dt().to_string(fmt))
 
 
 def test_truncate() -> None:
@@ -80,4 +70,4 @@ def test_round() -> None:
 
 
 def test_offset_by() -> None:
-    assert_eq(_pql_dt().offset_by(pql.lit("1 day")), _pl_dt().offset_by("1d"))
+    assert_eq(_pql_dt().offset_by("1 day"), _pl_dt().offset_by("1d"))

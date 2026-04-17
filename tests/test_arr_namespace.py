@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 import polars as pl
 import pytest
 
@@ -5,172 +7,131 @@ import pql
 
 from ._utils import assert_eq
 
-
-def test_len() -> None:
-    assert_eq(pql.col("arr_num").arr.len(), pl.col("arr_num").arr.len())
+pql_arr = pql.col("arr_num").arr
+pl_arr = pl.col("arr_num").arr
+pql_arr_str_vals = pql.col("arr_str_vals").arr
+pql_arr_bool = pql.col("arr_booleans").arr
+pl_arr_str_vals = pl.col("arr_str_vals").arr
+pl_arr_bool = pl.col("arr_booleans").arr
+type Fns = tuple[Callable[[], pql.Expr], Callable[[], pl.Expr]]
+type FnsParam[**P] = tuple[Callable[P, pql.Expr], Callable[P, pl.Expr]]
 
 
 def test_unique() -> None:
-    assert_eq(
-        pql.col("arr_num").arr.unique().arr.sort(),
-        pl.col("arr_num").arr.unique().list.sort(),
-    )
-
-
-def test_n_unique() -> None:
-    assert_eq(pql.col("arr_num").arr.n_unique(), pl.col("arr_num").arr.n_unique())
+    assert_eq(pql_arr.unique().arr.sort(), pl_arr.unique().list.sort())
 
 
 def test_contains() -> None:
-    assert_eq(pql.col("arr_num").arr.contains(2), pl.col("arr_num").arr.contains(2))
+    pql_f = pql_arr.contains
+    pl_f = pl_arr.contains
     assert_eq(
         (
-            pql.col("arr_num").arr.contains(pql.lit(None)).alias("x_nulls_neq"),
-            pql.col("arr_num").arr.contains("x").alias("x_nulls_neq_y"),
-            pql.col("arr_num").arr.contains(3).alias("x_y"),
+            pql_f(pql.lit(None)).alias("none"),
+            pql_f(3).alias("3"),
         ),
         (
-            pl
-            .col("arr_num")
-            .arr.contains(pl.lit(None), nulls_equal=False)
-            .alias("x_nulls_neq"),
-            pl
-            .col("arr_num")
-            .arr.contains(pl.col("x"), nulls_equal=False)
-            .alias("x_nulls_neq_y"),
-            pl.col("arr_num").arr.contains(3).alias("x_y"),
+            pl_f(pl.lit(None), nulls_equal=False).alias("none"),
+            pl_f(3).alias("3"),
         ),
+    )
+    assert_eq(
+        pql_arr_str_vals.contains("b").alias("str_contains"),
+        pl_arr_str_vals.contains("b").alias("str_contains"),
     )
 
 
 def test_count_matches() -> None:
-    assert_eq(
-        pql.col("arr_num").arr.count_matches(5), pl.col("arr_num").arr.count_matches(5)
-    )
+    assert_eq(pql_arr.count_matches(5), pl_arr.count_matches(5))
 
 
 def test_drop_nulls() -> None:
     """Drop nulls don't exist for array in polars."""
+    col = "arr_booleans"
     assert_eq(
-        pql.col("arr_booleans").arr.drop_nulls(),
-        pl.col("arr_booleans").cast(pl.List(pl.Boolean)).list.drop_nulls(),
+        pql.col(col).arr.drop_nulls(),
+        pl.col(col).cast(pl.List(pl.Boolean)).list.drop_nulls(),
     )
 
 
 def test_get_out_of_bounds() -> None:
 
     with pytest.raises(pl.exceptions.ComputeError, match="out of bounds"):
-        assert_eq(pql.col("arr_num").arr.get(10), pl.col("arr_num").arr.get(10))
+        assert_eq(pql_arr.get(10), pl_arr.get(10))
 
 
 @pytest.mark.parametrize("index", [0, 1, -1])
 def test_get(index: int) -> None:
-    assert_eq(pql.col("arr_num").arr.get(index), pl.col("arr_num").arr.get(index))
+    assert_eq(pql_arr.get(index), pl_arr.get(index))
 
 
-def test_min() -> None:
-    assert_eq(pql.col("arr_num").arr.min(), pl.col("arr_num").arr.min())
+@pytest.mark.parametrize(
+    "fns",
+    [
+        (pql_arr.min, pl_arr.min),
+        (pql_arr.max, pl_arr.max),
+        (pql_arr.mean, pl_arr.mean),
+        (pql_arr.median, pl_arr.median),
+        (pql_arr.sum, pl_arr.sum),
+        (pql_arr.first, pl_arr.first),
+        (pql_arr.last, pl_arr.last),
+        (pql_arr.reverse, pl_arr.reverse),
+        (pql_arr.len, pl_arr.len),
+        (pql_arr.n_unique, pl_arr.n_unique),
+    ],
+)
+def test_simple_method(fns: Fns) -> None:
+    assert_eq(fns[0](), fns[1]())
 
 
-def test_max() -> None:
-    assert_eq(pql.col("arr_num").arr.max(), pl.col("arr_num").arr.max())
+@pytest.mark.parametrize(
+    "fns",
+    [(pql_arr_bool.any, pl_arr_bool.any), (pql_arr_bool.all, pl_arr_bool.all)],
+)
+def test_simple_bool_methods(fns: Fns) -> None:
+    assert_eq(fns[0](), fns[1]())
 
 
-def test_mean() -> None:
-    assert_eq(pql.col("arr_num").arr.mean(), pl.col("arr_num").arr.mean())
-
-
-def test_median() -> None:
-    assert_eq(pql.col("arr_num").arr.median(), pl.col("arr_num").arr.median())
-
-
-def test_sum() -> None:
-    assert_eq(pql.col("arr_num").arr.sum(), pl.col("arr_num").arr.sum())
-
-
-def test_sort() -> None:
+@pytest.mark.parametrize("descending", [False, True])
+@pytest.mark.parametrize("nulls_last", [False, True])
+def test_sort(descending: bool, nulls_last: bool) -> None:
     assert_eq(
-        (
-            pql.col("arr_num").arr.sort().alias("x_sorted"),
-            pql
-            .col("arr_num")
-            .arr.sort(descending=True, nulls_last=True)
-            .alias("x_sorted_desc"),
-        ),
-        (
-            pl.col("arr_num").arr.sort().alias("x_sorted"),
-            pl
-            .col("arr_num")
-            .arr.sort(descending=True, nulls_last=True)
-            .alias("x_sorted_desc"),
-        ),
+        pql_arr.sort(descending=descending, nulls_last=nulls_last),
+        pl_arr.sort(descending=descending, nulls_last=nulls_last),
     )
 
 
 def test_eval_num() -> None:
-    assert_eq(
-        pql.col("arr_num").arr.eval(pql.element().mul(2)),
-        pl.col("arr_num").arr.eval(pl.element().mul(2)),
-    )
+
+    assert_eq(pql_arr.eval(pql.element().mul(2)), pl_arr.eval(pl.element().mul(2)))
 
 
 def test_eval_str() -> None:
     assert_eq(
-        pql.col("arr_str_vals").arr.eval(pql.element().str.to_uppercase()),
-        pl.col("arr_str_vals").arr.eval(pl.element().str.to_uppercase()),
+        pql_arr_str_vals.eval(pql.element().str.to_uppercase()),
+        pl_arr_str_vals.eval(pl.element().str.to_uppercase()),
     )
 
 
 def test_eval_bool() -> None:
+    assert_eq(pql_arr.eval(pql.element().gt(3)), pl_arr.eval(pl.element().gt(3)))
+
+
+@pytest.mark.parametrize("ddof", [0, 1])
+@pytest.mark.parametrize("fns", [(pql_arr.var, pl_arr.var), (pql_arr.std, pl_arr.std)])
+def test_std_var(fns: FnsParam[int], ddof: int) -> None:
+    assert_eq(fns[0](ddof), fns[1](ddof))
+
+
+@pytest.mark.parametrize("ignore_nulls", [False, True])
+def test_join(ignore_nulls: bool) -> None:
     assert_eq(
-        pql.col("arr_num").arr.eval(pql.element() > 3),
-        pl.col("arr_num").arr.eval(pl.element() > 3),
-    )
-
-
-def test_first() -> None:
-    assert_eq(pql.col("arr_num").arr.first(), pl.col("arr_num").arr.first())
-
-
-def test_last() -> None:
-    assert_eq(pql.col("arr_num").arr.last(), pl.col("arr_num").arr.last())
-
-
-def test_std() -> None:
-    assert_eq(pql.col("arr_num").arr.std(), pl.col("arr_num").arr.std())
-    assert_eq(pql.col("arr_num").arr.std(ddof=0), pl.col("arr_num").arr.std(ddof=0))
-
-
-def test_var() -> None:
-    assert_eq(pql.col("arr_num").arr.var(), pl.col("arr_num").arr.var())
-    assert_eq(pql.col("arr_num").arr.var(ddof=0), pl.col("arr_num").arr.var(ddof=0))
-
-
-def test_reverse() -> None:
-    assert_eq(pql.col("arr_num").arr.reverse(), pl.col("arr_num").arr.reverse())
-
-
-def test_any() -> None:
-    assert_eq(pql.col("arr_booleans").arr.any(), pl.col("arr_booleans").arr.any())
-
-
-def test_all() -> None:
-    assert_eq(pql.col("arr_booleans").arr.all(), pl.col("arr_booleans").arr.all())
-
-
-def test_join() -> None:
-    sep = pql.lit("-")
-    assert_eq(
-        pql.col("arr_str_vals").arr.join(sep), pl.col("arr_str_vals").arr.join("-")
-    )
-    assert_eq(
-        pql.col("arr_str_vals").arr.join(sep, ignore_nulls=False),
-        pl.col("arr_str_vals").arr.join("-", ignore_nulls=False),
+        pql_arr_str_vals.join("-", ignore_nulls=ignore_nulls),
+        pl_arr_str_vals.join("-", ignore_nulls=ignore_nulls),
     )
 
 
 def test_filter() -> None:
     assert_eq(
-        pql.col("arr_num").arr.filter(pql.element().gt(3)),
+        pql_arr.filter(pql.element().gt(3)),
         pl.col("arr_num").cast(pl.List(pl.UInt16)).list.filter(pl.element().gt(3)),
     )

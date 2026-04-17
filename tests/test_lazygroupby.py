@@ -8,6 +8,8 @@ from polars.testing import assert_frame_equal
 
 import pql
 
+pql_salary = pql.col("salary")
+pl_salary = pl.col("salary")
 assert_eq = partial(assert_frame_equal, check_dtypes=False, check_row_order=False)
 
 
@@ -37,13 +39,13 @@ def test_agg(sample_df: pl.DataFrame) -> None:
         pql
         .LazyFrame(sample_df)
         .group_by("department")
-        .agg(pql.col("salary").mean().alias("mean_salary"))
+        .agg(pql_salary.mean().alias("mean_salary"))
         .sort("department")
         .collect(),
         sample_df
         .lazy()
         .group_by("department")
-        .agg(pl.col("salary").mean().alias("mean_salary"))
+        .agg(pl_salary.mean().alias("mean_salary"))
         .sort("department")
         .collect(),
     )
@@ -54,13 +56,13 @@ def test_agg_by_prefix(sample_df: pl.DataFrame) -> None:
         pql
         .LazyFrame(sample_df)
         .group_by("department")
-        .agg(pql.col("salary").mean().name.prefix("avg_"))
+        .agg(pql_salary.mean().name.prefix("avg_"))
         .sort("department")
         .collect(),
         sample_df
         .lazy()
         .group_by("department")
-        .agg(pl.col("salary").mean().name.prefix("avg_"))
+        .agg(pl_salary.mean().name.prefix("avg_"))
         .sort("department")
         .collect(),
     )
@@ -166,13 +168,14 @@ def test_quantile() -> None:
 
 
 def test_agg_all_exclude(sample_df: pl.DataFrame) -> None:
+    sep = ", "
     assert_eq(
         pql
         .LazyFrame(sample_df)
         .group_by("department")
         .agg(
             pql.all(exclude=["category"]),
-            pql.col("category").str.join(pql.lit(", ")).alias("category"),
+            pql.col("category").str.join(sep).alias("category"),
         )
         .sort("department")
         .collect(),
@@ -181,7 +184,7 @@ def test_agg_all_exclude(sample_df: pl.DataFrame) -> None:
         .group_by("department")
         .agg(
             pl.all().exclude("category"),
-            pl.col("category").str.join(", ").alias("category"),
+            pl.col("category").str.join(sep).alias("category"),
         )
         .sort("department")
         .collect(),
@@ -194,7 +197,7 @@ def test_agg_multi_key(sample_df: pl.DataFrame) -> None:
         .LazyFrame(sample_df)
         .group_by("department", "sex")
         .agg(
-            pql.col("salary").mean().alias("mean_salary"),
+            pql_salary.mean().alias("mean_salary"),
             pql.col("age").max().alias("max_age"),
         )
         .sort("department", "sex")
@@ -203,7 +206,7 @@ def test_agg_multi_key(sample_df: pl.DataFrame) -> None:
         .lazy()
         .group_by("department", "sex")
         .agg(
-            pl.col("salary").mean().alias("mean_salary"),
+            pl_salary.mean().alias("mean_salary"),
             pl.col("age").max().alias("max_age"),
         )
         .sort("department", "sex")
@@ -217,8 +220,8 @@ def test_agg_multi_exprs(sample_df: pl.DataFrame) -> None:
         .LazyFrame(sample_df)
         .group_by("department")
         .agg(
-            pql.col("salary").mean().alias("mean_salary"),
-            pql.col("salary").sum().alias("sum_salary"),
+            pql_salary.mean().alias("mean_salary"),
+            pql_salary.sum().alias("sum_salary"),
             pql.col("id").count().alias("n"),
         )
         .sort("department")
@@ -227,8 +230,8 @@ def test_agg_multi_exprs(sample_df: pl.DataFrame) -> None:
         .lazy()
         .group_by("department")
         .agg(
-            pl.col("salary").mean().alias("mean_salary"),
-            pl.col("salary").sum().alias("sum_salary"),
+            pl_salary.mean().alias("mean_salary"),
+            pl_salary.sum().alias("sum_salary"),
             pl.col("id").count().alias("n"),
         )
         .sort("department")
@@ -241,13 +244,13 @@ def test_agg_composed_reducer(sample_df: pl.DataFrame) -> None:
         pql
         .LazyFrame(sample_df)
         .group_by("department")
-        .agg(pql.col("salary").mean().add(1).alias("mean_plus"))
+        .agg(pql_salary.mean().add(1).alias("mean_plus"))
         .sort("department")
         .collect(),
         sample_df
         .lazy()
         .group_by("department")
-        .agg(pl.col("salary").mean().add(1).alias("mean_plus"))
+        .agg(pl_salary.mean().add(1).alias("mean_plus"))
         .sort("department")
         .collect(),
     )
@@ -259,7 +262,7 @@ def test_agg_named_exprs(sample_df: pl.DataFrame) -> None:
         .LazyFrame(sample_df)
         .group_by("department")
         .agg(
-            mean_salary=pql.col("salary").mean(),
+            mean_salary=pql_salary.mean(),
             n=pql.col("id").count(),
         )
         .sort("department")
@@ -268,7 +271,7 @@ def test_agg_named_exprs(sample_df: pl.DataFrame) -> None:
         .lazy()
         .group_by("department")
         .agg(
-            mean_salary=pl.col("salary").mean(),
+            mean_salary=pl_salary.mean(),
             n=pl.col("id").count(),
         )
         .sort("department")
@@ -282,14 +285,14 @@ def test_drop_null_keys(sample_df: pl.DataFrame) -> None:
         pql
         .LazyFrame(sample_df)
         .group_by("category", drop_null_keys=True)
-        .agg(pql.col("salary").mean().alias("mean_salary"))
+        .agg(pql_salary.mean().alias("mean_salary"))
         .sort("category")
         .collect(),
         sample_df
         .lazy()
         .filter(pl.col("category").is_not_null())
         .group_by("category")
-        .agg(pl.col("salary").mean().alias("mean_salary"))
+        .agg(pl_salary.mean().alias("mean_salary"))
         .sort("category")
         .collect(),
     )
@@ -303,7 +306,7 @@ def test_agg_count_nulls(sample_df: pl.DataFrame) -> None:
         .group_by("department")
         .agg(
             pql.col("value").count().alias("n_values"),
-            pql.col("salary").n_unique().alias("n_unique_salary"),
+            pql_salary.n_unique().alias("n_unique_salary"),
         )
         .sort("department")
         .collect(),
@@ -312,7 +315,7 @@ def test_agg_count_nulls(sample_df: pl.DataFrame) -> None:
         .group_by("department")
         .agg(
             pl.col("value").count().alias("n_values"),
-            pl.col("salary").n_unique().alias("n_unique_salary"),
+            pl_salary.n_unique().alias("n_unique_salary"),
         )
         .sort("department")
         .collect(),
@@ -325,8 +328,8 @@ def test_agg_std_var(sample_df: pl.DataFrame) -> None:
         .LazyFrame(sample_df)
         .group_by("department")
         .agg(
-            pql.col("salary").std().alias("std_salary"),
-            pql.col("salary").var().alias("var_salary"),
+            pql_salary.std().alias("std_salary"),
+            pql_salary.var().alias("var_salary"),
         )
         .sort("department")
         .collect(),
@@ -334,8 +337,8 @@ def test_agg_std_var(sample_df: pl.DataFrame) -> None:
         .lazy()
         .group_by("department")
         .agg(
-            pl.col("salary").std().alias("std_salary"),
-            pl.col("salary").var().alias("var_salary"),
+            pl_salary.std().alias("std_salary"),
+            pl_salary.var().alias("var_salary"),
         )
         .sort("department")
         .collect(),
@@ -411,7 +414,7 @@ def test_group_by_all_multi_key(sample_df: pl.DataFrame) -> None:
         .group_by_all(
             "department",
             "sex",
-            pql.col("salary").mean().alias("mean_salary"),
+            pql_salary.mean().alias("mean_salary"),
             pql.col("age").max().alias("max_age"),
         )
         .sort("department", "sex")
@@ -420,7 +423,7 @@ def test_group_by_all_multi_key(sample_df: pl.DataFrame) -> None:
         .lazy()
         .group_by("department", "sex")
         .agg(
-            pl.col("salary").mean().alias("mean_salary"),
+            pl_salary.mean().alias("mean_salary"),
             pl.col("age").max().alias("max_age"),
         )
         .sort("department", "sex")
@@ -434,8 +437,8 @@ def test_group_by_all_multi_agg(sample_df: pl.DataFrame) -> None:
         .LazyFrame(sample_df)
         .group_by_all(
             "department",
-            pql.col("salary").mean().alias("avg_salary"),
-            pql.col("salary").sum().alias("sum_salary"),
+            pql_salary.mean().alias("avg_salary"),
+            pql_salary.sum().alias("sum_salary"),
             pql.col("id").count().alias("n"),
         )
         .sort("department")
@@ -444,8 +447,8 @@ def test_group_by_all_multi_agg(sample_df: pl.DataFrame) -> None:
         .lazy()
         .group_by("department")
         .agg(
-            pl.col("salary").mean().alias("avg_salary"),
-            pl.col("salary").sum().alias("sum_salary"),
+            pl_salary.mean().alias("avg_salary"),
+            pl_salary.sum().alias("sum_salary"),
             pl.col("id").count().alias("n"),
         )
         .sort("department")
@@ -457,13 +460,13 @@ def test_group_by_all_named_exprs(sample_df: pl.DataFrame) -> None:
     assert_eq(
         pql
         .LazyFrame(sample_df)
-        .group_by_all("department", mean_salary=pql.col("salary").mean())
+        .group_by_all("department", mean_salary=pql_salary.mean())
         .sort("department")
         .collect(),
         sample_df
         .lazy()
         .group_by("department")
-        .agg(mean_salary=pl.col("salary").mean())
+        .agg(mean_salary=pl_salary.mean())
         .sort("department")
         .collect(),
     )

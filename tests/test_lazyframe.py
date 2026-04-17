@@ -11,6 +11,11 @@ import pql._typing as t  # noqa: PLC2701
 
 from ._utils import assert_lf_eq
 
+pql_age = pql.col("age")
+pql_text = pql.col("text")
+pql_salary = pql.col("salary")
+pl_age = pl.col("age")
+pl_salary = pl.col("salary")
 _DF = pql.LazyFrame({
     "id": [1, 2, 3, 4, 5],
     "name": ["Alice", "Bob", "Charlie", "David", "Eve"],
@@ -70,8 +75,8 @@ def test_show(lf: pql.LazyFrame) -> None:
 def test_empty_frame(lf: pql.LazyFrame) -> None:
     assert_lf_eq(lf.lazy().select([]), lf.select([]))
     assert_lf_eq(
-        lf.lazy().with_columns(pl.col("age").sum()).select(),
-        lf.with_columns(pql.col("age").sum()).select([]),
+        lf.lazy().with_columns(pl_age.sum()).select(),
+        lf.with_columns(pql_age.sum()).select([]),
     )
     assert_lf_eq(
         lf.lazy().drop("age").select(),
@@ -87,12 +92,12 @@ def test_clone(lf: pql.LazyFrame) -> None:
     df = lf.collect()
     cloned = lf.clone()
     assert_lf_eq(cloned.lazy(), lf)
-    cloned_modified = cloned.filter(pql.col("age").gt(25)).collect()
+    cloned_modified = cloned.filter(pql_age.gt(25)).collect()
     assert df.height != cloned_modified.height
 
 
 def test_sql_query(lf: pql.LazyFrame) -> None:
-    parsed = lf.filter(pql.col("age").gt(25)).select("name", "age").sql_query()
+    parsed = lf.filter(pql_age.gt(25)).select("name", "age").sql_query()
     assert parsed.raw != parsed.prettify().raw
     assert parsed.tokenize() != parsed.prettify().tokenize()
     assert "SELECT" in parsed.raw
@@ -102,11 +107,11 @@ def test_sql_query(lf: pql.LazyFrame) -> None:
 
 @pytest.mark.parametrize("theme", t.Themes.__args__)
 def test_sql_show(lf: pql.LazyFrame, theme: t.Themes) -> None:
-    lf.select(pql.col("salary").cast(pql.Float64())).sql_query().show(theme)
+    lf.select(pql_salary.cast(pql.Float64())).sql_query().show(theme)
 
 
 def test_explain(lf: pql.LazyFrame) -> None:
-    explained = lf.filter(pql.col("age").gt(25)).explain("standard")
+    explained = lf.filter(pql_age.gt(25)).explain("standard")
     assert isinstance(explained, str)
 
 
@@ -117,8 +122,8 @@ def test_select(lf: pql.LazyFrame, cols: list[str]) -> None:
     assert_lf_eq(lf.lazy().select(cols), lf.select(cols))
 
     assert_lf_eq(
-        lf.lazy().select(*cols, vals=pl.col("id"), other_vals=42),
-        lf.select(*cols, vals=pql.col("id"), other_vals=42),
+        lf.lazy().select(*cols, vals="id", other_vals=42),
+        lf.select(*cols, vals="id", other_vals=42),
     )
 
 
@@ -209,10 +214,10 @@ def test_last(lf: pql.LazyFrame) -> None:
 
 
 def test_filter(lf: pql.LazyFrame) -> None:
-    salary_pql = pql.col("salary").mul(12).gt(600000)
-    salary_pl = pl.col("salary").mul(12).gt(600000)
-    age_pql = pql.col("age").lt(50)
-    age_pl = pl.col("age").lt(50)
+    salary_pql = pql_salary.mul(12).gt(600000)
+    salary_pl = pl_salary.mul(12).gt(600000)
+    age_pql = pql_age.lt(50)
+    age_pl = pl_age.lt(50)
     assert_lf_eq(lf.lazy().filter(salary_pl), lf.filter(salary_pql))
     assert_lf_eq(
         lf.lazy().filter(salary_pl, age_pl),
@@ -233,63 +238,49 @@ def test_first(lf: pql.LazyFrame) -> None:
 
 
 def test_count(lf: pql.LazyFrame) -> None:
-    result = lf.select(pql.col("id")).count()
-    expected = lf.lazy().select(pl.col("id")).count()
-    assert_lf_eq(expected, result)
+    assert_lf_eq(lf.lazy().select("id").count(), lf.select("id").count())
 
 
 def test_sum(lf: pql.LazyFrame) -> None:
-    result = lf.select(pql.col("age"), pql.col("salary")).sum()
-    expected = lf.lazy().select(pl.col("age"), pl.col("salary")).sum()
-    assert_lf_eq(expected, result)
+    cols = ("age", "salary")
+    assert_lf_eq(lf.lazy().select(cols).sum(), lf.select(cols).sum())
 
 
 def test_mean(lf: pql.LazyFrame) -> None:
-    result = lf.select(pql.col("age")).mean()
-    expected = lf.lazy().select(pl.col("age")).mean()
-    assert_lf_eq(expected, result)
+    assert_lf_eq(lf.lazy().select("age").mean(), lf.select("age").mean())
 
 
 def test_median(lf: pql.LazyFrame) -> None:
-    result = lf.select(pql.col("salary")).median()
-    expected = lf.lazy().select(pl.col("salary")).median()
-    assert_lf_eq(expected, result)
+    assert_lf_eq(lf.lazy().select("salary").median(), lf.select("salary").median())
 
 
 def test_min(lf: pql.LazyFrame) -> None:
-    result = lf.select(pql.col("age")).min()
-    expected = lf.lazy().select(pl.col("age")).min()
-    assert_lf_eq(expected, result)
+    assert_lf_eq(lf.lazy().select("age").min(), lf.select("age").min())
 
 
 def test_max(lf: pql.LazyFrame) -> None:
-    result = lf.select(pql.col("age")).max()
-    expected = lf.lazy().select(pl.col("age")).max()
-    assert_lf_eq(expected, result)
+    assert_lf_eq(lf.lazy().select("age").max(), lf.select("age").max())
 
 
 def test_null_count(lf: pql.LazyFrame) -> None:
-    result = lf.select(pql.col("value")).null_count()
-    expected = lf.lazy().select(pl.col("value")).null_count()
-    assert_lf_eq(expected, result)
+    assert_lf_eq(
+        lf.lazy().select("value").null_count(), lf.select("value").null_count()
+    )
 
 
 def test_cast(lf: pql.LazyFrame) -> None:
+    cols = ("age", "id")
     assert_lf_eq(
-        lf.lazy().select(pl.col("age"), pl.col("id")).cast({"age": pl.Float64}),
-        lf.select(pql.col("age"), pql.col("id")).cast({"age": pql.Float64()}),
+        lf.lazy().select(cols).cast({"age": pl.Float64}),
+        lf.select(cols).cast({"age": pql.Float64()}),
     )
     assert_lf_eq(
-        lf.lazy().select(pl.col("age"), pl.col("id")).cast(pl.String),
-        lf.select(pql.col("age"), pql.col("id")).cast(pql.String()),
+        lf.lazy().select(cols).cast(pl.String), lf.select(cols).cast(pql.String())
     )
 
 
 def test_pipe(lf: pql.LazyFrame) -> None:
-    assert_lf_eq(
-        lf.lazy().pipe(lambda df: df),
-        lf.pipe(lambda lf: lf),
-    )
+    assert_lf_eq(lf.lazy().pipe(lambda df: df), lf.pipe(lambda lf: lf))
 
 
 @pytest.mark.parametrize("cols", [["age"], ["age", "salary"]])
@@ -307,26 +298,26 @@ def test_rename(lf: pql.LazyFrame, mapping: dict[str, str]) -> None:
 
 
 def test_with_columns_add_only_uses_star(lf: pql.LazyFrame) -> None:
-    expr = pql.col("age").mul(2).alias("age2")
+    expr = pql_age.mul(2).alias("age2")
     parsed = m.ExprPlan(lf.columns, expr, (), {}).with_columns_ctx().find(exp.Star)
     assert parsed is not None
 
 
 def test_with_columns_override_enumerates_columns(lf: pql.LazyFrame) -> None:
-    expr = pql.col("age").mul(2).alias("age")
+    expr = pql_age.mul(2).alias("age")
     parsed = m.ExprPlan(lf.columns, expr, (), {}).with_columns_ctx().find(exp.Star)
     assert parsed is None
 
 
 def test_with_columns_single_expr(lf: pql.LazyFrame) -> None:
     assert_lf_eq(
-        lf.lazy().with_columns(pl.col("age").mul(2), x=42),
-        lf.with_columns(pql.col("age").mul(2), x=42),
+        lf.lazy().with_columns(pl_age.mul(2), x=42),
+        lf.with_columns(pql_age.mul(2), x=42),
     )
 
     assert_lf_eq(
-        lf.lazy().with_columns(pl.col("age").mul(2), pl.col("salary").truediv(12)),
-        lf.with_columns(pql.col("age").mul(2), pql.col("salary").truediv(12)),
+        lf.lazy().with_columns(pl_age.mul(2), pl_salary.truediv(12)),
+        lf.with_columns(pql_age.mul(2), pql_salary.truediv(12)),
     )
 
 
@@ -439,13 +430,13 @@ def test_top_bottom_k_single(
 @pytest.mark.parametrize("seed", [0, 42, 12345])
 def test_hash_seed(seed: int) -> None:
     df = pql.LazyFrame({"text": ["apple", "banana", "apple"]})
-    result = df.select(pql.col("text").hash(seed=seed).alias("h")).collect()
+    result = df.select(pql_text.hash(seed=seed).alias("h")).collect()
     # Check that same input produces same hash
     hashes = result["h"].to_list()
     assert hashes[0] == hashes[2], "Same input should produce same hash"
     # Different seed should produce different hash
     other_seed = 1 if seed == 0 else 0
-    result_other = df.select(pql.col("text").hash(seed=other_seed).alias("h")).collect()
+    result_other = df.select(pql_text.hash(seed=other_seed).alias("h")).collect()
     assert hashes[0] != result_other["h"][0], (
         "Different seeds should produce different hashes"
     )
@@ -518,8 +509,8 @@ def test_unique_with_multiple_order_by() -> None:
 
 def test_select_with_named_expr() -> None:
     df = pql.LazyFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-    result = df.select(pql.col("a"), doubled=pql.col("b").mul(2))
-    expected = df.lazy().select(pl.col("a"), doubled=pl.col("b").mul(2))
+    result = df.select("a", doubled=pql.col("b").mul(2))
+    expected = df.lazy().select("a", doubled=pl.col("b").mul(2))
     assert_lf_eq(expected, result)
 
 
