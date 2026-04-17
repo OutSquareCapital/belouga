@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import TYPE_CHECKING, override
@@ -115,9 +114,9 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         expr = self.inner().inner()
         match literal:
             case True:
-                return self._cls(expr.str.contains(expr.new(pattern)))
+                return self._cls(expr.str.contains(pattern))
             case False:
-                return self._cls(expr.re.matches(expr.new(pattern)))
+                return self._cls(expr.re.matches(pattern))
 
     def starts_with(self, prefix: IntoExprColumn) -> Expr:
         """Check if string starts with prefix.
@@ -125,8 +124,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        expr = self.inner().inner()
-        return self._cls(expr.str.starts_with(expr.new(prefix)))
+        return self._cls(self.inner().inner().str.starts_with(prefix))
 
     def ends_with(self, suffix: IntoExprColumn) -> Expr:
         """Check if string ends with suffix.
@@ -134,8 +132,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        expr = self.inner().inner()
-        return self._cls(expr.str.ends_with(expr.new(suffix)))
+        return self._cls(self.inner().inner().str.ends_with(suffix))
 
     def replace(
         self, pattern: str, value: IntoExprColumn, *, literal: bool = False, n: int = 1
@@ -164,25 +161,13 @@ class ExprStringNameSpace(ExprNameSpaceBase):
                     .pipe(self._cls)
                 )
 
-    def _strip_fn(
-        self,
-        characters: IntoExprColumn | None,
-        fn: Callable[[SqlExpr, SqlExpr | None], SqlExpr],
-    ) -> Expr:
-        expr = self.inner().inner()
-        match characters:
-            case None:
-                return self._cls(fn(expr, None))
-            case _:
-                return self._cls(fn(expr, expr.new(characters)))
-
     def strip_chars(self, characters: IntoExprColumn | None = None) -> Expr:
         """Strip leading and trailing characters.
 
         Returns:
             Expr
         """
-        return self._strip_fn(characters, lambda e, c: e.str.trim(c))
+        return self._cls(self.inner().inner().str.trim(characters))
 
     def strip_chars_start(self, characters: IntoExprColumn | None = None) -> Expr:
         """Strip leading characters.
@@ -190,7 +175,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._strip_fn(characters, lambda e, c: e.str.ltrim(c))
+        return self._cls(self.inner().inner().str.ltrim(characters))
 
     def strip_chars_end(self, characters: IntoExprColumn | None = None) -> Expr:
         """Strip trailing characters.
@@ -198,7 +183,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._strip_fn(characters, lambda e, c: e.str.rtrim(c))
+        return self._cls(self.inner().inner().str.rtrim(characters))
 
     def slice(self, offset: int, length: int | None = None) -> Expr:
         """Extract a substring.
@@ -254,8 +239,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        expr = self.inner().inner()
-        return self._cls(expr.json.extract_string(expr.new(json_path)))
+        return self._cls(self.inner().inner().json.extract_string(json_path))
 
     def to_date(self, format: IntoExprColumn | None = None) -> Expr:  # noqa: A002
         """Parse string values as date.
@@ -374,12 +358,10 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         return self._cls(self.inner().inner().str.reverse())
 
     def pad_start(self, length: int, fill_char: IntoExprColumn = Lit.ESCAPE) -> Expr:
-        expr = self.inner().inner()
-        return self._cls(expr.str.lpad(length, expr.new(fill_char)))
+        return self._cls(self.inner().inner().str.lpad(length, fill_char))
 
     def pad_end(self, length: int, fill_char: IntoExprColumn = Lit.ESCAPE) -> Expr:
-        expr = self.inner().inner()
-        return self._cls(expr.str.rpad(length, expr.new(fill_char)))
+        return self._cls(self.inner().inner().str.rpad(length, fill_char))
 
     def zfill(self, length: int) -> Expr:
         return self._cls(self.inner().inner().str.zfill(length))

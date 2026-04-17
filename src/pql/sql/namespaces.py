@@ -148,10 +148,11 @@ class SqlExprStringNameSpace(StringFns[SqlExpr]):
         Returns:
             SqlExpr: A new expression that evaluates to the number of matches.
         """
-        pattern_expr = self.inner().new(pattern)
+        expr = self.inner()
+        pattern_expr = expr.new(pattern)
         match literal:
             case False:
-                return self.inner().re.extract_all(pattern_expr).list.len()
+                return expr.re.extract_all(pattern_expr).list.len()
             case True:
                 return (
                     self
@@ -169,22 +170,20 @@ class SqlExprStringNameSpace(StringFns[SqlExpr]):
         Returns:
             SqlExpr: A new expression that evaluates to the string with the prefix removed.
         """
+        expr = self.inner()
         match prefix:
             case str() as prefix_str:
-                return self.inner().re.replace(
-                    lit(f"^{re.escape(prefix_str)}"), Lit.EMPTY_STR
-                )
+                return expr.re.replace(lit(f"^{re.escape(prefix_str)}"), Lit.EMPTY_STR)
             case _:
                 return (
-                    self
-                    .inner()
+                    expr
                     .new(prefix)
                     .pipe(
                         lambda prefix: when(
-                            self.inner().str.starts_with(prefix),
+                            expr.str.starts_with(prefix),
                         ).then(self.substring(prefix.str.length().add(1)))
                     )
-                    .otherwise(self.inner())
+                    .otherwise(expr)
                 )
 
     def strip_suffix(self, suffix: IntoExpr) -> SqlExpr:
@@ -196,24 +195,16 @@ class SqlExprStringNameSpace(StringFns[SqlExpr]):
         Returns:
             SqlExpr: A new expression that evaluates to the string with the suffix removed.
         """
+        expr = self.inner()
         match suffix:
             case str() as suffix_str:
-                return self.inner().re.replace(
-                    lit(f"{re.escape(suffix_str)}$"), Lit.EMPTY_STR
-                )
+                return expr.re.replace(lit(f"{re.escape(suffix_str)}$"), Lit.EMPTY_STR)
             case _:
-                return (
-                    self
-                    .inner()
-                    .new(suffix)
-                    .pipe(
-                        lambda expr: (
-                            when(self.inner().str.ends_with(expr))
-                            .then(
-                                self.substring(1, self.length().sub(expr.str.length()))
-                            )
-                            .otherwise(self.inner())
-                        )
+                return expr.new(suffix).pipe(
+                    lambda sfx: (
+                        when(expr.str.ends_with(sfx))
+                        .then(self.substring(1, self.length().sub(sfx.str.length())))
+                        .otherwise(expr)
                     )
                 )
 
@@ -465,7 +456,7 @@ class SqlExprListNameSpace(ListFns[SqlExpr]):
         Returns:
             SqlExpr: A new expression that evaluates to the number of matches in each array.
         """
-        return self.filter(element().eq(elem)).arr.length()
+        return self.filter(element().eq(SqlExpr.new(elem))).list.length()
 
 
 @dataclass(slots=True)
@@ -551,7 +542,7 @@ class SqlExprArrayNameSpace(ArrayFns[SqlExpr]):
         Returns:
             SqlExpr: A new expression that evaluates to the number of matches in each array.
         """
-        return self.filter(element().eq(elem)).arr.length()
+        return self.filter(element().eq(SqlExpr.new(elem))).arr.length()
 
 
 @dataclass(slots=True)
