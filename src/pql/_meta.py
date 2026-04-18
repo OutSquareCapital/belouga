@@ -70,8 +70,17 @@ class Marker(StrEnum):
     def windowed(cls, source: exp.Expr, cols: PyoIterable[ResolvedExpr]) -> exp.Expr:
         match cols.any(lambda p: p.is_windowed(cls.TEMP)):
             case True:
-                row_nb = sql.row_number().window().sub(1).alias(cls.TEMP).inner()
-                return exp.select(row_nb, "*").from_(source).subquery("src")
+                return (
+                    sql
+                    .row_number()
+                    .window()
+                    .sub(1)
+                    .alias(cls.TEMP)
+                    .inner()
+                    .pipe(lambda row_nb: exp.select(row_nb, exp.Star()))
+                    .from_(source)
+                    .subquery("src")
+                )
             case False:
                 return source
 
