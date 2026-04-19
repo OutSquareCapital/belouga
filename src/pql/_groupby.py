@@ -106,5 +106,5 @@ class LazyGroupBy:
             .into(ExprPlan, aggs, more_aggs, named_aggs)
             .agg_ctx(pc.Iter(key_glots))
             .group_by(*_group_by_clause())
-            .pipe(self._frame._from_sql_expr, src=self._frame.inner)  # pyright: ignore[reportPrivateUsage]
+            .pipe(self._frame._execute, src=self._frame.inner)  # pyright: ignore[reportPrivateUsage]
         )
