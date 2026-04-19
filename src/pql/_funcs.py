@@ -86,10 +86,9 @@ def coalesce(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> Expr:
     Returns:
         Expr: A new expression that evaluates to the first non-null value among the given expressions.
     """
-    expr_name = (
-        try_iter(exprs).next().map(SqlExpr.new, as_col=True).unwrap().inner.output_name
-    )
-    return Expr(sql.coalesce(exprs, *more_exprs), SingleMeta(root_name=expr_name))
+    all_exprs = try_iter(exprs).chain(more_exprs)
+    expr = all_exprs.next().map(SqlExpr.new, as_col=True).unwrap()
+    return Expr(expr.coalesce(all_exprs), SingleMeta(root_name=expr.inner.output_name))
 
 
 def all(exclude: TryIter[IntoExprColumn] = None) -> Expr:

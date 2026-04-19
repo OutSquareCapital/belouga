@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable, Iterable
-from functools import cache, partial
+from functools import partial
 from typing import TYPE_CHECKING, ClassVar, Self, override
 
 import pyochain as pc
@@ -40,22 +40,17 @@ if TYPE_CHECKING:
     )
     from .utils import TryIter
 
-
-@cache
-def _fill_strategy() -> pc.Dict[FillNullStrategy, Callable[[SqlExpr], SqlExpr]]:
-    from ._funcs import coalesce
-
-    return pc.Dict.from_ref({
-        "forward": lambda expr: expr.last_value().window(
-            frame_end=pc.Some(0), ignore_nulls=True
-        ),
-        "backward": lambda expr: expr.any_value().window(frame_start=pc.Some(0)),
-        "min": lambda expr: coalesce(expr, expr.min().window()),
-        "max": lambda expr: coalesce(expr, expr.max().window()),
-        "mean": lambda expr: coalesce(expr, expr.mean().window()),
-        "zero": lambda expr: coalesce(expr, 0),
-        "one": lambda expr: coalesce(expr, 1),
-    })
+_FILL_STRATEGY: dict[FillNullStrategy, Callable[[SqlExpr], SqlExpr]] = {
+    "forward": lambda expr: expr.last_value().window(
+        frame_end=pc.Some(0), ignore_nulls=True
+    ),
+    "backward": lambda expr: expr.any_value().window(frame_start=pc.Some(0)),
+    "min": lambda expr: expr.coalesce(expr.min().window()),
+    "max": lambda expr: expr.coalesce(expr.max().window()),
+    "mean": lambda expr: expr.coalesce(expr.mean().window()),
+    "zero": lambda expr: expr.coalesce(0),
+    "one": lambda expr: expr.coalesce(1),
+}
 
 
 """Computation strategies for `fill_null` when ."""
@@ -545,9 +540,9 @@ class SqlExpr(Fns):  # noqa: PLW1641
                     msg = "can only specify `limit` when strategy is set to 'backward' or 'forward'"
                     return pc.Err(ValueError(msg))
                 case (pc.Some(val), pc.NONE, pc.NONE):
-                    return pc.Ok(coalesce((self.inner, val)))
+                    return pc.Ok(self.coalesce(val))
                 case (_, pc.Some(strat), pc.NONE):
-                    return pc.Ok(self.pipe(_fill_strategy()[strat]))
+                    return pc.Ok(self.pipe(_FILL_STRATEGY[strat]))
                 case _:
                     msg = "must specify either a fill `value` or `strategy`"
                     return pc.Err(ValueError(msg))
@@ -1212,3 +1207,16 @@ class SqlExpr(Fns):  # noqa: PLW1641
             Self
         """
         return self._cls(self.str.hash(seed).inner)
+
+    def coalesce(self, exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
+        """Create a `COALESCE` expression.
+
+        Args:
+            exprs (TryIter[IntoExpr]): The expressions to coalesce.
+            *more_exprs (IntoExpr): Additional expressions to coalesce.
+
+        Returns:
+            SqlExpr: An expression representing the `COALESCE` operation.
+        """
+        exprs = try_iter(exprs).chain(more_exprs).into(args_into_glot, as_col=True)
+        return self._cls(exp.Coalesce(this=self.inner, expressions=exprs))

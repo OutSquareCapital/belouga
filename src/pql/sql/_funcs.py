@@ -150,8 +150,8 @@ def coalesce(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
     Returns:
         SqlExpr: An expression representing the COALESCE operation.
     """
-    exprs = try_iter(exprs).chain(more_exprs).into(args_into_glot, as_col=True)
-    return SqlExpr(exp.Coalesce(this=exprs[0], expressions=exprs))
+    exprs = try_iter(exprs).chain(more_exprs)
+    return SqlExpr.new(exprs.next().unwrap(), as_col=True).coalesce(exprs)
 
 
 _HORIZONTAL_ERR = "At least one expression is required."
@@ -192,7 +192,7 @@ def sum_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
     return (
         try_iter(exprs)
         .chain(more_exprs)
-        .into(reduce, lambda lhs, rhs: lhs.add(coalesce(rhs, 0)))
+        .into(reduce, lambda lhs, rhs: lhs.add(SqlExpr.new(rhs).coalesce(0)))
     )
 
 
@@ -215,7 +215,7 @@ def mean_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
             lambda vals: (
                 vals
                 .iter()
-                .map(lambda value: coalesce(value, 0))
+                .map(lambda value: value.coalesce(0))
                 .reduce(SqlExpr.add)
                 .truediv(
                     vals

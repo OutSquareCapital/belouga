@@ -705,7 +705,7 @@ class LazyFrame(sql.CoreHandler[ScanSource]):
             Self: A new LazyFrame with shifted values.
         """
         return self._iter_slct(
-            lambda c: sql.coalesce(sql.col(c).shift(n), fill_value).alias(c)
+            lambda c: sql.col(c).shift(n).coalesce(fill_value).alias(c)
         )
 
     def clone(self) -> Self:

@@ -24,7 +24,7 @@ from ._code_gen import (
 )
 from ._core import DuckHandler, func
 from ._expr import SqlExpr
-from ._funcs import coalesce, element, lit
+from ._funcs import element, lit
 from ._when import when
 
 if TYPE_CHECKING:
@@ -635,15 +635,15 @@ class SqlExprListNameSpace(ListFns[SqlExpr]):
         Returns:
             SqlExpr: A new expression that evaluates to the joined string.
         """
-        joined = self.aggregate(Lit.STR_AGG, separator)
+        joined = self.aggregate(Lit.STR_AGG, separator).coalesce(Lit.EMPTY_STR)
         match ignore_nulls:
             case True:
-                return coalesce(joined, Lit.EMPTY_STR)
+                return joined
             case False:
                 return (
                     when(self.filter(element().is_null()).list.length().gt(0))
                     .then(Lit.NONE)
-                    .otherwise(coalesce(joined, Lit.EMPTY_STR))
+                    .otherwise(joined)
                 )
 
     def n_unique(self) -> SqlExpr:
@@ -721,15 +721,15 @@ class SqlExprArrayNameSpace(ArrayFns[SqlExpr]):
         Returns:
             SqlExpr: A new expression that evaluates to the joined string.
         """
-        joined = self.aggregate(Lit.STR_AGG, separator)
+        joined = self.aggregate(Lit.STR_AGG, separator).coalesce(Lit.EMPTY_STR)
         match ignore_nulls:
             case True:
-                return coalesce(joined, Lit.EMPTY_STR)
+                return joined
             case False:
                 return (
                     when(self.filter(element().is_null()).arr.length().gt(0))
                     .then(Lit.NONE)
-                    .otherwise(coalesce(joined, Lit.EMPTY_STR))
+                    .otherwise(joined)
                 )
 
     def n_unique(self) -> SqlExpr:
