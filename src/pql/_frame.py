@@ -85,8 +85,7 @@ class LazyFrame(sql.CoreHandler[ScanSource]):
                 self._ast = exp.from_(exp.to_table(source_name))
 
     def _execute(self, expr: exp.Expr, **kwargs: IntoRel) -> Self:
-        raw_sql = expr.sql(dialect="duckdb", identify=True)
-        qry = ScanSource.from_query(raw_sql, **kwargs).relation
+        qry = ScanSource.from_query(expr, **kwargs).relation
         return self.__class__(qry)
 
     def _iter_slct(self, func: Callable[[str], SqlExpr]) -> Self:

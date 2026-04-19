@@ -9,7 +9,7 @@ import duckdb
 import pyochain as pc
 from sqlglot import exp
 
-from ._conversions import glot_into_duckdb
+from ._conversions import PQLConversionError, glot_into_duckdb
 from ._core import DuckHandler
 from ._funcs import unnest
 from .typing import FrameLike, NPArrayLike, PythonLiteral
@@ -101,32 +101,33 @@ class ScanSource:
         return cls(relation, pc.Vec.from_ref(relation.columns))
 
     @classmethod
-    def from_query(cls, query: str, **relations: IntoRel) -> Self:
-        """Create a relation from a SQL query.
+    def from_query(cls, query: exp.Expr, **relations: IntoRel) -> Self:
+        """Create a `duckdb.DuckDBPyRelation` from a  `exp.Expr` node.
 
         Args:
-            query (str): The SQL query to execute.
+            query (exp.Expr): The SQL node to execute.
             **relations (IntoRel): Relations to include in the query.
 
         Returns:
             duckdb.DuckDBPyRelation: The resulting DuckDB relation.
+
+        Raises:
+                PQLConversionError: If the SQL query cannot be parsed by DuckDB.
         """
-
-        def _as_namespace(
-            rels: IntoDict[str, duckdb.DuckDBPyRelation],
-        ) -> duckdb.DuckDBPyRelation:
-            namespace = {"dk": duckdb, "qry": query, **dict(rels)}
-            exec("relation = dk.from_query(qry)", namespace)
-            return cast(duckdb.DuckDBPyRelation, namespace["relation"])
-
-        rel = (
-            pc
-            .Iter(relations.items())
-            .map_star(lambda k, v: (k, cls.build(v).relation))
-            .into(_as_namespace)
-        )
-
-        return cls.from_relation(rel)
+        try:
+            rels = (
+                pc
+                .Iter(relations.items())
+                .map_star(lambda k, v: (k, cls.build(v).relation))
+                .collect(dict)
+            )
+            parsed = query.sql(dialect="duckdb", identify=True)
+            namespace = {"duckdb": duckdb, "parsed": parsed, **rels}
+            exec("relation = duckdb.from_query(parsed)", namespace)
+            result = cast(duckdb.DuckDBPyRelation, namespace["relation"])
+            return cls.from_relation(result)
+        except duckdb.ParserException as e:
+            raise PQLConversionError(e, query) from e
 
     @classmethod
     def from_dicts(cls, data: Sequence[Mapping[str, PythonLiteral]]) -> Self:

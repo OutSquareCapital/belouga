@@ -10,6 +10,18 @@ from .typing import IntoExpr
 class PQLConversionError(ValueError):
     """Raised when a conversion from a sqlglot expression to a DuckDB expression fails."""
 
+    def __init__(self, e: Exception, expr: exp.Expr) -> None:
+        msg = f"""
+Failed to convert expression to DuckDB!
+error:
+        {e}
+    expression:
+        {expr!r}
+    SQL:
+        {expr.sql(dialect="duckdb", pretty=True, identify=True)}
+"""
+        super().__init__(msg)
+
 
 def args_into_glot(args: Iterable[IntoExpr], *, as_col: bool = False) -> list[exp.Expr]:
     """Convert an `Iterable` of `IntoExpr` values into a list of sqlglot `Expr` nodes.
@@ -71,15 +83,7 @@ def glot_into_duckdb(expr: exp.Expr) -> duckdb.Expression:
             case _:
                 return _raw_expr(expr)
     except duckdb.Error as e:
-        msg = f"""Failed to convert expression to DuckDB!
-    error:
-        {e}
-    expression:
-        {expr!r}
-    SQL:
-        {expr.sql(dialect="duckdb", pretty=True)}
-        """
-        raise PQLConversionError(msg) from e
+        raise PQLConversionError(e, expr) from e
 
 
 def _ordered_expr(expr: exp.Ordered) -> duckdb.Expression:
@@ -131,4 +135,4 @@ def _anon_func_expr(
 
 
 def _raw_expr(expr: exp.Expr) -> duckdb.Expression:
-    return duckdb.SQLExpression(expr.sql(dialect="duckdb"))
+    return duckdb.SQLExpression(expr.sql(dialect="duckdb", identify=True))

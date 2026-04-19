@@ -6,6 +6,7 @@ import numpy as np
 import polars as pl
 import pyochain as pc
 import pytest
+import sqlglot
 from polars.testing import assert_frame_equal
 
 import pql
@@ -46,7 +47,7 @@ def test_from_query(data: TestData) -> None:
     SELECT *
     FROM df
     """
-    pql_df = pql.from_query(qry, df=df).collect()
+    pql_df = pql.from_query(sqlglot.parse_one(qry), df=df).collect()
     pl_df = duckdb.from_query(qry).pl()
     assert_eq(pql_df, pl_df)
 

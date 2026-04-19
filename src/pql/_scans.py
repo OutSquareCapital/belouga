@@ -7,6 +7,7 @@ from .sql import ScanSource
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoFrame
+    from sqlglot import exp
 
     from ._frame import LazyFrame
     from .sql.typing import (
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
     )
 
 
-def from_query(query: str, **relations: IntoRel) -> LazyFrame:
+def from_query(query: exp.Expr, **relations: IntoRel) -> LazyFrame:
     return ScanSource.from_query(query, **relations).into_frame()
 
 

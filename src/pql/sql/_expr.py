@@ -429,7 +429,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
         return self._cls(exp.Ordered(this=self.inner, nulls_first=False))
 
     def show(self) -> None:
-        print(self.inner.sql(dialect="duckdb"))
+        print(self.inner.sql(dialect="duckdb", identify=True))
 
     def _reversed(self, *, reverse: bool = False) -> Self:
         match reverse:
