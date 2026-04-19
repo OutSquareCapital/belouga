@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import TYPE_CHECKING, Self, override
 
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 @dataclass(slots=True)
 class Expr(sql.CoreHandler[SqlExpr]):
     _inner: SqlExpr
-    meta: ExprMeta
+    meta: ExprMeta = field(default_factory=ExprMeta)
 
     @override
     def _cls(self, value: SqlExpr) -> Self:

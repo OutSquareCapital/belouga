@@ -150,11 +150,16 @@ def coalesce(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
     Returns:
         SqlExpr: An expression representing the COALESCE operation.
     """
-    exprs = try_iter(exprs).chain(more_exprs)
-    return SqlExpr.new(exprs.next().unwrap(), as_col=True).coalesce(exprs)
+    all_exprs = try_iter(exprs).chain(more_exprs)
+    expr = all_exprs.next().map(SqlExpr.new, as_col=True).unwrap()
+    return expr.coalesce(all_exprs).alias(expr.inner.output_name)
 
 
 _HORIZONTAL_ERR = "At least one expression is required."
+
+
+def _into_col(value: IntoExpr) -> SqlExpr:
+    return SqlExpr.new(value, as_col=True)
 
 
 def _horizontal_fn(
@@ -162,22 +167,22 @@ def _horizontal_fn(
     more_exprs: Iterable[IntoExpr],
     fn: Callable[[SqlExpr, *tuple[IntoExpr]], SqlExpr],
 ) -> SqlExpr:
+    all_exprs = try_iter(exprs).chain(more_exprs).map(_into_col)
     return (
-        try_iter(exprs)
-        .chain(more_exprs)
-        .into(
-            lambda all_exprs: (
-                all_exprs
-                .next()
-                .map(lambda value: SqlExpr.new(value, as_col=True))
-                .map(
-                    lambda x: fn(
-                        x, *all_exprs.map(lambda value: SqlExpr.new(value, as_col=True))
-                    )
-                )
-            ).expect(_HORIZONTAL_ERR)
-        )
+        all_exprs
+        .next()
+        .map(lambda first: first.pipe(fn, *all_exprs).alias(first.inner.output_name))
+        .expect(_HORIZONTAL_ERR)
     )
+
+
+def _horizontal_reduce(
+    exprs: TryIter[IntoExpr],
+    more_exprs: Iterable[IntoExpr],
+    fn: Callable[[SqlExpr, IntoExpr], SqlExpr],
+) -> SqlExpr:
+    all_exprs = try_iter(exprs).chain(more_exprs).map(_into_col).collect()
+    return all_exprs.iter().reduce(fn).alias(all_exprs.first().inner.output_name)
 
 
 def min_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
@@ -189,19 +194,17 @@ def max_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
 
 
 def sum_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
-    return (
-        try_iter(exprs)
-        .chain(more_exprs)
-        .into(reduce, lambda lhs, rhs: lhs.add(SqlExpr.new(rhs).coalesce(0)))
+    return _horizontal_reduce(
+        exprs, more_exprs, lambda lhs, rhs: lhs.add(_into_col(rhs).coalesce(0))
     )
 
 
 def all_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
-    return try_iter(exprs).chain(more_exprs).into(reduce, SqlExpr.and_)
+    return _horizontal_reduce(exprs, more_exprs, SqlExpr.and_)
 
 
 def any_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
-    return try_iter(exprs).chain(more_exprs).into(reduce, SqlExpr.or_)
+    return _horizontal_reduce(exprs, more_exprs, SqlExpr.or_)
 
 
 def mean_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
@@ -209,7 +212,7 @@ def mean_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
     return (
         try_iter(exprs)
         .chain(more_exprs)
-        .map(lambda value: SqlExpr.new(value, as_col=True))
+        .map(_into_col)
         .collect()
         .then(
             lambda vals: (
@@ -223,6 +226,7 @@ def mean_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> SqlExpr:
                     .map(lambda value: value.is_not_null().cast(dtype))
                     .reduce(SqlExpr.add)
                 )
+                .alias(vals.first().inner.output_name)
             )
         )
         .expect(_HORIZONTAL_ERR)

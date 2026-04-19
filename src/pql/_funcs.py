@@ -41,7 +41,7 @@ def len() -> Expr:
     Returns:
         Expr: A new expression that evaluates to the number of rows.
     """
-    return Expr(sql.len(), SingleMeta(root_name=Marker.LEN))
+    return Expr(sql.len())
 
 
 def _agg_expr(
@@ -86,9 +86,7 @@ def coalesce(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> Expr:
     Returns:
         Expr: A new expression that evaluates to the first non-null value among the given expressions.
     """
-    all_exprs = try_iter(exprs).chain(more_exprs)
-    expr = all_exprs.next().map(SqlExpr.new, as_col=True).unwrap()
-    return Expr(expr.coalesce(all_exprs), SingleMeta(root_name=expr.inner.output_name))
+    return sql.coalesce(exprs, *more_exprs).pipe(Expr)
 
 
 def all(exclude: TryIter[IntoExprColumn] = None) -> Expr:
@@ -100,44 +98,31 @@ def all(exclude: TryIter[IntoExprColumn] = None) -> Expr:
     return Expr(sql.all(exclude), Resolver.all_fn(pc.Option(exclude)).into_meta())
 
 
-def _horizontal_fn(
-    exprs: TryIter[IntoExpr], more_exprs: Iterable[IntoExpr], fn: Callable[..., SqlExpr]
-) -> Expr:
-    meta = (
-        try_iter(exprs)
-        .next()
-        .map(lambda v: SqlExpr.new(v, as_col=True).inner.output_name)
-        .map(lambda n: SingleMeta(root_name=n))
-        .unwrap()
-    )
-    return Expr(fn(exprs, *more_exprs), meta)
-
-
 def sum_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> Expr:
-    return _horizontal_fn(exprs, more_exprs, sql.sum_horizontal)
+    return Expr(sql.sum_horizontal(exprs, *more_exprs))
 
 
 def min_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> Expr:
-    return _horizontal_fn(exprs, more_exprs, sql.min_horizontal)
+    return Expr(sql.min_horizontal(exprs, *more_exprs))
 
 
 def max_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> Expr:
-    return _horizontal_fn(exprs, more_exprs, sql.max_horizontal)
+    return Expr(sql.max_horizontal(exprs, *more_exprs))
 
 
 def mean_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> Expr:
-    return _horizontal_fn(exprs, more_exprs, sql.mean_horizontal)
+    return Expr(sql.mean_horizontal(exprs, *more_exprs))
 
 
 def all_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> Expr:
-    return _horizontal_fn(exprs, more_exprs, sql.all_horizontal)
+    return Expr(sql.all_horizontal(exprs, *more_exprs))
 
 
 def any_horizontal(exprs: TryIter[IntoExpr], *more_exprs: IntoExpr) -> Expr:
-    return _horizontal_fn(exprs, more_exprs, sql.any_horizontal)
+    return Expr(sql.any_horizontal(exprs, *more_exprs))
 
 
-_ELEMENT = Expr(sql.element(), SingleMeta(root_name=Marker.ELEMENT))
+_ELEMENT = Expr(sql.element())
 
 
 def element() -> Expr:

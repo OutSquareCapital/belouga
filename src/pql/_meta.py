@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from collections.abc import Callable, Collection, Iterable
 from dataclasses import dataclass, field, replace
 from enum import StrEnum, auto
@@ -126,20 +125,23 @@ def _resolve_exploded(expr: SqlExpr, *, is_distinct: bool) -> SqlExpr:
 
 
 @dataclass(slots=True)
-class ExprMeta(ABC):
+class ExprMeta:
     """Metadata for expressions, used for tracking properties that affect query generation."""
 
     alias_name: pc.Option[Aliaser] = field(default_factory=lambda: pc.NONE)
 
-    @abstractmethod
-    def into_resolved(self, template: SqlExpr, cols: Cols) -> pc.Iter[ResolvedExpr]: ...
+    def into_resolved(self, expr: SqlExpr, _cols: Cols) -> pc.Iter[ResolvedExpr]:
+        name = (
+            pc.Seq((expr.inner.output_name,)).into(self.get_output_names, expr).first()
+        )
+        return ResolvedExpr(expr, name).into(pc.Iter.once)
 
-    def get_output_names(self, base_names: Cols, template: SqlExpr) -> Cols:
-        match template.inner, self.alias_name:
-            case exp.Alias() as expr, pc.Some(alias_fn):
-                return pc.Iter.once(expr.output_name).map(alias_fn).collect()
-            case exp.Alias() as expr, pc.NONE:
-                return pc.Seq((expr.output_name,))
+    def get_output_names(self, base_names: Cols, expr: SqlExpr) -> Cols:
+        match expr.inner, self.alias_name:
+            case exp.Alias() as inner, pc.Some(alias_fn):
+                return pc.Iter.once(inner.output_name).map(alias_fn).collect()
+            case exp.Alias() as inner, pc.NONE:
+                return pc.Seq((inner.output_name,))
             case _, pc.Some(alias_fn):
                 return base_names.iter().map(alias_fn).collect()
             case _:
@@ -164,9 +166,9 @@ class SingleMeta(ExprMeta):
     root_name: str = field(kw_only=True)
 
     @override
-    def into_resolved(self, template: SqlExpr, cols: Cols) -> pc.Iter[ResolvedExpr]:
-        name = pc.Seq((self.root_name,)).into(self.get_output_names, template).first()
-        return ResolvedExpr(template, name).into(pc.Iter.once)
+    def into_resolved(self, expr: SqlExpr, cols: Cols) -> pc.Iter[ResolvedExpr]:
+        name = pc.Seq((self.root_name,)).into(self.get_output_names, expr).first()
+        return ResolvedExpr(expr, name).into(pc.Iter.once)
 
 
 @dataclass(slots=True)
@@ -174,16 +176,16 @@ class MultiMeta(ExprMeta):
     resolver: Resolver = field(kw_only=True)
 
     @override
-    def into_resolved(self, template: SqlExpr, cols: Cols) -> pc.Iter[ResolvedExpr]:
+    def into_resolved(self, expr: SqlExpr, cols: Cols) -> pc.Iter[ResolvedExpr]:
         base_names = self.resolver(cols)
-        output_names = self.get_output_names(base_names, template)
+        output_names = self.get_output_names(base_names, expr)
 
         def _resolved(expr: SqlExpr, col_name: str, name: str) -> ResolvedExpr:
             return ResolvedExpr(Marker.replace_col(expr, col_name), name)
 
-        match template.inner:
+        match expr.inner:
             case exp.Alias():
-                expr = template.inner.unalias().pipe(SqlExpr)
+                expr = expr.inner.unalias().pipe(SqlExpr)
                 alias = output_names.first()
                 return base_names.iter().map(lambda name: _resolved(expr, name, alias))
 
@@ -192,7 +194,7 @@ class MultiMeta(ExprMeta):
                     base_names
                     .iter()
                     .zip(output_names)
-                    .map_star(lambda name, output: _resolved(template, name, output))
+                    .map_star(lambda name, output: _resolved(expr, name, output))
                 )
 
 

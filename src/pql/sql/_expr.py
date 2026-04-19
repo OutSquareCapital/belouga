@@ -951,7 +951,7 @@ class SqlExpr(Fns):  # noqa: PLW1641
             frame_end=frame_end,
             exclude=exclude,
         )
-        return self.__class__(
+        return self._cls(
             OverBuilder(self.inner)
             .handle_nulls(ignore_nulls=ignore_nulls)
             .handle_distinct(distinct=distinct)
