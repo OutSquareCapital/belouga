@@ -28,7 +28,7 @@ from ._funcs import coalesce, element, lit
 from ._when import when
 
 if TYPE_CHECKING:
-    from .typing import IntoExpr, IntoExprColumn, TimeUnit
+    from .typing import IntoExpr, IntoExprColumn, TimeUnit, TransferEncoding
 
 
 class Sec(IntEnum):
@@ -322,6 +322,35 @@ class SqlExprStringNameSpace(StringFns[SqlExpr]):
             SqlExpr
         """
         return self.rpad(length, fill_char)
+
+    def slice(self, offset: int, length: int | None = None) -> SqlExpr:
+        """Extract a substring.
+
+        Returns:
+            SqlExpr
+        """
+        return self.substring(offset + 1, length)
+
+    def len_bytes(self) -> SqlExpr:
+        """Get the length in bytes.
+
+        Returns:
+            Expr
+        """
+        return self.inner.encode().octet_length()
+
+    def encode(self, encoding: TransferEncoding = "base64") -> SqlExpr:
+        """Encode UTF-8 strings as binary values.
+
+        Returns:
+            SqlExpr
+        """
+        expr = self.inner.encode().str
+        match encoding:
+            case "base64":
+                return expr.to_base64()
+            case "hex":
+                return expr.to_hex().str.lower()
 
 
 @dataclass(slots=True)

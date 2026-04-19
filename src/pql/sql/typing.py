@@ -156,3 +156,4 @@ FillNullStrategy = Literal["forward", "backward", "min", "max", "mean", "zero", 
 RankMethod = Literal["average", "min", "max", "dense", "ordinal"]
 type IntoDataType = exp.DataType | DataType
 """Types that can be converted into a `DataType` instance."""
+type TransferEncoding = Literal["hex", "base64"]

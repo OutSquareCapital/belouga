@@ -13,8 +13,13 @@ from ._meta import Aliaser, ExprPlan
 from .sql import SqlExpr, namespaces as nm
 
 if TYPE_CHECKING:
-    from ._typing import TransferEncoding
-    from .sql.typing import EpochTimeUnit, IntoExpr, IntoExprColumn, TimeUnit
+    from .sql.typing import (
+        EpochTimeUnit,
+        IntoExpr,
+        IntoExprColumn,
+        TimeUnit,
+        TransferEncoding,
+    )
     from .sql.utils import TryIter
 
 
@@ -169,7 +174,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._cls(self._base.substring(offset + 1, length))
+        return self._cls(self._base.slice(offset, length))
 
     def len_bytes(self) -> Expr:
         """Get the length in bytes.
@@ -177,7 +182,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        return self._cls(self.inner.inner.encode().octet_length())
+        return self._cls(self._base.len_bytes())
 
     def split(self, by: IntoExprColumn) -> Expr:
         """Split string by separator.
@@ -257,12 +262,7 @@ class ExprStringNameSpace(ExprNameSpaceBase):
         Returns:
             Expr
         """
-        expr = self.inner.inner.encode().str
-        match encoding:
-            case "base64":
-                return self._cls(expr.to_base64())
-            case "hex":
-                return self._cls(expr.to_hex().str.lower())
+        return self._cls(self._base.encode(encoding))
 
     def normalize(self) -> Expr:
         """Normalize strings using NFC normalization.

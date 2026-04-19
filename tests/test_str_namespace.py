@@ -8,7 +8,6 @@ import pytest
 from polars.testing import assert_frame_equal
 
 import pql
-from pql._typing import TransferEncoding
 
 type TestArgs = tuple[pql.Expr | str, pl.Expr | str]
 
@@ -473,5 +472,5 @@ def test_zfill(length: int) -> None:
 
 
 @pytest.mark.parametrize("encoding", ["base64", "hex"])
-def test_encode(encoding: TransferEncoding) -> None:
+def test_encode(encoding: pql.sql.typing.TransferEncoding) -> None:
     assert_eq_pl(pql_text.str.encode(encoding), pl_text.str.encode(encoding))

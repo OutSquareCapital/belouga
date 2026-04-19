@@ -7,7 +7,6 @@ if TYPE_CHECKING:
 JoinStrategy = Literal["inner", "left", "right", "outer", "semi", "anti"]
 AsofJoinStrategy = Literal["backward", "forward"]
 UniqueKeepStrategy = Literal["any", "none", "first", "last"]
-type TransferEncoding = Literal["hex", "base64"]
 PivotAgg = Literal[
     "min", "max", "first", "last", "sum", "mean", "median", "len", "count"
 ]
