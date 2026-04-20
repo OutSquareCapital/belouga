@@ -77,6 +77,10 @@ class Expr(Fns):
         """
         return cls(into_glot(value, as_col=as_col))
 
+    @override
+    def _cls(self, value: exp.Expr) -> Self:
+        return self.__class__(value, self.meta)
+
     def _rolling_agg(
         self,
         agg: Callable[[Expr], Expr],
