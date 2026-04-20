@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from functools import partial
 
 import polars as pl
 import pytest
+from polars.lazyframe.group_by import LazyGroupBy as PlLazyGroupBy
 from polars.testing import assert_frame_equal
+from pyochain import Seq
 
 import pql
+from pql._groupby import LazyGroupBy  # noqa: PLC2701
 
 pql_salary = pql.col("salary")
 pl_salary = pl.col("salary")
@@ -70,26 +74,38 @@ def test_agg_by_prefix(sample_df: pl.DataFrame) -> None:
     )
 
 
+_GROUP_BY_METHODS = Seq((
+    (LazyGroupBy.all, PlLazyGroupBy.all),
+    (LazyGroupBy.sum, PlLazyGroupBy.sum),
+    (LazyGroupBy.mean, PlLazyGroupBy.mean),
+    (LazyGroupBy.median, PlLazyGroupBy.median),
+    (LazyGroupBy.min, PlLazyGroupBy.min),
+    (LazyGroupBy.max, PlLazyGroupBy.max),
+    (LazyGroupBy.first, PlLazyGroupBy.first),
+    (LazyGroupBy.last, PlLazyGroupBy.last),
+    (LazyGroupBy.n_unique, PlLazyGroupBy.n_unique),
+))
+
+
 @pytest.mark.parametrize(
-    "method_name",
-    ["all", "sum", "mean", "median", "min", "max", "first", "last", "n_unique"],
+    "fns",
+    _GROUP_BY_METHODS,
+    ids=_GROUP_BY_METHODS.iter().map_star(lambda f1, _f2: f1.__name__),
 )
 def test_lazygroupby_simple_computations(
-    sample_df: pl.DataFrame, method_name: str
+    sample_df: pl.DataFrame,
+    fns: tuple[
+        Callable[[LazyGroupBy], pql.LazyFrame], Callable[[PlLazyGroupBy], pl.LazyFrame]
+    ],
 ) -> None:
     selected = ("department", "age", "salary")
-    result: pl.DataFrame = (  # pyright: ignore[reportAny]
-        getattr(  # pyright: ignore[reportAny]
-            pql.LazyFrame(sample_df).select(*selected).group_by("department"),
-            method_name,
-        )()
+    result = (
+        (fns[0](pql.LazyFrame(sample_df).select(*selected).group_by("department")))
         .sort("department")
         .collect()
     )
-    expected: pl.DataFrame = (  # pyright: ignore[reportAny]
-        getattr(  # pyright: ignore[reportAny]
-            sample_df.lazy().select(*selected).group_by("department"), method_name
-        )()
+    expected = (
+        fns[1](sample_df.lazy().select(*selected).group_by("department"))
         .sort("department")
         .collect()
     )

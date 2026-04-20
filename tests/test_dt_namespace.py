@@ -1,43 +1,48 @@
+from collections.abc import Callable
+
 import polars as pl
 import pytest
+from pyochain import Seq
 
 import pql
 import pql.sql.typing as t
 
-from ._utils import assert_eq, on_simple_fn
+from ._utils import assert_eq
 
 dt = "dt"
 pql_dt = pql.col(dt).dt
 pl_dt = pl.col(dt).dt
 
 
-_SIMPLE_FNS = {
-    "microsecond",
-    "nanosecond",
-    "millisecond",
-    "second",
-    "minute",
-    "hour",
-    "day",
-    "weekday",
-    "ordinal_day",
-    "week",
-    "month",
-    "quarter",
-    "year",
-    "iso_year",
-    "century",
-    "millennium",
-    "date",
-    "time",
-    "month_start",
-    "month_end",
-}
+_SIMPLE_FNS = Seq((
+    (pql_dt.microsecond, pl_dt.microsecond),
+    (pql_dt.nanosecond, pl_dt.nanosecond),
+    (pql_dt.millisecond, pl_dt.millisecond),
+    (pql_dt.second, pl_dt.second),
+    (pql_dt.minute, pl_dt.minute),
+    (pql_dt.hour, pl_dt.hour),
+    (pql_dt.day, pl_dt.day),
+    (pql_dt.weekday, pl_dt.weekday),
+    (pql_dt.ordinal_day, pl_dt.ordinal_day),
+    (pql_dt.week, pl_dt.week),
+    (pql_dt.month, pl_dt.month),
+    (pql_dt.quarter, pl_dt.quarter),
+    (pql_dt.year, pl_dt.year),
+    (pql_dt.iso_year, pl_dt.iso_year),
+    (pql_dt.century, pl_dt.century),
+    (pql_dt.millennium, pl_dt.millennium),
+    (pql_dt.date, pl_dt.date),
+    (pql_dt.time, pl_dt.time),
+    (pql_dt.month_start, pl_dt.month_start),
+    (pql_dt.month_end, pl_dt.month_end),
+))
 
 
-@pytest.mark.parametrize("fn", sorted(_SIMPLE_FNS))
-def test_simple_fns(fn: str) -> None:
-    on_simple_fn(pql_dt, pl_dt, fn)
+@pytest.mark.parametrize(
+    "fn", _SIMPLE_FNS, ids=_SIMPLE_FNS.iter().map_star(lambda f1, _f2: f1.__name__)
+)
+def test_simple_fns(fn: tuple[Callable[[], pql.Expr], Callable[[], pl.Expr]]) -> None:
+    assert_eq(fn[0](), fn[1]())
 
 
 @pytest.mark.parametrize("unit", t.EpochTimeUnit.__args__)

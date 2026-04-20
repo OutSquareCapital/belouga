@@ -1,12 +1,13 @@
 from collections.abc import Callable
-from typing import cast
+from typing import Protocol
 
 import polars as pl
 import pytest
+from pyochain import Seq
 
 import pql
 
-from ._utils import assert_eq, on_simple_fn
+from ._utils import assert_eq
 
 pql_a = pql.col("a")
 pql_x = pql.col("x")
@@ -25,6 +26,7 @@ pl_age = pl.col("age")
 pl_nan_vals = pl.col("nan_vals")
 pl_float_vals = pl.col("float_vals")
 desc_param = pytest.mark.parametrize("descending", [True, False])
+type Fns = tuple[Callable[[], pql.Expr], Callable[[], pl.Expr]]
 
 
 def test_rand() -> None:
@@ -163,55 +165,67 @@ def test_floordiv() -> None:
     assert_eq(pql_x.__floordiv__(3), pl_x.__floordiv__(3))
 
 
-_SIMPLE_FNS = {
-    "sinh",
-    "cosh",
-    "tanh",
-    "is_finite",
-    "is_infinite",
-    "count",
-    "len",
-    "min",
-    "max",
-    "sum",
-    "mean",
-    "median",
-    "product",
-    "n_unique",
-    "null_count",
-    "has_nulls",
-    "cot",
-    "degrees",
-    "radians",
-    "sign",
-    "floor",
-    "ceil",
-    "cbrt",
-    "abs",
-    "approx_n_unique",
-    "is_last_distinct",
-    "exp",
-    "sin",
-    "cos",
-    "tan",
-    "arctan",
-    "arccosh",
-    "arcsinh",
-    "bitwise_and",
-    "bitwise_or",
-    "bitwise_xor",
-    "diff",
-}
+_SIMPLE_FNS = Seq((
+    (pql_x.sinh, pl_x.sinh),
+    (pql_x.cosh, pl_x.cosh),
+    (pql_x.tanh, pl_x.tanh),
+    (pql_x.is_finite, pl_x.is_finite),
+    (pql_x.is_infinite, pl_x.is_infinite),
+    (pql_x.count, pl_x.count),
+    (pql_x.len, pl_x.len),
+    (pql_x.min, pl_x.min),
+    (pql_x.max, pl_x.max),
+    (pql_x.sum, pl_x.sum),
+    (pql_x.mean, pl_x.mean),
+    (pql_x.median, pl_x.median),
+    (pql_x.product, pl_x.product),
+    (pql_x.n_unique, pl_x.n_unique),
+    (pql_x.null_count, pl_x.null_count),
+    (pql_x.has_nulls, pl_x.has_nulls),
+    (pql_x.cot, pl_x.cot),
+    (pql_x.degrees, pl_x.degrees),
+    (pql_x.radians, pl_x.radians),
+    (pql_x.sign, pl_x.sign),
+    (pql_x.floor, pl_x.floor),
+    (pql_x.ceil, pl_x.ceil),
+    (pql_x.cbrt, pl_x.cbrt),
+    (pql_x.abs, pl_x.abs),
+    (pql_x.approx_n_unique, pl_x.approx_n_unique),
+    (pql_x.is_last_distinct, pl_x.is_last_distinct),
+    (pql_x.exp, pl_x.exp),
+    (pql_x.sin, pl_x.sin),
+    (pql_x.cos, pl_x.cos),
+    (pql_x.tan, pl_x.tan),
+    (pql_x.arctan, pl_x.arctan),
+    (pql_x.arccosh, pl_x.arccosh),
+    (pql_x.arcsinh, pl_x.arcsinh),
+    (pql_x.bitwise_and, pl_x.bitwise_and),
+    (pql_x.bitwise_or, pl_x.bitwise_or),
+    (pql_x.bitwise_xor, pl_x.bitwise_xor),
+    (pql_x.diff, pl_x.diff),
+))
 
 
-@pytest.mark.parametrize("fn", _SIMPLE_FNS)
-def test_simple_methods_on_x(fn: str) -> None:
-    on_simple_fn(pql_x, pl_x, fn)
+@pytest.mark.parametrize(
+    "fn", _SIMPLE_FNS, ids=_SIMPLE_FNS.iter().map_star(lambda f1, _f2: f1.__name__)
+)
+def test_simple_methods_on_x(fn: Fns) -> None:
+    assert_eq(fn[0](), fn[1]())
 
 
-@pytest.mark.parametrize("fn", ["null_count", "has_nulls"])
-def test_simple_methods_on_age(fn: str) -> None:
-    on_simple_fn(pql_age, pl_age, fn)
+_SIMPLE_FN_AGE = Seq((
+    (pql_age.null_count, pl_age.null_count),
+    (pql_age.has_nulls, pl_age.has_nulls),
+))
+
+
+@pytest.mark.parametrize(
+    "fn",
+    _SIMPLE_FN_AGE,
+    ids=_SIMPLE_FN_AGE.iter().map_star(lambda f1, _f2: f1.__name__),
+)
+def test_simple_methods_on_age(fn: Fns) -> None:
+    assert_eq(fn[0](), fn[1]())
 
 
 def test_uint_only_simple() -> None:
@@ -389,21 +403,38 @@ def test_is_close() -> None:
     )
 
 
+_ROLLING_FNS = Seq((
+    (pql_x.rolling_mean, pl_x.rolling_mean),
+    (pql_x.rolling_sum, pl_x.rolling_sum),
+    (pql_x.rolling_min, pl_x.rolling_min),
+    (pql_x.rolling_max, pl_x.rolling_max),
+    (pql_x.rolling_median, pl_x.rolling_median),
+))
+
+
+class RollingFn[T: pql.Expr | pl.Expr](Protocol):
+    def __call__(
+        self, window_size: int, min_samples: int | None, center: bool
+    ) -> T: ...
+
+
 @pytest.mark.parametrize("center", [True, False])
 @pytest.mark.parametrize("window_size", [2, 4])
 @pytest.mark.parametrize("min_samples", [None, 1, 2])
 @pytest.mark.parametrize(
     "method",
-    ["rolling_mean", "rolling_sum", "rolling_min", "rolling_max", "rolling_median"],
+    _ROLLING_FNS,
+    ids=_ROLLING_FNS.iter().map_star(lambda f1, _f2: f1.__name__),
 )
 def test_rolling(
-    method: str, window_size: int, min_samples: int | None, center: bool
+    method: tuple[RollingFn[pql.Expr], RollingFn[pl.Expr]],
+    window_size: int,
+    min_samples: int | None,
+    center: bool,
 ) -> None:
-    pql_fn = cast(Callable[..., pql.Expr], getattr(pql_x, method))
-    pl_fn = cast(Callable[..., pl.Expr], getattr(pl_x, method))
     assert_eq(
-        pql_fn(window_size=window_size, min_samples=min_samples, center=center),
-        pl_fn(window_size=window_size, min_samples=min_samples, center=center),
+        method[0](window_size=window_size, min_samples=min_samples, center=center),
+        method[1](window_size=window_size, min_samples=min_samples, center=center),
     )
 
 

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import timedelta
 
 import polars as pl
 import polars.selectors as cs_pl
 import pytest
+from pyochain import Seq
 
 import pql
 from pql import selectors as cs
@@ -169,28 +171,34 @@ def test_empty_selector() -> None:
     )
 
 
+_SELECTOR_FNS = Seq((
+    (cs.float, cs_pl.float),
+    (cs.integer, cs_pl.integer),
+    (cs.signed_integer, cs_pl.signed_integer),
+    (cs.unsigned_integer, cs_pl.unsigned_integer),
+    (cs.temporal, cs_pl.temporal),
+    (cs.date, cs_pl.date),
+    (cs.struct, cs_pl.struct),
+    (cs.nested, cs_pl.nested),
+    (cs.string, cs_pl.string),
+    (cs.boolean, cs_pl.boolean),
+    (cs.numeric, cs_pl.numeric),
+    (cs.decimal, cs_pl.decimal),
+    (cs.binary, cs_pl.binary),
+    (cs.time, cs_pl.time),
+))
+
+
 @pytest.mark.parametrize(
-    "fn_name",
-    [
-        "float",
-        "integer",
-        "signed_integer",
-        "unsigned_integer",
-        "temporal",
-        "date",
-        "struct",
-        "nested",
-        "string",
-        "boolean",
-        "numeric",
-        "decimal",
-        "binary",
-        "time",
-    ],
+    "fns",
+    _SELECTOR_FNS,
+    ids=_SELECTOR_FNS.iter().map_star(lambda f1, _f2: f1.__name__),
 )
 @skipped
-def test_dtype_selector(fn_name: str) -> None:
-    assert_eq(getattr(cs, fn_name)(), getattr(cs_pl, fn_name)())  # pyright: ignore[reportAny]
+def test_dtype_selector(
+    fns: tuple[Callable[[], cs.Selector], Callable[[], cs_pl.Selector]],
+) -> None:
+    assert_eq(fns[0](), fns[1]())
 
 
 def test_all_selector() -> None:

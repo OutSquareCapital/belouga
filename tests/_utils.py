@@ -71,7 +71,3 @@ def assert_eq(
 
 def assert_lf_eq(polars_lf: pl.LazyFrame, pql_lf: pql.LazyFrame) -> None:
     _assert(polars_lf, pql_lf.collect())
-
-
-def on_simple_fn(pql_expr: object, pl_expr: object, fn_name: str) -> None:
-    assert_eq(getattr(pql_expr, fn_name)(), getattr(pl_expr, fn_name)())  # pyright: ignore[reportAny]
