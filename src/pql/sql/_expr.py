@@ -722,8 +722,14 @@ class SqlExpr(Fns):  # noqa: PLW1641
         Returns:
             Self: A list expression with repeated values.
         """
-        expr = self.new(by, as_col=True).list.range().list.eval(self).inner
-        return self._cls(expr)
+        return self._cls(
+            self
+            .new(by, as_col=True)
+            .list.range()
+            .list.eval(self)
+            .alias(self.inner.output_name)
+            .inner
+        )
 
     def replace(self, old: IntoExpr, new: IntoExpr) -> Self:
         """Replace values.

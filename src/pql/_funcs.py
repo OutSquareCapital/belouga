@@ -5,7 +5,6 @@ import pyochain as pc
 
 from . import sql
 from ._expr import Expr
-from ._meta import Marker, SingleMeta
 from .selectors import Resolver
 from .sql import SqlExpr
 from .sql.typing import IntoExpr, IntoExprColumn, PythonLiteral
@@ -17,7 +16,7 @@ class Col:
     __slots__ = ()
 
     def __call__(self, name: str) -> Expr:
-        return Expr(sql.col(name), SingleMeta(root_name=name))
+        return Expr(sql.col(name))
 
     def __getattr__(self, name: str) -> Expr:
         return self(name)
@@ -32,7 +31,7 @@ def lit(value: PythonLiteral) -> Expr:
     Returns:
         Expr: A new expression that evaluates to the literal value.
     """
-    return Expr(sql.lit(value), SingleMeta(root_name=Marker.LITERAL))
+    return Expr(sql.lit(value))
 
 
 def len() -> Expr:

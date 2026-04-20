@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from . import sql
 from ._expr import Expr
-from ._meta import ExprMeta, Marker, SingleMeta
+from ._meta import ExprMeta
 
 if TYPE_CHECKING:
     from .sql.typing import IntoExpr
@@ -25,7 +25,7 @@ class When:
             case Expr():
                 meta = value.meta
             case _:
-                meta = SingleMeta(root_name=Marker.LITERAL)
+                meta = ExprMeta()
         return Then(self._when.then(value), meta)
 
 

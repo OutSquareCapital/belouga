@@ -118,6 +118,72 @@ def _resolve_exploded(expr: SqlExpr, *, is_distinct: bool) -> SqlExpr:
             return expr.implode()
 
 
+def _extract_root_name(node: exp.Expr) -> str:  # noqa: C901, PLR0911, PLR0912
+    match node:
+        case exp.Alias() | exp.Column():
+            return node.output_name
+        case exp.Literal() | exp.Boolean() | exp.Null():
+            return Marker.LITERAL
+        case exp.Case():
+            match node.args.get("ifs", []):
+                case [exp.If() as first_if, *_]:
+                    match first_if.args.get("true"):
+                        case exp.Expr() as then_val:
+                            name = _extract_root_name(then_val)
+                            match name:
+                                case Marker.LITERAL:
+                                    match node.args.get("default"):
+                                        case exp.Expr() as default_val:
+                                            return _extract_root_name(default_val)
+                                        case _:
+                                            return name
+                                case _:
+                                    return name
+                        case _:
+                            return Marker.LITERAL
+                case _:  # pyright: ignore[reportAny]
+                    return Marker.LITERAL
+        case exp.Anonymous() | exp.AnonymousAggFunc() | exp.Distinct() | exp.List():
+            match node.expressions:
+                case [exp.Expr() as first_arg, *_]:
+                    return _extract_root_name(first_arg)
+                case _:
+                    return Marker.LITERAL
+        case exp.Func():
+            match node.this:  # pyright: ignore[reportAny]
+                case exp.Expr() as inner:
+                    name = _extract_root_name(inner)
+                    match name:
+                        case Marker.LITERAL:
+                            return _root_col_name(node)
+                        case _:
+                            return name
+                case _:  # pyright: ignore[reportAny]
+                    return _root_col_name(node)
+        case exp.Window():
+            name = _extract_root_name(node.this)  # pyright: ignore[reportAny]
+            match name in {Marker.LITERAL, Marker.TEMP}:
+                case True:
+                    return _root_col_name(node)
+                case False:
+                    return name
+        case _:
+            match node.this:  # pyright: ignore[reportAny]
+                case exp.Expr() as inner:
+                    return _extract_root_name(inner)
+                case _:  # pyright: ignore[reportAny]
+                    return Marker.LITERAL
+
+
+def _root_col_name(node: exp.Expr) -> str:
+    return (
+        _find_all(node, exp.Column)
+        .map(lambda c: c.output_name)
+        .find(lambda name: name != Marker.TEMP)
+        .unwrap_or(Marker.LITERAL)
+    )
+
+
 @dataclass(slots=True)
 class ExprMeta:
     """Metadata for expressions, used for tracking properties that affect query generation."""
@@ -125,9 +191,8 @@ class ExprMeta:
     alias_name: pc.Option[Aliaser] = field(default_factory=lambda: pc.NONE)
 
     def into_resolved(self, expr: SqlExpr, _cols: Cols) -> pc.Iter[ResolvedExpr]:
-        name = (
-            pc.Seq((expr.inner.output_name,)).into(self.get_output_names, expr).first()
-        )
+        output_name = (_extract_root_name(expr.inner),)
+        name = pc.Seq(output_name).into(self.get_output_names, expr).first()
         return ResolvedExpr(expr, name).into(pc.Iter.once)
 
     def get_output_names(self, base_names: Cols, expr: SqlExpr) -> Cols:
@@ -153,16 +218,6 @@ class ExprMeta:
 
     def unalias(self) -> Self:
         return replace(self, alias_name=pc.NONE)
-
-
-@dataclass(slots=True)
-class SingleMeta(ExprMeta):
-    root_name: str = field(kw_only=True)
-
-    @override
-    def into_resolved(self, expr: SqlExpr, cols: Cols) -> pc.Iter[ResolvedExpr]:
-        name = pc.Seq((self.root_name,)).into(self.get_output_names, expr).first()
-        return ResolvedExpr(expr, name).into(pc.Iter.once)
 
 
 @dataclass(slots=True)
