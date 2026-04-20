@@ -258,4 +258,4 @@ class ScanSource:
     def from_none(cls) -> Self:
         from .._meta import Marker
 
-        return cls.from_dict({Marker.EMPTY: ()})
+        return cls.from_dict({Marker.TEMP: ()})

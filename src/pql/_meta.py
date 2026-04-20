@@ -31,19 +31,13 @@ class Marker(StrEnum):
     ELEMENT = auto()
     LITERAL = auto()
     LEN = auto()
-    EMPTY = "__pql_empty__"
-    """Marker for empty `LazyFrames`.
-
-    DuckDB doesn't allow empty `DuckDBPyRelation`, so we need to create an empty column that is cleaned up afterwards if we want to convert to another type of empty frame."""
     TEMP = "__pql_temp__"
-
-    IDX = "__pql_idx__"
 
     def to_expr(self) -> SqlExpr:
         return sql.col(self.value)
 
     @classmethod
-    def replace_col(cls, template: SqlExpr, column_name: str) -> SqlExpr:
+    def replace_col(cls, expr: SqlExpr, column_name: str) -> SqlExpr:
         target = exp.column(column_name)
 
         def _replacer(node: exp.Expr) -> exp.Expr:
@@ -53,15 +47,15 @@ class Marker(StrEnum):
                 case _:
                     return node
 
-        return SqlExpr(template.inner.transform(_replacer))  # pyright: ignore[reportUnknownMemberType, reportAny]
+        return SqlExpr(expr.inner.transform(_replacer))  # pyright: ignore[reportUnknownMemberType, reportAny]
 
     @classmethod
     def drop_marker(cls, result: IntoFrameT, cols: Collection[str]) -> IntoFrameT:
         import narwhals as nw
 
-        match cls.EMPTY in cols:
+        match cls.TEMP in cols:
             case True:
-                return nw.from_native(result).drop(cls.EMPTY).to_native()
+                return nw.from_native(result).drop(cls.TEMP).to_native()
             case False:
                 return result
 

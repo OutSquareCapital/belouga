@@ -329,12 +329,12 @@ class LazyFrame(sql.CoreHandler[ScanSource]):
 
         def _with_idx_and_len() -> Self:
             return self.with_columns(
-                sql.row_number().window().sub(1).alias(Marker.IDX),
+                sql.row_number().window().sub(1).alias(Marker.TEMP),
                 sql.lit(1).count().window().alias(Marker.LEN),
             )
 
         def _from_end_start(off: int) -> SqlExpr:
-            return Marker.IDX.to_expr().ge(Marker.LEN.to_expr().add(off))
+            return Marker.TEMP.to_expr().ge(Marker.LEN.to_expr().add(off))
 
         def _filter_lf(
             lf_length: pc.Option[int], offset: int
@@ -344,33 +344,35 @@ class LazyFrame(sql.CoreHandler[ScanSource]):
                     msg = f"negative slice lengths ({length}) are invalid for LazyFrame"
                     return pc.Err(ValueError(msg))
                 case (len_val, offset) if offset >= 0:
-                    return pc.Ok(
+                    lf = (
                         _slct_all()
                         .from_("src")
                         .limit(len_val.unwrap_or(MAX_I64))
                         .offset(offset)
                         .pipe(self._execute, src=self.inner)
                     )
+                    return pc.Ok(lf)
                 case (pc.Some(0), _):
                     return pc.Ok(self.limit(0))
                 case (pc.Some(length), offset):
-                    return pc.Ok(
-                        _with_idx_and_len()
-                        .filter(
-                            _from_end_start(offset).and_(
-                                Marker.IDX.to_expr().lt(
-                                    Marker.LEN.to_expr().add(offset).add(length)
-                                )
-                            )
+                    predicate = _from_end_start(offset).and_(
+                        Marker.TEMP.to_expr().lt(
+                            Marker.LEN.to_expr().add(offset).add(length)
                         )
-                        .drop(Marker.IDX, Marker.LEN)
                     )
+                    lf = (
+                        _with_idx_and_len()
+                        .filter(predicate)
+                        .drop(Marker.TEMP, Marker.LEN)
+                    )
+                    return pc.Ok(lf)
                 case (_, offset):
-                    return pc.Ok(
+                    lf = (
                         _with_idx_and_len()
                         .filter(_from_end_start(offset))
-                        .drop(Marker.IDX, Marker.LEN)
+                        .drop(Marker.TEMP, Marker.LEN)
                     )
+                    return pc.Ok(lf)
 
         return _filter_lf(pc.Option(length), offset).unwrap()
 
