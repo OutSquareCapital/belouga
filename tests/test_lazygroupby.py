@@ -12,26 +12,28 @@ pql_salary = pql.col("salary")
 pl_salary = pl.col("salary")
 assert_eq = partial(assert_frame_equal, check_dtypes=False, check_row_order=False)
 
+_DF = pl.DataFrame({
+    "id": [1, 2, 3, 4, 5],
+    "name": ["Alice", "Bob", "Charlie", "David", "Eve"],
+    "sex": ["F", "M", "M", "M", "F"],
+    "age": [25, 30, 35, 28, 22],
+    "salary": [50000.0, 60000.0, 75000.0, 55000.0, 45000.0],
+    "department": [
+        "Engineering",
+        "Sales",
+        "Engineering",
+        "Sales",
+        "Engineering",
+    ],
+    "is_active": [True, True, False, True, True],
+    "value": [10.0, None, 30.0, None, 50.0],
+    "category": ["A", "B", None, "A", "B"],
+})
+
 
 @pytest.fixture
 def sample_df() -> pl.DataFrame:
-    return pl.DataFrame({
-        "id": [1, 2, 3, 4, 5],
-        "name": ["Alice", "Bob", "Charlie", "David", "Eve"],
-        "sex": ["F", "M", "M", "M", "F"],
-        "age": [25, 30, 35, 28, 22],
-        "salary": [50000.0, 60000.0, 75000.0, 55000.0, 45000.0],
-        "department": [
-            "Engineering",
-            "Sales",
-            "Engineering",
-            "Sales",
-            "Engineering",
-        ],
-        "is_active": [True, True, False, True, True],
-        "value": [10.0, None, 30.0, None, 50.0],
-        "category": ["A", "B", None, "A", "B"],
-    })
+    return _DF
 
 
 def test_agg(sample_df: pl.DataFrame) -> None:
@@ -39,13 +41,13 @@ def test_agg(sample_df: pl.DataFrame) -> None:
         pql
         .LazyFrame(sample_df)
         .group_by("department")
-        .agg(pql_salary.mean().alias("mean_salary"))
+        .agg(pql_salary.mean())
         .sort("department")
         .collect(),
         sample_df
         .lazy()
         .group_by("department")
-        .agg(pl_salary.mean().alias("mean_salary"))
+        .agg(pl_salary.mean())
         .sort("department")
         .collect(),
     )
@@ -173,19 +175,13 @@ def test_agg_all_exclude(sample_df: pl.DataFrame) -> None:
         pql
         .LazyFrame(sample_df)
         .group_by("department")
-        .agg(
-            pql.all(exclude=["category"]),
-            pql.col("category").str.join(sep).alias("category"),
-        )
+        .agg(pql.all(exclude="category"), pql.col("category").str.join(sep))
         .sort("department")
         .collect(),
         sample_df
         .lazy()
         .group_by("department")
-        .agg(
-            pl.all().exclude("category"),
-            pl.col("category").str.join(sep).alias("category"),
-        )
+        .agg(pl.all().exclude("category"), pl.col("category").str.join(sep))
         .sort("department")
         .collect(),
     )

@@ -20,14 +20,14 @@ def test_with_fields() -> None:
             pql_struct.field("b").alias("f"),
             g=pql_struct.field("c"),
             h="structs",
-        ).alias("structs"),
+        ),
         pl_struct.with_fields(
             "structs",
             pl_struct.field("a").alias("e"),
             pl_struct.field("b").alias("f"),
             g=pl_struct.field("c"),
             h="structs",
-        ).alias("structs"),
+        ),
     )
 
 

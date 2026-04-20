@@ -14,10 +14,7 @@ pl_salary = pl.col("salary").name
 
 
 def test_name_keep_after_alias() -> None:
-    assert_eq(
-        pql_x.alias("renamed").name.keep(),
-        pl_x.alias("renamed").name.keep(),
-    )
+    assert_eq(pql_x.alias("renamed").name.keep(), pl_x.alias("renamed").name.keep())
 
 
 def test_name_map() -> None:

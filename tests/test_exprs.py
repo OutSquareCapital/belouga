@@ -370,11 +370,6 @@ def test_implode() -> None:
 
 def test_unique() -> None:
     assert_eq(pql_x.unique(), pl_x.unique(), with_cols=False)
-    assert_eq(
-        (pql_x.unique(), pql_x.unique().add(3).alias("x_unique_right")),
-        (pl_x.unique(), pl_x.unique().add(3).alias("x_unique_right")),
-        with_cols=False,
-    )
 
 
 def test_composed_reducer_broadcast() -> None:

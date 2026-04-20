@@ -27,18 +27,10 @@ def test_n_unique() -> None:
 def test_contains() -> None:
     assert_eq(pql_list_num.contains(2), pl_list_num.contains(2))
     assert_eq(
-        (
-            pql_list_num.contains(pql.lit(None)).alias("x_nulls_neq"),
-            pql_list_num.contains(pql.col("x")).alias("x_y"),
-        ),
-        (
-            pl
-            .col("list_num")
-            .list.contains(pl.lit(None), nulls_equal=False)
-            .alias("x_nulls_neq"),
-            pl_list_num.contains(pl.col("x")).alias("x_y"),
-        ),
+        pql_list_num.contains(pql.lit(None)),
+        pl_list_num.contains(pl.lit(None), nulls_equal=False),
     )
+    assert_eq(pql_list_num.contains(pql.col("x")), pl_list_num.contains(pl.col("x")))
 
 
 def test_count_matches() -> None:
@@ -83,22 +75,12 @@ def test_sum() -> None:
     assert_eq(pql_list_num.sum(), pl_list_num.sum())
 
 
-def test_sort() -> None:
+@pytest.mark.parametrize("descending", [True, False])
+@pytest.mark.parametrize("nulls_last", [True, False])
+def test_sort(descending: bool, nulls_last: bool) -> None:
     assert_eq(
-        (
-            pql_list_num.sort().alias("x_sorted"),
-            pql
-            .col("list_num")
-            .list.sort(descending=True, nulls_last=True)
-            .alias("x_sorted_desc"),
-        ),
-        (
-            pl_list_num.sort().alias("x_sorted"),
-            pl
-            .col("list_num")
-            .list.sort(descending=True, nulls_last=True)
-            .alias("x_sorted_desc"),
-        ),
+        pql_list_num.sort(descending=descending, nulls_last=nulls_last),
+        pl_list_num.sort(descending=descending, nulls_last=nulls_last),
     )
 
 

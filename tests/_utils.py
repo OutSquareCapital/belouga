@@ -1,4 +1,4 @@
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from typing import NamedTuple, override
 
@@ -15,7 +15,6 @@ from ._data import sample_lf, sample_pql
 _ = install(show_locals=True)
 type PlFn = Callable[..., pl.Expr]
 type PqlFn = Callable[..., pql.Expr]
-type Exprs[T: pl.Expr | pql.Expr] = T | Iterable[T]
 
 
 class Fns(NamedTuple):
@@ -60,13 +59,13 @@ def _assert(
 
 
 def assert_eq(
-    pql_exprs: Exprs[pql.Expr], polars_exprs: Exprs[pl.Expr], *, with_cols: bool = True
+    pql_expr: pql.Expr, polars_expr: pl.Expr, *, with_cols: bool = True
 ) -> None:
-    _assert(sample_lf().select(polars_exprs), sample_pql().select(pql_exprs).collect())
+    _assert(sample_lf().select(polars_expr), sample_pql().select(pql_expr).collect())
     if with_cols:
         _assert(
-            sample_lf().with_columns(polars_exprs),
-            sample_pql().with_columns(pql_exprs).collect(),
+            sample_lf().with_columns(polars_expr),
+            sample_pql().with_columns(pql_expr).collect(),
         )
 
 

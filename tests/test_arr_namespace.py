@@ -24,20 +24,9 @@ def test_unique() -> None:
 def test_contains() -> None:
     pql_f = pql_arr.contains
     pl_f = pl_arr.contains
-    assert_eq(
-        (
-            pql_f(pql.lit(None)).alias("none"),
-            pql_f(3).alias("3"),
-        ),
-        (
-            pl_f(pl.lit(None), nulls_equal=False).alias("none"),
-            pl_f(3).alias("3"),
-        ),
-    )
-    assert_eq(
-        pql_arr_str_vals.contains("b").alias("str_contains"),
-        pl_arr_str_vals.contains("b").alias("str_contains"),
-    )
+    assert_eq(pql_f(pql.lit(None)), pl_f(pl.lit(None), nulls_equal=False))
+    assert_eq(pql_f(3), pl_f(3))
+    assert_eq(pql_arr_str_vals.contains("b"), pl_arr_str_vals.contains("b"))
 
 
 def test_count_matches() -> None:

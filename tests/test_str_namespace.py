@@ -1,5 +1,3 @@
-from collections.abc import Iterable
-
 import polars as pl
 import pyochain as pc
 import pytest
@@ -11,8 +9,10 @@ type TestArgs = tuple[pql.Expr | str, pl.Expr | str]
 
 pql_text = pql.col("text")
 pql_text_short = pql.col("text_short")
+pql_dt_str = pql.col("dt_str")
 pl_text = pl.col("text")
 pl_text_short = pl.col("text_short")
+pl_dt_str = pl.col("dt_str")
 
 _LF = pql.LazyFrame({
     "text": [
@@ -117,12 +117,10 @@ def sample_df() -> pql.LazyFrame:
     return _LF
 
 
-def assert_eq(
-    pql_exprs: pql.Expr | Iterable[pql.Expr], polars_exprs: pl.Expr | Iterable[pl.Expr]
-) -> None:
+def assert_eq(pql_expr: pql.Expr, polars_expr: pl.Expr) -> None:
     assert_frame_equal(
-        sample_df().select(pql_exprs).lazy(),
-        sample_df().lazy().select(polars_exprs),
+        sample_df().select(pql_expr).lazy(),
+        sample_df().lazy().select(polars_expr),
         check_dtypes=False,
         check_row_order=False,
     )
@@ -163,21 +161,14 @@ def test_ends_with() -> None:
 
 
 def test_replace() -> None:
+    pql_replace = pql_text.str.replace
+    pl_replace = pl_text.str.replace
     hi = "Hi"
-    assert_eq(pql_text.str.replace("Hello", hi), pl_text.str.replace("Hello", hi))
+    assert_eq(pql_replace("Hello", hi), pl_replace("Hello", hi))
     sep = "_"
-    assert_eq(
-        (
-            pql_text.str.replace("a", sep, n=2),
-            pql_text.str.replace("a", sep, n=0).alias("replaced_0"),
-            pql_text.str.replace("a", sep, n=-1).alias("replaced_minus1"),
-        ),
-        (
-            pl_text.str.replace("a", sep, n=2),
-            pl_text.str.replace("a", sep, n=0).alias("replaced_0"),
-            pl_text.str.replace("a", sep, n=-1).alias("replaced_minus1"),
-        ),
-    )
+    assert_eq(pql_replace("a", sep, n=2), pl_replace("a", sep, n=2))
+    assert_eq(pql_replace("a", sep, n=0), pl_replace("a", sep, n=0))
+    assert_eq(pql_replace("a", sep, n=-1), pl_replace("a", sep, n=-1))
 
 
 _SPACE = " "
@@ -240,43 +231,23 @@ def test_extract_all() -> None:
 
 def test_extract() -> None:
     ptrn = r"(\w+)"
-
-    assert_eq(
-        (
-            pql_text.str.extract(ptrn).alias("group_default"),
-            pql
-            .col("text")
-            .str.extract(r"(\w+)\s+(\w+)", group_index=2)
-            .alias("group_index_2"),
-            pql_text.str.extract(ptrn, group_index=0).alias("all"),
-        ),
-        (
-            pl_text.str.extract(r"(\w+)").alias("group_default"),
-            pl
-            .col("text")
-            .str.extract(r"(\w+)\s+(\w+)", group_index=2)
-            .alias("group_index_2"),
-            pl_text.str.extract(pl.lit(r"(\w+)"), group_index=0).alias("all"),
-        ),
-    )
+    ptrn_2 = r"(\w+)\s+(\w+)"
+    pql_extract = pql_text.str.extract
+    pl_extract = pl_text.str.extract
+    assert_eq(pql_extract(ptrn), pl_extract(ptrn))
+    assert_eq(pql_extract(ptrn_2, group_index=2), pl_extract(ptrn_2, group_index=2))
+    assert_eq(pql_extract(ptrn, group_index=0), pl_extract(ptrn, group_index=0))
 
 
 def test_find() -> None:
     pattern = r"[A-Z][a-z]+"
     world = "World"
     missing = "missing"
-    assert_eq(
-        (
-            pql_text.str.find(world, literal=True).alias("lit_found"),
-            pql_text.str.find(missing, literal=True).alias("lit_none"),
-            pql_text.str.find(pattern, literal=False).alias("regex"),
-        ),
-        (
-            pl_text.str.find(world, literal=True).alias("lit_found"),
-            pl_text.str.find(missing, literal=True).alias("lit_none"),
-            pl_text.str.find(pattern, literal=False).alias("regex"),
-        ),
-    )
+    pql_find = pql_text.str.find
+    pl_find = pl_text.str.find
+    assert_eq(pql_find(world, literal=True), pl_find(world, literal=True))
+    assert_eq(pql_find(missing, literal=True), pl_find(missing, literal=True))
+    assert_eq(pql_find(pattern, literal=False), pl_find(pattern, literal=False))
 
 
 def test_escape_regex() -> None:
@@ -313,8 +284,7 @@ def test_to_date() -> None:
 def test_to_datetime() -> None:
     fmt = "%Y-%m-%d %H:%M:%S"
     assert_eq(
-        pql.col("dt_str").str.to_datetime(format=fmt),
-        pl.col("dt_str").str.to_datetime(format=fmt),
+        pql_dt_str.str.to_datetime(format=fmt), pl_dt_str.str.to_datetime(format=fmt)
     )
 
 
@@ -328,10 +298,7 @@ def test_to_time() -> None:
 
 def test_strptime() -> None:
     fmt = "%Y-%m-%d %H:%M:%S"
-    assert_eq(
-        pql.col("dt_str").str.strptime(fmt),
-        pl.col("dt_str").str.strptime(pl.Datetime, fmt),
-    )
+    assert_eq(pql_dt_str.str.strptime(fmt), pl_dt_str.str.strptime(pl.Datetime, fmt))
 
 
 def test_normalize() -> None:
@@ -381,24 +348,23 @@ def test_strip_suffix(suffixes: TestArgs) -> None:
 
 
 def test_replace_all() -> None:
-
+    pql_replace_all = pql_text.str.replace_all
+    pl_replace_all = pl_text.str.replace_all
     assert_eq(
-        pql_text.str.replace_all("o", "0", literal=True),
-        pl_text.str.replace_all("o", "0", literal=True),
+        pql_replace_all("o", "0", literal=True), pl_replace_all("o", "0", literal=True)
     )
 
     assert_eq(
-        pql_text.str.replace_all("l", "L", literal=True),
-        pl_text.str.replace_all("l", "L", literal=True),
+        pql_replace_all("l", "L", literal=True), pl_replace_all("l", "L", literal=True)
     )
 
     assert_eq(
-        pql_text.str.replace_all(r"\d+", "X", literal=False),
-        pl_text.str.replace_all(r"\d+", "X", literal=False),
+        pql_replace_all(r"\d+", "X", literal=False),
+        pl_replace_all(r"\d+", "X", literal=False),
     )
     assert_eq(
-        pql_text.str.replace_all("suffix", pql.col("suffix_val"), literal=True),
-        pl_text.str.replace_all("suffix", pl.col("suffix_val"), literal=True),
+        pql_replace_all("suffix", pql.col("suffix_val"), literal=True),
+        pl_replace_all("suffix", pl.col("suffix_val"), literal=True),
     )
 
 

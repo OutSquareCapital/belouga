@@ -297,16 +297,14 @@ def test_rename(lf: pql.LazyFrame, mapping: dict[str, str]) -> None:
     assert_lf_eq(expected, result)
 
 
-def test_with_columns_add_only_uses_star(lf: pql.LazyFrame) -> None:
-    expr = pql_age.mul(2).alias("age2")
-    parsed = m.ExprPlan(lf.columns, expr, (), {}).with_columns_ctx().find(exp.Star)
-    assert parsed is not None
+def test_with_columns_star_exprs(lf: pql.LazyFrame) -> None:
+    cols = lf.columns
 
+    def _plan(expr: pql.Expr) -> exp.Star | None:
+        return m.ExprPlan(cols, expr, (), {}).with_columns_ctx().find(exp.Star)
 
-def test_with_columns_override_enumerates_columns(lf: pql.LazyFrame) -> None:
-    expr = pql_age.mul(2).alias("age")
-    parsed = m.ExprPlan(lf.columns, expr, (), {}).with_columns_ctx().find(exp.Star)
-    assert parsed is None
+    assert _plan(pql_age) is None
+    assert _plan(pql_age.alias("age2")) is not None
 
 
 def test_with_columns_single_expr(lf: pql.LazyFrame) -> None:
@@ -430,14 +428,15 @@ def test_top_bottom_k_single(
 @pytest.mark.parametrize("seed", [0, 42, 12345])
 def test_hash_seed(seed: int) -> None:
     df = pql.LazyFrame({"text": ["apple", "banana", "apple"]})
-    result = df.select(pql_text.hash(seed=seed).alias("h")).collect()
+    hashes = df.select(pql_text.hash(seed)).collect().get_column("text").to_list()
     # Check that same input produces same hash
-    hashes = result["h"].to_list()
     assert hashes[0] == hashes[2], "Same input should produce same hash"
     # Different seed should produce different hash
     other_seed = 1 if seed == 0 else 0
-    result_other = df.select(pql_text.hash(seed=other_seed).alias("h")).collect()
-    assert hashes[0] != result_other["h"][0], (
+    hashes_other = (
+        df.select(pql_text.hash(other_seed)).collect().get_column("text").to_list()
+    )
+    assert hashes[0] != hashes_other[0], (
         "Different seeds should produce different hashes"
     )
 
