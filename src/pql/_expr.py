@@ -42,7 +42,7 @@ class Expr(sql.CoreHandler[SqlExpr]):
         return self.__class__(value, self.meta)
 
     def _as_lit(self, expr: SqlExpr) -> Self:
-        return self.__class__(expr.alias(Marker.LIT), self.meta.unalias())
+        return self.__class__(expr.alias(Marker.LITERAL), self.meta.unalias())
 
     @property
     def str(self) -> ExprStringNameSpace:

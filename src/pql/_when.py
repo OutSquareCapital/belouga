@@ -25,7 +25,7 @@ class When:
             case Expr():
                 meta = value.meta
             case _:
-                meta = SingleMeta(root_name=Marker.LIT)
+                meta = SingleMeta(root_name=Marker.LITERAL)
         return Then(self._when.then(value), meta)
 
 

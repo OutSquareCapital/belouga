@@ -32,7 +32,7 @@ def lit(value: PythonLiteral) -> Expr:
     Returns:
         Expr: A new expression that evaluates to the literal value.
     """
-    return Expr(sql.lit(value), SingleMeta(root_name=Marker.LIT))
+    return Expr(sql.lit(value), SingleMeta(root_name=Marker.LITERAL))
 
 
 def len() -> Expr:

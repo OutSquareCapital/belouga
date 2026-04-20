@@ -29,8 +29,8 @@ class Marker(StrEnum):
     """Column name markers for special expression types."""
 
     ELEMENT = auto()
-    LIT = "literal"
-    LEN = "len"
+    LITERAL = auto()
+    LEN = auto()
     EMPTY = "__pql_empty__"
     """Marker for empty `LazyFrames`.
 
@@ -198,8 +198,10 @@ class MultiMeta(ExprMeta):
                 )
 
 
-def _find_all[T: exp.Expr](expr: exp.Expr, *exprs: type[T]) -> pc.Iter[T]:
-    return pc.Iter(expr.find_all(*exprs))
+def _find_all[T: exp.Expr](
+    expr: exp.Expr, *exprs: type[T], bfs: bool = True
+) -> pc.Iter[T]:
+    return pc.Iter(expr.find_all(*exprs, bfs=bfs))
 
 
 @dataclass(slots=True, init=False)
