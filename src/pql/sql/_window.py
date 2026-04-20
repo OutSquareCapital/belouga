@@ -57,7 +57,7 @@ class FnArgs(TypedDict):
 
 
 class ClauseArgs(TypedDict):
-    partition_by: pc.Option[pc.Seq[exp.Expr]]
+    partition_by: pc.Option[list[exp.Expr]]
     order: pc.Option[exp.Order]
     spec: pc.Option[exp.WindowSpec]
 
@@ -78,9 +78,9 @@ def get_order(
 
 def get_partition(
     partition_by: pc.Option[TryIter[IntoExprColumn]],
-) -> pc.Option[pc.Seq[exp.Expr]]:
+) -> pc.Option[list[exp.Expr]]:
     return partition_by.map(try_iter).map(
-        lambda cols: cols.map(pql_into_glot).collect()
+        lambda cols: cols.map(pql_into_glot).collect(list)
     )
 
 
