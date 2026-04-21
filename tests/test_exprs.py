@@ -76,11 +76,11 @@ def test_repr() -> None:
     assert txt in repr(pql.col("name"))
 
 
-def test_sql_list_sort_uses_array_sort_constructor() -> None:
-    list_sort = pql.sql.col("arr").list.sort().inner
-    array_sort = pql.sql.col("arr").arr.sort().inner
+def test_list_sort_uses_array_sort_constructor() -> None:
+    list_sort = pql.col("arr").list.sort().inner.__class__
+    array_sort = pql.col("arr").arr.sort().inner.__class__
 
-    assert type(list_sort) is type(array_sort)
+    assert list_sort is array_sort
 
 
 def test_and() -> None:
