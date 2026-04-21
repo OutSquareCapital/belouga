@@ -29,17 +29,13 @@ from ._funcs import (
 )
 from ._scans import ScanSource
 from ._when import ChainedThen, ChainedWhen, Then, When, when
-from ._window import BoundsValues, NullsClause, SortClause, rolling_agg
 
 __all__ = [
-    "BoundsValues",
     "ChainedThen",
     "ChainedWhen",
     "CoreHandler",
     "Expr",
-    "NullsClause",
     "ScanSource",
-    "SortClause",
     "Then",
     "When",
     "all",
@@ -61,7 +57,6 @@ __all__ = [
     "min",
     "min_horizontal",
     "reduce",
-    "rolling_agg",
     "row_number",
     "selectors",
     "sum",
