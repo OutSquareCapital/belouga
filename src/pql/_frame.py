@@ -941,60 +941,94 @@ class LazyFrame(sql.CoreHandler[ScanSource]):
             Self: A new LazyFrame with duplicates removed.
         """
 
-        def _marker(
-            subset_cols: Iterable[IntoExprColumn],
-        ) -> pc.Result[Expr, ValueError]:
-            match (
-                keep,
-                pc.Option(order_by).map(lambda value: try_iter(value).collect()),
-            ):
-                case ("none", _):
+        def _query() -> pc.Result[exp.Select, ValueError]:  # noqa: PLR0911
+            match (keep, try_seq(order_by), try_seq(subset)):
+                case ("none", _, pc.NONE):
                     return pc.Ok(
-                        sql.all().count().window(partition_by=pc.Some(subset_cols))
+                        _slct_all()
+                        .from_("src")
+                        .group_by("ALL")
+                        .having(sql.lit(1).count().eq(1).inner)
                     )
-                case ("first", pc.Some(order_by_cols)):
+                case ("any", _, pc.NONE):
+                    return pc.Ok(_slct_all().from_("src").distinct())
+                case ("first" | "last", pc.Some(_), pc.NONE):
+                    return pc.Ok(_slct_all().from_("src").distinct())
+                case ("none", _, pc.Some(subset_names)):
+                    subset_exprs = subset_names.iter().map(exp.column).collect()
+                    rhs = (
+                        exp
+                        .select(*subset_exprs)
+                        .from_("src")
+                        .group_by(*subset_exprs)
+                        .having(sql.lit(1).count().eq(1).inner)
+                        .subquery("rhs")
+                    )
+                    condition = (
+                        subset_names
+                        .iter()
+                        .map(
+                            lambda name: exp.NullSafeEQ(
+                                this=sql.col(name, table="lhs").inner,
+                                expression=sql.col(name, table="rhs").inner,
+                            )
+                        )
+                        .map(Expr)
+                        .reduce(Expr.and_)
+                        .inner
+                    )
+                    res = (
+                        exp
+                        .select("lhs.*")
+                        .from_("src AS lhs")
+                        .join(rhs, on=condition, join_type="semi")
+                    )
+                    return pc.Ok(res)
+                case ("last", pc.Some(order_cols), pc.Some(subset_names)):
                     return pc.Ok(
-                        sql.row_number().window(
-                            partition_by=pc.Some(subset_cols),
-                            order_by=pc.Some(order_by_cols),
+                        _distinct_on(
+                            subset_names, order_cols, descending=True, nulls_last=True
                         )
                     )
-                case ("last", pc.Some(order_by_cols)):
+                case ("any" | "first", order_cols, pc.Some(subset_names)):
                     return pc.Ok(
-                        sql.row_number().window(
-                            partition_by=pc.Some(subset_cols),
-                            order_by=pc.Some(order_by_cols),
-                            descending=True,
-                            nulls_last=True,
+                        _distinct_on(
+                            subset_names,
+                            order_cols.unwrap_or_else(pc.Seq[str].new),
+                            descending=False,
+                            nulls_last=False,
                         )
                     )
-                case ("first" | "last", pc.NONE):
+                case _:
                     msg = """`order_by` must be specified when `keep` is 'first' or 'last'
                     because LazyFrame makes no assumptions about row order."""
-
                     return pc.Err(ValueError(msg))
-                case _:
-                    return pc.Ok(
-                        sql.row_number().window(partition_by=pc.Some(subset_cols))
-                    )
 
-        return (
-            pc
-            .Option(subset)
-            .map(try_iter)
-            .unwrap_or_else(self.columns.iter)
-            .into(_marker)
-            .map(
-                lambda expr: (
-                    expr
-                    .alias(Marker.TEMP)
-                    .pipe(self.with_columns)
-                    .filter(Marker.TEMP.to_expr().eq(1))
-                    .drop(Marker.TEMP)
+        def _distinct_on(
+            subset_names: pc.Seq[str],
+            order_names: pc.Seq[str],
+            *,
+            descending: bool,
+            nulls_last: bool,
+        ) -> exp.Select:
+            order_exprs = (
+                subset_names
+                .iter()
+                .map(sql.col)
+                .chain(
+                    order_names.iter().map(
+                        lambda name: sql.col(name).set_order(
+                            desc=descending, nulls_last=nulls_last
+                        )
+                    )
                 )
+                .map(lambda expr: expr.inner)
             )
-            .unwrap()
-        )
+            return (
+                _slct_all().from_("src").distinct(*subset_names).order_by(*order_exprs)
+            )
+
+        return _query().unwrap().pipe(self._execute, src=self.inner)
 
     def pivot(  # noqa: C901, PLR0913
         self,
