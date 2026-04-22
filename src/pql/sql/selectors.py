@@ -39,11 +39,11 @@ class Resolver:
     def __call__(self, cols: Cols) -> Cols:
         return self._fn(cols)
 
-    def into_meta(self) -> MultiMeta:
-        return MultiMeta(resolver=self)
-
     def into_selector(self) -> Selector:
         return Selector(fn.all().inner, self.into_meta())
+
+    def into_meta(self) -> MultiMeta:
+        return MultiMeta(resolver=self)
 
     @classmethod
     def all_columns(cls) -> Self:
@@ -192,12 +192,12 @@ class Selector(Expr):
     def __sub__(self, other: IntoExpr) -> Self | Expr:
         return self.difference(other)
 
-    def complement(self) -> Selector:
-        return self._resolver.complement().into_selector()
-
     @override
     def __invert__(self) -> Selector:
         return self.complement()
+
+    def complement(self) -> Selector:
+        return self._resolver.complement().into_selector()
 
 
 def by_dtype(*dtypes: type[dt.DataType]) -> Selector:  # pyright: ignore[reportUnusedParameter]

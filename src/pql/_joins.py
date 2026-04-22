@@ -25,19 +25,12 @@ class JoinBuilder:
     left: PyoCollection[str]
     right: PyoCollection[str]
 
-    @staticmethod
-    def rhs(name: str) -> Expr:
-        return _RHS(name)
+    def equals(self, left: str, right: str) -> Expr:
+        return self.lhs(left).eq(self.rhs(right))
 
     @staticmethod
     def lhs(name: str) -> Expr:
         return _LHS(name)
-
-    def equals(self, left: str, right: str) -> Expr:
-        return self.lhs(left).eq(self.rhs(right))
-
-    def _aliased(self, name: str) -> Expr:
-        return self.rhs(name).alias(f"{name}{self.suffix}")
 
     def for_inner_left(self, name: str) -> pc.Option[Expr]:
         match (name in self.left, name in self.right):
@@ -61,6 +54,13 @@ class JoinBuilder:
                 return self._aliased(name)
             case _:
                 return self.rhs(name)
+
+    def _aliased(self, name: str) -> Expr:
+        return self.rhs(name).alias(f"{name}{self.suffix}")
+
+    @staticmethod
+    def rhs(name: str) -> Expr:
+        return _RHS(name)
 
 
 class JoinKeys[T: pc.Seq[str] | str](NamedTuple):

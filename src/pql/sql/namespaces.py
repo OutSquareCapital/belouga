@@ -82,23 +82,6 @@ class Lit:
 class ExprStringNameSpace(StringFns[Expr]):
     """String function namespace for SQL expressions."""
 
-    def concat(self, *args: IntoExpr) -> Expr:
-        """Concatenates multiple strings or lists.
-
-        `NULL` inputs are skipped.
-
-        See also operator `||`.
-
-        **SQL name**: *concat*
-
-        Args:
-            *args (IntoExpr): `ANY` expression
-
-        Returns:
-            Expr
-        """
-        return self._cls(func("CONCAT", self.inner, *args))
-
     def to_titlecase(self) -> Expr:
         """Convert to title case.
 
@@ -251,6 +234,23 @@ class ExprStringNameSpace(StringFns[Expr]):
             )
             .otherwise(self.lpad(width, Lit.ZERO))
         )
+
+    def concat(self, *args: IntoExpr) -> Expr:
+        """Concatenates multiple strings or lists.
+
+        `NULL` inputs are skipped.
+
+        See also operator `||`.
+
+        **SQL name**: *concat*
+
+        Args:
+            *args (IntoExpr): `ANY` expression
+
+        Returns:
+            Expr
+        """
+        return self._cls(func("CONCAT", self.inner, *args))
 
     def replace_all(
         self, pattern: IntoExprColumn, value: IntoExprColumn, *, literal: bool = False
@@ -489,22 +489,6 @@ class ExprStructNameSpace(StructFns[Expr]):
 class ExprDateTimeNameSpace(DateTimeFns[Expr]):
     """Datetime function namespace for SQL expressions."""
 
-    def trunc(self, precision: IntoExprColumn) -> Expr:
-        """Truncate to specified precision.
-
-        **SQL name**: *date_trunc*
-
-        Args:
-            precision (IntoExprColumn): `VARCHAR` expression
-
-        Examples:
-            date_trunc('hour', TIMESTAMPTZ '1992-09-20 20:38:40')
-
-        Returns:
-            T
-        """
-        return self._cls(func("DATE_TRUNC", precision, self.inner))
-
     def month_start(self) -> Expr:
         """Get the first day of the month.
 
@@ -599,22 +583,21 @@ class ExprDateTimeNameSpace(DateTimeFns[Expr]):
         """
         return self.trunc(lit(every))
 
-    def timestamp(self, time_unit: TimeUnit = "us") -> Expr:
-        """Return the number of time units since the Unix epoch.
+    def trunc(self, precision: IntoExprColumn) -> Expr:
+        """Truncate to specified precision.
+
+        **SQL name**: *date_trunc*
 
         Args:
-            time_unit (TimeUnit): The time unit to use for the epoch time. Defaults to "us".
+            precision (IntoExprColumn): `VARCHAR` expression
+
+        Examples:
+            date_trunc('hour', TIMESTAMPTZ '1992-09-20 20:38:40')
 
         Returns:
-            Expr: A new expression that evaluates to the epoch time in the specified time unit.
+            T
         """
-        match time_unit:
-            case "ms":
-                return self.epoch_ms()
-            case "us":
-                return self.epoch_us()
-            case "ns":
-                return self.epoch_ns()
+        return self._cls(func("DATE_TRUNC", precision, self.inner))
 
     def date(self) -> Expr:
         """Returns a new expression that evaluates to the date component of the datetime.
@@ -672,6 +655,23 @@ class ExprDateTimeNameSpace(DateTimeFns[Expr]):
                 return self.epoch_us().truediv(Sec.TO_MICRO).floor()
             case _:
                 return self.timestamp(time_unit)
+
+    def timestamp(self, time_unit: TimeUnit = "us") -> Expr:
+        """Return the number of time units since the Unix epoch.
+
+        Args:
+            time_unit (TimeUnit): The time unit to use for the epoch time. Defaults to "us".
+
+        Returns:
+            Expr: A new expression that evaluates to the epoch time in the specified time unit.
+        """
+        match time_unit:
+            case "ms":
+                return self.epoch_ms()
+            case "us":
+                return self.epoch_us()
+            case "ns":
+                return self.epoch_ns()
 
     def iso_year(self) -> Expr:
         """Extract the isoyear component from a date or timestamp.
@@ -746,28 +746,6 @@ class ExprListNameSpace(ListFns[Expr]):
             case _:
                 return self.var_samp()
 
-    def filter(self, lambda_arg: IntoExprColumn) -> Expr:
-        """Constructs a list from those elements of the input `list` for which the `lambda` function returns `true`.
-
-        DuckDB must be able to cast the `lambda` function's return type to `BOOL`.
-
-        The return type of `list_filter` is the same as the input list's.
-
-        **SQL name**: *filter*
-
-        Args:
-            lambda_arg (IntoExprColumn): `LAMBDA` expression
-
-        Examples:
-            filter([3, 4, 5], lambda x : x > 4)
-
-        Returns:
-            T
-        """
-        from ._funcs import fn_once
-
-        return self._cls(func("LIST_FILTER", self.inner, fn_once(lambda_arg)))
-
     def join(self, separator: IntoExprColumn, *, ignore_nulls: bool = True) -> Expr:
         """Join string values in each list with a separator.
 
@@ -807,6 +785,28 @@ class ExprListNameSpace(ListFns[Expr]):
             Expr
         """
         return self.filter(element().is_not_null())
+
+    def filter(self, lambda_arg: IntoExprColumn) -> Expr:
+        """Constructs a list from those elements of the input `list` for which the `lambda` function returns `true`.
+
+        DuckDB must be able to cast the `lambda` function's return type to `BOOL`.
+
+        The return type of `list_filter` is the same as the input list's.
+
+        **SQL name**: *filter*
+
+        Args:
+            lambda_arg (IntoExprColumn): `LAMBDA` expression
+
+        Examples:
+            filter([3, 4, 5], lambda x : x > 4)
+
+        Returns:
+            T
+        """
+        from ._funcs import fn_once
+
+        return self._cls(func("LIST_FILTER", self.inner, fn_once(lambda_arg)))
 
     def get(self, index: int) -> Expr:
         """Return the value by index in each list.
@@ -910,28 +910,6 @@ class ExprArrayNameSpace(ArrayFns[Expr]):
 
         return self.transform(fn_once(expr))
 
-    def filter(self, lambda_arg: IntoExprColumn) -> Expr:
-        """Constructs a list from those elements of the input `list` for which the `lambda` function returns `true`.
-
-        DuckDB must be able to cast the `lambda` function's return type to `BOOL`.
-
-        The return type of `list_filter` is the same as the input list's.
-
-        **SQL name**: *filter*
-
-        Args:
-            lambda_arg (IntoExprColumn): `LAMBDA` expression
-
-        Examples:
-            filter([3, 4, 5], lambda x : x > 4)
-
-        Returns:
-            T
-        """
-        from ._funcs import fn_once
-
-        return self._cls(func("ARRAY_FILTER", self.inner, fn_once(lambda_arg)))
-
     def join(self, separator: IntoExprColumn, *, ignore_nulls: bool = True) -> Expr:
         """Join string values in each array with a separator.
 
@@ -971,6 +949,28 @@ class ExprArrayNameSpace(ArrayFns[Expr]):
             Expr
         """
         return self.filter(element().is_not_null())
+
+    def filter(self, lambda_arg: IntoExprColumn) -> Expr:
+        """Constructs a list from those elements of the input `list` for which the `lambda` function returns `true`.
+
+        DuckDB must be able to cast the `lambda` function's return type to `BOOL`.
+
+        The return type of `list_filter` is the same as the input list's.
+
+        **SQL name**: *filter*
+
+        Args:
+            lambda_arg (IntoExprColumn): `LAMBDA` expression
+
+        Examples:
+            filter([3, 4, 5], lambda x : x > 4)
+
+        Returns:
+            T
+        """
+        from ._funcs import fn_once
+
+        return self._cls(func("ARRAY_FILTER", self.inner, fn_once(lambda_arg)))
 
     def get(self, index: int) -> Expr:
         """Return the value by index in each array.
@@ -1121,10 +1121,6 @@ class ExprArrayNameSpace(ArrayFns[Expr]):
 class ExprNameNameSpace(NameSpaceHandler[Expr]):
     """Name operations namespace (equivalent to pl.Expr.name)."""
 
-    def _with_alias_mapper(self, mapper: Aliaser) -> Expr:
-        expr = self.inner
-        return expr.inner.pipe(Expr, expr.meta.with_alias_mapper(mapper))
-
     def keep(self) -> Expr:
         """Keep the original name of the expression, even if it gets aliased.
 
@@ -1194,6 +1190,10 @@ class ExprNameNameSpace(NameSpaceHandler[Expr]):
             case False:
                 regex = re.compile(pattern)
                 return self._with_alias_mapper(lambda name: regex.sub(value, name))
+
+    def _with_alias_mapper(self, mapper: Aliaser) -> Expr:
+        expr = self.inner
+        return expr.inner.pipe(Expr, expr.meta.with_alias_mapper(mapper))
 
 
 @dataclass(slots=True)

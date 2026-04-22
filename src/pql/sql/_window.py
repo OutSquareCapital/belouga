@@ -50,14 +50,6 @@ class BoundArgs(TypedDict):
     exclude: pc.Option[WindowExclude]
 
 
-def get_order(
-    order_by: pc.Option[TryIter[IntoExprColumn]], **kwargs: Unpack[DirectionArgs]
-) -> pc.Option[exp.Order]:
-    return order_by.map(lambda x: try_iter(x).collect()).map(
-        lambda cols: exp.Order(expressions=_ordered(cols, **kwargs))
-    )
-
-
 def get_partition(
     partition_by: pc.Option[TryIter[IntoExprColumn]],
 ) -> pc.Option[list[exp.Expr]]:
@@ -66,42 +58,9 @@ def get_partition(
     )
 
 
-def _ordered(
-    cols: pc.Seq[IntoExprColumn], **kwargs: Unpack[DirectionArgs]
-) -> list[exp.Ordered]:
-    def _expand_clauses(*, clauses: TryIter[bool], n: int) -> pc.Iter[bool]:
-        match clauses:
-            case Iterable() as seq:
-                return pc.Iter(seq)
-            case _ as val:
-                return try_iter(val).cycle().take(n)
-
-    return (
-        cols
-        .iter()
-        .zip(
-            _expand_clauses(clauses=kwargs["descending"], n=cols.length()),
-            _expand_clauses(clauses=kwargs["nulls_last"], n=cols.length()),
-        )
-        .map_star(
-            lambda item, desc, nl: exp.Ordered(
-                this=into_expr(item), desc=desc, nulls_first=not nl
-            )
-        )
-        .collect(list)
-    )
-
-
 @dataclass(slots=True)
 class OverBuilder:
     expr: exp.Expr
-
-    def handle_nulls(self, *, ignore_nulls: bool) -> Self:
-        match ignore_nulls:
-            case True:
-                return self.__class__(exp.IgnoreNulls(this=self.expr))
-            case False:
-                return self
 
     def handle_distinct(self, *, distinct: bool) -> Self:
         match (distinct, self.expr.find(exp.Func)):
@@ -111,24 +70,6 @@ class OverBuilder:
                 return self.__class__(expr)
             case _:
                 return self
-
-    def handle_fn_order_by(self, **kwargs: Unpack[FnArgs]) -> Self:
-        def _build(cols: pc.Seq[IntoExprColumn]) -> exp.WithinGroup:
-            exprs = _ordered(
-                cols,
-                descending=kwargs["fn_descending"],
-                nulls_last=kwargs["fn_nulls_last"],
-            )
-            return exp.WithinGroup(
-                this=self.expr, expression=exp.Order(expressions=exprs)
-            )
-
-        return (
-            kwargs["fn_order_by"]
-            .map(lambda x: try_iter(x).collect().into(_build))
-            .map(self.__class__)
-            .unwrap_or(self)
-        )
 
     def handle_filter(self, filter_cond: pc.Option[IntoExprColumn]) -> Self:
         return (
@@ -151,9 +92,6 @@ class OverBuilder:
             case _:
                 return self.__class__(_inject_into_existing(expr, clauses))
 
-    def build(self) -> exp.Expr:
-        return self.expr
-
     def build_fn(
         self, *, ignore_nulls: bool = False, **kwargs: Unpack[FnArgs]
     ) -> exp.Expr:
@@ -162,6 +100,34 @@ class OverBuilder:
             .handle_fn_order_by(**kwargs)
             .handle_nulls(ignore_nulls=ignore_nulls)
             .build()
+        )
+
+    def build(self) -> exp.Expr:
+        return self.expr
+
+    def handle_nulls(self, *, ignore_nulls: bool) -> Self:
+        match ignore_nulls:
+            case True:
+                return self.__class__(exp.IgnoreNulls(this=self.expr))
+            case False:
+                return self
+
+    def handle_fn_order_by(self, **kwargs: Unpack[FnArgs]) -> Self:
+        def _build(cols: pc.Seq[IntoExprColumn]) -> exp.WithinGroup:
+            exprs = _ordered(
+                cols,
+                descending=kwargs["fn_descending"],
+                nulls_last=kwargs["fn_nulls_last"],
+            )
+            return exp.WithinGroup(
+                this=self.expr, expression=exp.Order(expressions=exprs)
+            )
+
+        return (
+            kwargs["fn_order_by"]
+            .map(lambda x: try_iter(x).collect().into(_build))
+            .map(self.__class__)
+            .unwrap_or(self)
         )
 
 
@@ -223,6 +189,40 @@ def _rewrite_forward_fill(
                     return expr, clauses
         case _:
             return expr, clauses
+
+
+def get_order(
+    order_by: pc.Option[TryIter[IntoExprColumn]], **kwargs: Unpack[DirectionArgs]
+) -> pc.Option[exp.Order]:
+    return order_by.map(lambda x: try_iter(x).collect()).map(
+        lambda cols: exp.Order(expressions=_ordered(cols, **kwargs))
+    )
+
+
+def _ordered(
+    cols: pc.Seq[IntoExprColumn], **kwargs: Unpack[DirectionArgs]
+) -> list[exp.Ordered]:
+    def _expand_clauses(*, clauses: TryIter[bool], n: int) -> pc.Iter[bool]:
+        match clauses:
+            case Iterable() as seq:
+                return pc.Iter(seq)
+            case _ as val:
+                return try_iter(val).cycle().take(n)
+
+    return (
+        cols
+        .iter()
+        .zip(
+            _expand_clauses(clauses=kwargs["descending"], n=cols.length()),
+            _expand_clauses(clauses=kwargs["nulls_last"], n=cols.length()),
+        )
+        .map_star(
+            lambda item, desc, nl: exp.Ordered(
+                this=into_expr(item), desc=desc, nulls_first=not nl
+            )
+        )
+        .collect(list)
+    )
 
 
 def _inject_into_existing(expr: exp.Expr, clauses: ClauseArgs) -> exp.Expr:

@@ -38,26 +38,6 @@ def try_seq[T](val: TryIter[T]) -> pc.Option[pc.Seq[T]]:
     return try_iter(val).collect().then_some()
 
 
-def try_iter[T](val: TryIter[T]) -> pc.Iter[T]:
-    """Try to iterate over a value that may or may not be iterable.
-
-    Args:
-        val (TryIter[T]): The value to try to iterate over.
-
-    Returns:
-        pc.Iter[T]: An iterator over the value if it is iterable, otherwise an iterator over a single element.
-    """
-    match val:
-        case None:
-            return pc.Iter[T].new()
-        case str() | bytes() | bytearray() | exp.Expr():
-            return pc.Iter[T].once(val)  # pyright: ignore[reportReturnType]
-        case Iterable():
-            return pc.Iter(val)  # pyright: ignore[reportUnknownArgumentType]
-        case _:
-            return pc.Iter[T].once(val)
-
-
 def check_by_arg[T: NonNestedLiteral](
     compared: pc.Seq[Any],  # pyright: ignore[reportExplicitAny]
     name: str,
@@ -85,3 +65,23 @@ def check_by_arg[T: NonNestedLiteral](
 
         case _:
             return pc.Ok(try_iter(arg).cycle().take(length))
+
+
+def try_iter[T](val: TryIter[T]) -> pc.Iter[T]:
+    """Try to iterate over a value that may or may not be iterable.
+
+    Args:
+        val (TryIter[T]): The value to try to iterate over.
+
+    Returns:
+        pc.Iter[T]: An iterator over the value if it is iterable, otherwise an iterator over a single element.
+    """
+    match val:
+        case None:
+            return pc.Iter[T].new()
+        case str() | bytes() | bytearray() | exp.Expr():
+            return pc.Iter[T].once(val)  # pyright: ignore[reportReturnType]
+        case Iterable():
+            return pc.Iter(val)  # pyright: ignore[reportUnknownArgumentType]
+        case _:
+            return pc.Iter[T].once(val)

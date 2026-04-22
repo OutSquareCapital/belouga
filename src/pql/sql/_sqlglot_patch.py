@@ -10,6 +10,14 @@ type FuncRegistery = dict[str, Callable[..., exp.Expr]]
 type BindedFn = Callable[[list[exp.Expr]], exp.Expr]
 
 
+def _regexp_extract(expr: type[exp.Expr]) -> BindedFn:
+    return _bind_dialect(build_regexp_extract(expr))
+
+
+def _extract_json_with_path(expr: type[exp.Expr]) -> BindedFn:
+    return _bind_dialect(parser.build_extract_json_with_path(expr))
+
+
 def _bind_dialect(
     builder: Callable[[list[exp.Expr], Dialect], exp.Expr],
 ) -> BindedFn:
@@ -19,14 +27,6 @@ def _bind_dialect(
         return builder(args, dialect)
 
     return f
-
-
-def _regexp_extract(expr: type[exp.Expr]) -> BindedFn:
-    return _bind_dialect(build_regexp_extract(expr))
-
-
-def _extract_json_with_path(expr: type[exp.Expr]) -> BindedFn:
-    return _bind_dialect(parser.build_extract_json_with_path(expr))
 
 
 def _object_insert(source: exp.Expr, field: exp.Expr) -> exp.ObjectInsert:

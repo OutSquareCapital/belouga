@@ -40,14 +40,6 @@ class LazyGroupBy:
             frame.columns.iter().filter(lambda name: name not in keys_names).collect()
         )
 
-    def _agg_columns(self, func: Callable[[Expr], Expr]) -> LazyFrame:
-        return (
-            self._cols
-            .iter()
-            .map(lambda name: col(name).pipe(func).alias(name))
-            .into(self.agg)
-        )
-
     def len(self, name: str | None = None) -> LazyFrame:
         return self.agg(pc.Option(name).map(len().alias).unwrap_or_else(len))
 
@@ -81,6 +73,14 @@ class LazyGroupBy:
     def quantile(self, quantile: float, *, interpolation: bool = True) -> LazyFrame:
         return self._agg_columns(
             lambda expr: expr.quantile(quantile, interpolation=interpolation)
+        )
+
+    def _agg_columns(self, func: Callable[[Expr], Expr]) -> LazyFrame:
+        return (
+            self._cols
+            .iter()
+            .map(lambda name: col(name).pipe(func).alias(name))
+            .into(self.agg)
         )
 
     def agg(

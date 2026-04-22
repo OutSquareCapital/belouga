@@ -79,6 +79,17 @@ class Marker(StrEnum):
                 return source
 
 
+def _broadcast_reducers(expr: Expr) -> Expr:
+    def _window_agg(node: exp.Expr) -> exp.Expr:
+        match node:
+            case exp.AggFunc() | exp.List() if not _has_window_ancestor(node):
+                return expr.__class__(node, expr.meta).window().inner
+            case _:
+                return node
+
+    return expr.__class__(expr.inner.transform(_window_agg))  # pyright: ignore[reportUnknownMemberType, reportAny]
+
+
 def _has_window_ancestor(node: exp.Expr) -> bool:
     def _ancestor_is_window(ancestor: exp.Expr | None) -> bool:
         match ancestor:
@@ -99,17 +110,6 @@ def _has_window_ancestor(node: exp.Expr) -> bool:
 
 def _is_projection_distinct(node: exp.Expr) -> bool:
     return node.find_ancestor(exp.AggFunc, exp.List, exp.Window) is None
-
-
-def _broadcast_reducers(expr: Expr) -> Expr:
-    def _window_agg(node: exp.Expr) -> exp.Expr:
-        match node:
-            case exp.AggFunc() | exp.List() if not _has_window_ancestor(node):
-                return expr.__class__(node, expr.meta).window().inner
-            case _:
-                return node
-
-    return expr.__class__(expr.inner.transform(_window_agg))  # pyright: ignore[reportUnknownMemberType, reportAny]
 
 
 def _resolve_exploded(expr: Expr, *, is_distinct: bool) -> Expr:
@@ -369,12 +369,6 @@ class ExprPlan:
             .collect()
         )
 
-    def aliased_sql(self, *, broadcast_agg: bool) -> pc.Iter[exp.Expr]:
-        def _into_expr(resolved: ResolvedExpr) -> exp.Expr:
-            return resolved.as_aliased(broadcast_agg=broadcast_agg).inner
-
-        return self.projections.iter().map(_into_expr)
-
     def select_ctx(self) -> pc.Option[exp.Select]:
         def _non_empty_slct(projs: pc.Seq[ResolvedExpr], lf: exp.Expr) -> exp.Select:
             match projs.all(lambda r: r.has_projection_distinct):
@@ -466,6 +460,12 @@ class ExprPlan:
             .from_("src")
             .group_by("ALL")
         )
+
+    def aliased_sql(self, *, broadcast_agg: bool) -> pc.Iter[exp.Expr]:
+        def _into_expr(resolved: ResolvedExpr) -> exp.Expr:
+            return resolved.as_aliased(broadcast_agg=broadcast_agg).inner
+
+        return self.projections.iter().map(_into_expr)
 
     def agg_ctx(self, keys: PyoIterable[exp.Expr]) -> exp.Select:
         def _lower_projection(proj: ResolvedExpr) -> pc.Iter[exp.Expr]:

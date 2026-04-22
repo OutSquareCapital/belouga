@@ -47,17 +47,6 @@ class FnsCat(PyoIterable[Fns]):
         return self.fns.iter().map(lambda x: x.pql_fn.__name__)
 
 
-def _assert(
-    left: pl.DataFrame | pl.LazyFrame, right: pl.DataFrame | pl.LazyFrame
-) -> None:
-    return assert_frame_equal(
-        left.lazy().collect(),
-        right.lazy().collect(),
-        check_dtypes=False,
-        check_row_order=False,
-    )
-
-
 def assert_eq(
     pql_expr: pql.Expr, polars_expr: pl.Expr, *, with_cols: bool = True
 ) -> None:
@@ -71,3 +60,14 @@ def assert_eq(
 
 def assert_lf_eq(polars_lf: pl.LazyFrame, pql_lf: pql.LazyFrame) -> None:
     _assert(polars_lf, pql_lf.collect())
+
+
+def _assert(
+    left: pl.DataFrame | pl.LazyFrame, right: pl.DataFrame | pl.LazyFrame
+) -> None:
+    return assert_frame_equal(
+        left.lazy().collect(),
+        right.lazy().collect(),
+        check_dtypes=False,
+        check_row_order=False,
+    )
