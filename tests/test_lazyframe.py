@@ -72,16 +72,11 @@ def test_show(lf: pql.LazyFrame) -> None:
     assert lf.show() is None
 
 
-def test_empty_frame(lf: pql.LazyFrame) -> None:
-    assert_lf_eq(lf.lazy().select([]), lf.select([]))
-    assert_lf_eq(
-        lf.lazy().with_columns(pl_age.sum()).select(),
-        lf.with_columns(pql_age.sum()).select([]),
-    )
-    assert_lf_eq(
-        lf.lazy().drop("age").select(),
-        lf.drop("age").select([]),
-    )
+def test_empty_contexts(lf: pql.LazyFrame) -> None:
+    pl_lf = lf.lazy()
+    assert_lf_eq(pl_lf.with_columns(), lf.with_columns())
+    assert_lf_eq(pl_lf.select(), lf.select())
+    assert_lf_eq(pl_lf.select().with_columns(), lf.select().with_columns())
 
 
 def test_repr(lf: pql.LazyFrame) -> None:

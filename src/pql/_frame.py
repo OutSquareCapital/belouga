@@ -121,7 +121,10 @@ class LazyFrame(sql.CoreHandler[ScanSource]):
         return self._into_pl(lazy=False)
 
     def select(
-        self, exprs: TryIter[IntoExpr], *more_exprs: IntoExpr, **named_exprs: IntoExpr
+        self,
+        exprs: TryIter[IntoExpr] = None,
+        *more_exprs: IntoExpr,
+        **named_exprs: IntoExpr,
     ) -> Self:
         """Context method to select columns or expressions.
 
@@ -144,7 +147,10 @@ class LazyFrame(sql.CoreHandler[ScanSource]):
         )
 
     def with_columns(
-        self, exprs: TryIter[IntoExpr], *more_exprs: IntoExpr, **named_exprs: IntoExpr
+        self,
+        exprs: TryIter[IntoExpr] = None,
+        *more_exprs: IntoExpr,
+        **named_exprs: IntoExpr,
     ) -> Self:
         """Add or replace columns.
 
