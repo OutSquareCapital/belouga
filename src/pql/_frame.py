@@ -14,7 +14,8 @@ from sqlglot import exp
 
 from . import sql
 from ._joins import JoinBuilder, JoinKeys
-from .sql import Expr, ScanSource
+from ._scans import ScanSource
+from .sql import Expr
 from .sql._core import into_expr
 from .sql._meta import ExprPlan, Marker
 from .sql.datatypes import DataType

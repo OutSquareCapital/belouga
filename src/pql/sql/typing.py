@@ -21,9 +21,9 @@ if TYPE_CHECKING:
     )
     from narwhals.typing import IntoFrame
 
+    from .._scans import ScanSource
     from ._core import DuckHandler
     from ._expr import Expr
-    from ._scans import ScanSource
     from .datatypes import DataType
 
 

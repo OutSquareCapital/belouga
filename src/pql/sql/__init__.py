@@ -27,7 +27,6 @@ from ._funcs import (
     sum_horizontal,
     unnest,
 )
-from ._scans import ScanSource
 from ._when import ChainedThen, ChainedWhen, Then, When, when
 
 __all__ = [
@@ -35,7 +34,6 @@ __all__ = [
     "ChainedWhen",
     "CoreHandler",
     "Expr",
-    "ScanSource",
     "Then",
     "When",
     "all",
