@@ -87,17 +87,11 @@ type SeqLiteral[T: NonNestedLiteral] = list[T] | tuple[T, ...]
 type PythonLiteral = DuckPyLit
 type NestedLiteral = DuckNestedLit
 """Python literal types (can convert into a `lit` expression)."""
-type ExprIntoVals = DuckHandler | exp.Expr
-type SeqRowVals = Sequence[PythonLiteral]
-type SeqIntoVals = (
-    Sequence[exp.Expr]
-    | Sequence[Mapping[str, PythonLiteral]]
-    | Sequence[SeqRowVals]
-    | Sequence[PythonLiteral]
-    | AnyArray
-)
+type LitSeq = Sequence[PythonLiteral]
+type NestedSeq = Sequence[LitSeq]
+type SeqIntoVals = Sequence[Mapping[str, PythonLiteral]] | NestedSeq | LitSeq | AnyArray
 
-type IntoValues = ExprIntoVals | Mapping[str, Sequence[PythonLiteral]] | SeqIntoVals
+type IntoValues = Mapping[str, LitSeq] | SeqIntoVals
 """Types that can be converted into a `values` relation (either an expression, a mapping, or a sequence)."""
 type IntoRel = IntoFrame | IntoValues | ScanSource
 """"Types that can be converted into a relation (either a frame or values)."""

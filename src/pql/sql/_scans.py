@@ -7,15 +7,13 @@ from typing import TYPE_CHECKING, Any, Self, cast
 
 import duckdb
 import pyochain as pc
-from sqlglot import exp
 
-from ._conversions import PQLConversionError, into_duckdb
-from ._core import DuckHandler
 from ._funcs import unnest
-from .typing import FrameLike, NPArrayLike, PythonLiteral
+from .typing import FrameLike, LitSeq, NestedSeq, NPArrayLike, PythonLiteral
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoFrame
+    from sqlglot import exp
 
     from .._frame import LazyFrame
     from .typing import AnyArray, IntoDict, IntoRel, Orientation, SeqIntoVals
@@ -42,7 +40,23 @@ def _to_expr(k: str, v: PythonLiteral) -> duckdb.Expression:
 
 
 def _unnest(k: str) -> duckdb.Expression:
-    return unnest(k).alias(k).inner.pipe(into_duckdb)
+    return duckdb.SQLExpression(unnest(k).alias(k).inner.sql(dialect="duckdb"))
+
+
+class PQLConversionError(ValueError):
+    """Raised when a conversion from a sqlglot expression to a DuckDB expression fails."""
+
+    def __init__(self, e: Exception, expr: exp.Expr) -> None:
+        msg = f"""
+Failed to convert expression to DuckDB!
+error:
+        {e}
+    expression:
+        {expr!r}
+    SQL:
+        {expr.sql(dialect="duckdb", pretty=True, identify=True)}
+"""
+        super().__init__(msg)
 
 
 @dataclass(slots=True)
@@ -51,7 +65,7 @@ class ScanSource:
     columns: pc.Vec[str]
 
     @classmethod
-    def build(cls, source: IntoRel | None, orient: Orientation = "col") -> Self:  # noqa: C901, PLR0911
+    def build(cls, source: IntoRel | None, orient: Orientation = "col") -> Self:  # noqa: PLR0911
         from .._frame import LazyFrame
 
         match source:
@@ -63,10 +77,6 @@ class ScanSource:
                 return cls.from_relation(source)
             case LazyFrame():
                 return cls.from_lf(source)
-            case exp.Expr():
-                return cls.from_glot(source)
-            case DuckHandler():
-                return cls.from_pql(source)
             case Mapping():
                 return cls.from_dict(source)
             case NPArrayLike():
@@ -87,14 +97,6 @@ class ScanSource:
     @classmethod
     def from_lf(cls, lf: LazyFrame) -> Self:
         return cls(lf.inner.relation, lf.columns)
-
-    @classmethod
-    def from_glot(cls, data: exp.Expr) -> Self:
-        return cls.from_expr(into_duckdb(data))
-
-    @classmethod
-    def from_pql(cls, data: DuckHandler) -> Self:
-        return cls.from_expr(data.inner.pipe(into_duckdb))
 
     @classmethod
     def from_relation(cls, relation: duckdb.DuckDBPyRelation) -> Self:
@@ -139,7 +141,7 @@ class ScanSource:
         )
 
     @classmethod
-    def from_seq_col(cls, data: Sequence[Sequence[PythonLiteral]]) -> Self:
+    def from_seq_col(cls, data: NestedSeq) -> Self:
         return (
             pc
             .Iter(data)
@@ -149,7 +151,7 @@ class ScanSource:
         )
 
     @classmethod
-    def from_seq_row(cls, data: Sequence[Sequence[PythonLiteral]]) -> Self:
+    def from_seq_row(cls, data: NestedSeq) -> Self:
         width = len(data[0])
         return (
             pc
@@ -159,13 +161,7 @@ class ScanSource:
         )
 
     @classmethod
-    def from_seq_glot(cls, data: Sequence[exp.Expr]) -> Self:
-        exprs = pc.Iter(data).map(into_duckdb).collect(tuple)
-        cols = pc.Iter(data).map(lambda c: c.name).collect(pc.Vec)
-        return cls(duckdb.values(exprs), cols)
-
-    @classmethod
-    def from_seq_exprs(cls, data: Sequence[duckdb.Expression]) -> Self:
+    def from_seq_lit(cls, data: LitSeq) -> Self:
         rel = duckdb.values(_to_expr(COL0, tuple(data))).select(_unnest(COL0))
         return cls(rel, _single_col())
 
@@ -176,19 +172,16 @@ class ScanSource:
                 vals = cast(Sequence[Mapping[str, Any]], data)  # pyright: ignore[reportExplicitAny]
                 return cls.from_dicts(vals)
             case Sequence() as value if not isinstance(value, str | bytes | bytearray):  # pyright: ignore[reportUnknownVariableType]
-                vals = cast(Sequence[Sequence[PythonLiteral]], data)
+                vals = cast(NestedSeq, data)
                 match orient:
                     case "col":
                         return cls.from_seq_col(vals)
 
                     case "row":
                         return cls.from_seq_row(vals)
-            case exp.Expr():
-                vals = cast(Sequence[exp.Expr], data)
-                return cls.from_seq_glot(vals)
             case _:
-                vals = cast(Sequence[duckdb.Expression], data)
-                return cls.from_seq_exprs(vals)
+                vals = cast(LitSeq, data)
+                return cls.from_seq_lit(vals)
 
     @classmethod
     def from_df(cls, data: IntoFrame) -> Self:
@@ -241,10 +234,6 @@ class ScanSource:
                 names_nb: int = arr.shape[axis]  # pyright: ignore[reportAny]
                 cols = pc.Iter(range(names_nb)).map(_named).collect(pc.Vec)
                 return cls(cols.into(_named_array), cols)
-
-    @classmethod
-    def from_expr(cls, data: duckdb.Expression) -> Self:
-        return cls(duckdb.values(data), _single_col(data.get_name()))
 
     @classmethod
     def from_table(cls, name: str) -> Self:
