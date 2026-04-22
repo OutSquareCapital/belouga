@@ -4,7 +4,7 @@ from typing import final
 import pyochain as pc
 from sqlglot import exp
 
-from ._conversions import args_into_glot, into_glot
+from ._conversions import into_expr, into_expr_list
 from ._expr import Expr
 from .typing import IntoExpr, IntoExprColumn, PythonLiteral
 from .utils import TryIter, try_iter
@@ -70,7 +70,7 @@ def unnest(
     Returns:
         Expr: An expression representing the unnesting operation.
     """
-    expr = exp.Explode(this=into_glot(col), max_depth=max_depth, recursive=recursive)
+    expr = exp.Explode(this=into_expr(col), max_depth=max_depth, recursive=recursive)
     return Expr(expr)
 
 
@@ -99,7 +99,7 @@ def element() -> Expr:
 
 
 def fn_once(rhs: IntoExpr) -> Expr:
-    return Expr(exp.Lambda(this=into_glot(rhs), expressions=[_ELEM_ID]))
+    return Expr(exp.Lambda(this=into_expr(rhs), expressions=[_ELEM_ID]))
 
 
 def all(exclude: TryIter[IntoExprColumn] = None) -> Expr:
@@ -108,7 +108,7 @@ def all(exclude: TryIter[IntoExprColumn] = None) -> Expr:
     exclude_opt: pc.Option[TryIter[IntoExprColumn]] = pc.Option(exclude)
     return (
         exclude_opt
-        .map(lambda x: try_iter(x).map(into_glot).collect())
+        .map(lambda x: try_iter(x).map(into_expr).collect())
         .map(lambda exc: exp.Star(except_=exc))
         .unwrap_or_else(exp.Star)
         .pipe(Expr, Resolver.all_fn(exclude_opt).into_meta())
@@ -260,7 +260,7 @@ def _agg_expr(
     meta = all_cols.map(Resolver.fixed).unwrap_or_else(Resolver.all_columns).into_meta()
     return (
         all_cols
-        .map(lambda inner_cols: exp.Columns(this=inner_cols.into(args_into_glot)))
+        .map(lambda inner_cols: exp.Columns(this=inner_cols.into(into_expr_list)))
         .unwrap_or_else(lambda: exp.Columns(this=exp.Star()))
         .pipe(Expr, meta)
         .pipe(agg)

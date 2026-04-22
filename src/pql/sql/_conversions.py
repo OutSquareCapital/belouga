@@ -6,7 +6,7 @@ from pyochain import Iter, Option
 from .typing import IntoExpr
 
 
-def args_into_glot(args: Iterable[IntoExpr], *, as_col: bool = False) -> list[exp.Expr]:
+def into_expr_list(args: Iterable[IntoExpr], *, as_col: bool = False) -> list[exp.Expr]:
     """Convert an `Iterable` of `IntoExpr` values into a list of sqlglot `Expr` nodes.
 
     Args:
@@ -19,12 +19,12 @@ def args_into_glot(args: Iterable[IntoExpr], *, as_col: bool = False) -> list[ex
     return (
         Iter(args)
         .filter_map(Option)
-        .map(lambda x: into_glot(x, as_col=as_col))
+        .map(lambda x: into_expr(x, as_col=as_col))
         .collect(list)
     )
 
 
-def into_glot(value: IntoExpr, *, as_col: bool = True) -> exp.Expr:
+def into_expr(value: IntoExpr, *, as_col: bool = True) -> exp.Expr:
     """Convert an `IntoExpr` value into a sqlglot `Expr` node.
 
     Args:

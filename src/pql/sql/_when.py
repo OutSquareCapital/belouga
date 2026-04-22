@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from sqlglot import exp
 
-from ._conversions import into_glot
+from ._conversions import into_expr
 from ._expr import Expr
 from ._funcs import reduce
 from .utils import try_iter
@@ -35,7 +35,7 @@ class When:
             Then: An object that allows chaining additional WHEN conditions or specifying an OTHERWISE clause.
         """
         return Then(
-            exp.Case(ifs=[exp.If(this=self._when.inner, true=into_glot(value))])
+            exp.Case(ifs=[exp.If(this=self._when.inner, true=into_expr(value))])
         )
 
 
@@ -48,7 +48,7 @@ class Then(Expr):
 
     def otherwise(self, statement: IntoExpr) -> Expr:
         case = self.inner.copy()
-        case.set("default", into_glot(statement))
+        case.set("default", into_expr(statement))
         return Expr(case)
 
 
@@ -59,7 +59,7 @@ class ChainedWhen:
 
     def then(self, statement: IntoExpr) -> ChainedThen:
         case = self._chained_when.inner.copy()
-        if_expr = exp.If(this=self._predicate.inner, true=into_glot(statement))
+        if_expr = exp.If(this=self._predicate.inner, true=into_expr(statement))
         case.append("ifs", if_expr)
         return ChainedThen(case)
 
@@ -73,5 +73,5 @@ class ChainedThen(Expr):
 
     def otherwise(self, statement: IntoExpr) -> Expr:
         case = self.inner.copy()
-        case.set("default", into_glot(statement))
+        case.set("default", into_expr(statement))
         return Expr(case)

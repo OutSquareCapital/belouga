@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Concatenate, Self, override
 
 from sqlglot import exp
 
-from ._conversions import args_into_glot
+from ._conversions import into_expr_list
 from ._sqlglot_patch import DUCKDB_FUNCTIONS
 
 if TYPE_CHECKING:
@@ -105,7 +105,7 @@ def anon(name: str, *args: IntoExpr) -> exp.Expr:
     Returns:
         exp.Expr: A new expression representing the anonymous function.
     """
-    return exp.Anonymous(this=name, expressions=args_into_glot(args))
+    return exp.Anonymous(this=name, expressions=into_expr_list(args))
 
 
 def anon_agg(name: str, *args: IntoExpr) -> exp.Expr:
@@ -114,8 +114,8 @@ def anon_agg(name: str, *args: IntoExpr) -> exp.Expr:
     Returns:
         exp.Expr: A new aggregate expression representing the anonymous function.
     """
-    return exp.AnonymousAggFunc(this=name, expressions=args_into_glot(args))
+    return exp.AnonymousAggFunc(this=name, expressions=into_expr_list(args))
 
 
 def func(name: str, *args: IntoExpr) -> exp.Expr:
-    return DUCKDB_FUNCTIONS[name](args_into_glot(args))
+    return DUCKDB_FUNCTIONS[name](into_expr_list(args))

@@ -10,7 +10,7 @@ import pyochain as pc
 from sqlglot import exp
 
 from ._code_gen import Fns
-from ._conversions import args_into_glot, into_glot
+from ._conversions import into_expr, into_expr_list
 from ._core import func
 from ._meta import ExprMeta, Marker
 from ._window import (
@@ -75,7 +75,7 @@ class Expr(Fns):
         Returns:
             Expr
         """
-        return cls(into_glot(value, as_col=as_col))
+        return cls(into_expr(value, as_col=as_col))
 
     @override
     def _cls(self, value: exp.Expr) -> Self:
@@ -223,10 +223,10 @@ class Expr(Fns):
         return self._cls(expr)
 
     def _binop[T: exp.Binary](self, op: type[T], other: IntoExpr) -> Self:
-        return self._build_op(op, self.inner, into_glot(other))
+        return self._build_op(op, self.inner, into_expr(other))
 
     def _rbinop[T: exp.Binary](self, op: type[T], other: IntoExpr) -> Self:
-        return self._build_op(op, into_glot(other), self.inner).alias(Marker.LITERAL)
+        return self._build_op(op, into_expr(other), self.inner).alias(Marker.LITERAL)
 
     def __add__(self, other: IntoExpr) -> Self:
         return self._binop(exp.Add, other)
@@ -257,7 +257,7 @@ class Expr(Fns):
         return self._build_op(exp.Div, left, right).floor()
 
     def __floordiv__(self, other: IntoExpr) -> Self:
-        return self._floordiv_op(self.inner, into_glot(other))
+        return self._floordiv_op(self.inner, into_expr(other))
 
     def floordiv(self, other: IntoExpr) -> Self:
         return self.__floordiv__(other)
@@ -336,7 +336,7 @@ class Expr(Fns):
         return self.__rand__(other)
 
     def __rfloordiv__(self, other: IntoExpr) -> Self:
-        return self._floordiv_op(into_glot(other), self.inner).alias(Marker.LITERAL)
+        return self._floordiv_op(into_expr(other), self.inner).alias(Marker.LITERAL)
 
     def rfloordiv(self, other: IntoExpr) -> Self:
         return self.__rfloordiv__(other)
@@ -396,7 +396,7 @@ class Expr(Fns):
 
     def between(self, lower: IntoExpr, upper: IntoExpr) -> Self:
         return self._cls(
-            exp.Between(this=self.inner, low=into_glot(lower), high=into_glot(upper))
+            exp.Between(this=self.inner, low=into_expr(lower), high=into_expr(upper))
         )
 
     def cast(self, dtype: IntoDataType) -> Self:
@@ -416,7 +416,7 @@ class Expr(Fns):
         return self._cls(exp.Ordered(this=self.inner, desc=True))
 
     def is_in(self, args: TryIter[IntoExpr], *more_args: IntoExpr) -> Self:
-        exprs = args_into_glot(try_iter(args).chain(more_args))
+        exprs = into_expr_list(try_iter(args).chain(more_args))
         return self._cls(exp.In(this=self.inner, expressions=exprs))
 
     def is_not_in(self, args: TryIter[IntoExpr], *more_args: IntoExpr) -> Self:
@@ -919,7 +919,7 @@ class Expr(Fns):
         Returns:
             Self
         """
-        expr = exp.Greatest(this=self.inner, expressions=args_into_glot(args))
+        expr = exp.Greatest(this=self.inner, expressions=into_expr_list(args))
         return self._cls(expr)
 
     def least(self, *args: IntoExpr) -> Self:
@@ -937,7 +937,7 @@ class Expr(Fns):
         Returns:
             Self
         """
-        expr = exp.Least(this=self.inner, expressions=args_into_glot(args))
+        expr = exp.Least(this=self.inner, expressions=into_expr_list(args))
         return self._cls(expr)
 
     def window(  # noqa: PLR0913, PLR0917
@@ -1167,7 +1167,7 @@ class Expr(Fns):
         Returns:
             Self
         """
-        return self._cls(exp.BitwiseXor(this=self.inner, expression=into_glot(right)))
+        return self._cls(exp.BitwiseXor(this=self.inner, expression=into_expr(right)))
 
     def truncate(self, decimals: int = 0) -> Self:
         """Truncate numeric value to given number of decimal places.
@@ -1236,7 +1236,7 @@ class Expr(Fns):
         Returns:
             Expr: An expression representing the `COALESCE` operation.
         """
-        exprs_lst = try_iter(exprs).chain(more_exprs).into(args_into_glot, as_col=True)
+        exprs_lst = try_iter(exprs).chain(more_exprs).into(into_expr_list, as_col=True)
         return self._cls(exp.Coalesce(this=self.inner, expressions=exprs_lst))
 
     def arctan(self) -> Self:
