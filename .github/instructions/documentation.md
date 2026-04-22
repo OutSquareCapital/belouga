@@ -4,7 +4,9 @@ You need to ensure up-to-date comprehension of the `duckdb` documentation.
 
 You MUST consult the following links, instead of making any assumption:
 
-## SQL Reference
+## DuckDB Documentation
+
+### SQL Reference
 
 <https://duckdb.org/docs/current/sql/introduction>
 <https://duckdb.org/docs/current/sql/statements/overview>
@@ -18,7 +20,7 @@ You MUST consult the following links, instead of making any assumption:
 <https://duckdb.org/docs/current/sql/dialect/overview>
 <https://duckdb.org/docs/current/sql/samples>
 
-### Query syntax
+#### Query syntax
 
 <https://duckdb.org/docs/current/sql/query_syntax/select>
 <https://duckdb.org/docs/current/sql/query_syntax/from>
@@ -38,7 +40,7 @@ You MUST consult the following links, instead of making any assumption:
 <https://duckdb.org/docs/current/sql/query_syntax/setops>
 <https://duckdb.org/docs/current/sql/query_syntax/prepared_statements>
 
-## Guides
+### Guides
 
 <https://duckdb.org/docs/current/clients/python/overview>
 <https://duckdb.org/docs/current/core_extensions/overview>
@@ -50,3 +52,25 @@ You MUST consult the following links, instead of making any assumption:
 <https://duckdb.org/docs/current/guides/sql_features/query_and_query_table_functions>
 <https://duckdb.org/docs/current/guides/sql_features/timestamps>
 <https://duckdb.org/docs/current/guides/snippets/analyze_git_repository>
+
+## SQLGlot Documentation
+
+<https://sqlglot.com/sqlglot.html>
+
+## Polars Documentation
+
+<https://narwhals-dev.github.io/narwhals/basics/dataframe/>
+<https://docs.pola.rs/api/python/stable/reference/>
+<https://narwhals-dev.github.io/narwhals/basics/complete_example/>
+<https://narwhals-dev.github.io/narwhals/basics/dataframe_conversion/>
+<https://narwhals-dev.github.io/narwhals/how_it_works/>
+<https://narwhals-dev.github.io/narwhals/api-completeness/>
+
+## Narwhals Documentation
+
+<https://narwhals-dev.github.io/narwhals/generating_sql/>
+
+## pyochain Documentation
+
+<https://outsquarecapital.github.io/pyochain/getting-started/>
+<https://outsquarecapital.github.io/pyochain/api-reference/>
