@@ -17,7 +17,7 @@ from . import meta
 
 if TYPE_CHECKING:
     from pygments.token import (
-        _TokenType as TokenType,  # pyright: ignore[reportPrivateUsage]  # noqa: PLC2701
+        _TokenType as TokenType,  # pyright: ignore[reportPrivateUsage]
     )
 
     from ._frame import LazyFrame

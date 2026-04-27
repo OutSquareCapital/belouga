@@ -9,7 +9,7 @@ from pyochain import Result, Seq
 from sqlglot import exp
 
 if TYPE_CHECKING:
-    from _duckdb._typing import (  # pyright: ignore[reportMissingModuleSource]  # noqa: PLC2701
+    from _duckdb._typing import (  # pyright: ignore[reportMissingModuleSource]
         BlobLiteral as DuckBlobLit,
         IntoExpr as DuckIntoExpr,
         IntoExprColumn as DuckIntoExprColumn,
