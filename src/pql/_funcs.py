@@ -99,7 +99,15 @@ def element() -> Expr:
 
 
 def fn_once(rhs: IntoExpr) -> Expr:
-    return Expr(exp.Lambda(this=into_expr(rhs), expressions=[_ELEM_ID]))
+    def _bind(node: exp.Expr) -> exp.Expr:
+        match node:
+            case exp.Column() if node.name == ELEM_NAME:
+                return _ELEM_ID
+            case _:
+                return node
+
+    body: exp.Expr = into_expr(rhs).transform(_bind)  # pyright: ignore[reportUnknownMemberType, reportAny]
+    return Expr(exp.Lambda(this=body, expressions=[_ELEM_ID]))
 
 
 def all(exclude: TryIter[IntoExprColumn] = None) -> Expr:
