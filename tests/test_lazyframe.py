@@ -475,6 +475,48 @@ def test_unnest() -> None:
     assert_lf_eq(df.lazy().unnest("nested"), df.unnest("nested"))
 
 
+pl_nested = pl.LazyFrame({
+    "id": [1, 2, 3],
+    "nested": [
+        {"a": 10, "b": 100},
+        {"a": 20, "b": 200},
+        {"a": 30, "b": 300},
+    ],
+})
+pql_unnested = pql.LazyFrame(pl_nested).unnest("nested")
+pl_unnested = pl_nested.unnest("nested")
+
+
+def test_unnest_columns_property() -> None:
+    assert pql_unnested.columns.into(list) == pl_unnested.collect_schema().names()
+
+
+def test_unnest_then_select_all() -> None:
+    assert_lf_eq(pl_unnested.select(pl.all()), pql_unnested.select(pql.all()))
+
+
+def test_unnest_then_with_columns_overlap() -> None:
+    assert_lf_eq(
+        pl_unnested.with_columns(a=pl.col("a").add(1)),
+        pql_unnested.with_columns(a=pql.col("a").add(1)),
+    )
+
+
+def test_unnest_then_drop() -> None:
+    assert_lf_eq(pl_unnested.drop("b"), pql_unnested.drop("b"))
+
+
+def test_unnest_then_rename() -> None:
+    assert_lf_eq(pl_unnested.rename({"a": "x"}), pql_unnested.rename({"a": "x"}))
+
+
+def test_unnest_then_filter_then_select_all() -> None:
+    assert_lf_eq(
+        pl_unnested.filter(pl.col("a").gt(10)).select(pl.all()),
+        pql_unnested.filter(pql.col("a").gt(10)).select(pql.all()),
+    )
+
+
 @pytest.mark.parametrize("strategy", t.UniqueKeepStrategy.__args__)
 @pytest.mark.parametrize("subset", [None, "department", ["department", "sex"]])
 def test_unique(
