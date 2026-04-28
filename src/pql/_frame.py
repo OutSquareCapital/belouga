@@ -29,7 +29,6 @@ if TYPE_CHECKING:
         RenderModeLiteral,
     )
     from duckdb import DuckDBPyRelation
-    from pyochain.traits import PyoIterable
 
     from ._groupby import LazyGroupBy
     from ._parser import ParsedQuery
@@ -100,22 +99,27 @@ class LazyFrame(CoreHandler[exp.Expr]):
         self, ast: exp.Expr, columns: pc.Seq[str], **subs: Self | ScanSource
     ) -> Self:
 
-        def _replacement(name: str, alias_name: str) -> exp.Expr:
-            match subs[name]:
+        def _replacement(table: exp.Table) -> exp.Expr:
+            alias_name = table.alias_or_name
+            pivots: pc.Option[list[exp.Pivot]] = pc.Option(table.args.get("pivots"))
+            match subs[table.name]:
                 case LazyFrame() as lf:
+                    alias = exp.TableAlias(this=exp.to_identifier(alias_name))
                     return exp.Subquery(
-                        this=lf._inner,
-                        alias=exp.TableAlias(this=exp.to_identifier(alias_name)),
+                        this=lf._inner, alias=alias, pivots=pivots.unwrap_or_else(list)
                     )
                 case ScanSource() as src:
-                    return exp.alias_(
-                        exp.to_table(src.identity), alias_name, table=True
+                    return (
+                        exp
+                        .to_table(src.identity)
+                        .pipe(exp.alias_, alias_name, table=True)
+                        .apply(lambda out: pivots.map(lambda p: out.set("pivots", p)))
                     )
 
         def _replacer(node: exp.Expr) -> exp.Expr:
             match node:
                 case exp.Table() as t if t.name in subs:
-                    return _replacement(t.name, t.alias_or_name)
+                    return _replacement(t)
                 case _:
                     return node
 
@@ -139,7 +143,7 @@ class LazyFrame(CoreHandler[exp.Expr]):
         return self._make(ast.transform(_replacer), new_sources, columns)  # pyright: ignore[reportUnknownMemberType, reportAny]
 
     def _materialize(self) -> DuckDBPyRelation:
-        return ScanSource.from_query(self._inner, **self._sources).relation
+        return self._inner.pipe(ScanSource.from_query, **self._sources).relation
 
     def _iter_slct(self, func: Callable[[Expr], Expr]) -> Self:
         return (
@@ -1207,44 +1211,35 @@ class LazyFrame(CoreHandler[exp.Expr]):
             return idx_cols.iter().chain(tail).collect()
 
         def _pivoted() -> Self:
-
-            def _on_exprs() -> PyoIterable[exp.Expr] | PyoIterable[str]:
-                converted = pc.Iter(on_columns).map(exp.convert).collect()
-                expr = exp.In(this=on_cols.first(), expressions=converted)
-                return pc.Iter.once(expr)
+            def _field() -> exp.In:
+                exprs = pc.Iter(on_columns).map(exp.convert).collect(list)
+                return exp.In(this=exp.column(on_cols.first()), expressions=exprs)
 
             def _group() -> exp.Group | None:
                 group = idx_cols.then(
-                    lambda cols: exp.Group(expressions=cols.into(list))
+                    lambda cols: exp.Group(
+                        expressions=cols.iter().map(exp.column).collect(list)
+                    )
                 )
                 return group.unwrap() if group.is_some() else None
 
-            def _pivot() -> exp.Expr:
-                return exp.to_table("src").pipe(
-                    lambda e: exp.Pivot(
-                        this=e,
-                        expressions=_on_exprs().into(list),
-                        using=val_cols
-                        .iter()
-                        .map(_aliased)
-                        .map(lambda c: c.inner)
-                        .collect(list),
-                        group=_group(),
-                    )
+            def _pivot_node() -> exp.Pivot:
+                exprs = (
+                    val_cols.iter().map(_aliased).map(lambda c: c.inner).collect(list)
                 )
+                return exp.Pivot(expressions=exprs, fields=[_field()], group=_group())
 
-            def _select_ordered(cols: Iterable[str]) -> exp.Expr:
-                return (
-                    _slct_all()
-                    .from_(_pivot().pipe(lambda e: exp.Subquery(this=e)))
-                    .order_by(*cols)
-                )
+            table = exp.Table(this=exp.to_identifier("src"), pivots=[_pivot_node()])
 
             return (
                 try_iter(idx_cols if maintain_order else None)
                 .collect()
-                .then(_select_ordered)
-                .unwrap_or_else(_pivot)
+                .then(
+                    lambda cols: (
+                        _slct_all().from_(table).order_by(*cols.iter().map(exp.column))
+                    )
+                )
+                .unwrap_or_else(lambda: _slct_all().from_(table))
                 .pipe(self._execute, _pivoted_cols(), src=self)
             )
 
