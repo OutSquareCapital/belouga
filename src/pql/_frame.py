@@ -118,8 +118,8 @@ class LazyFrame(CoreHandler[exp.Expr]):
 
         def _replacer(node: exp.Expr) -> exp.Expr:
             match node:
-                case exp.Table() as t if t.name in subs:
-                    return _replacement(t)
+                case exp.Table() if node.name in subs:
+                    return _replacement(node)
                 case _:
                     return node
 
@@ -193,8 +193,8 @@ class LazyFrame(CoreHandler[exp.Expr]):
             Self: A new LazyFrame with the selected columns.
         """
         plan = self._columns.into(ExprPlan, exprs, more_exprs, named_exprs)
-        return plan.select_ctx().map_or(
-            self.__class__(ScanSource.from_none().relation),
+        return plan.select_ctx().map_or_else(
+            lambda: self.__class__(ScanSource.from_none().relation),
             lambda ast: self._execute(ast, plan.select_names(), src=self),
         )
 
