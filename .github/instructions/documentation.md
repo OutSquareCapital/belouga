@@ -57,6 +57,12 @@ You MUST consult the following links, instead of making any assumption:
 
 <https://sqlglot.com/sqlglot.html>
 
+### Guides
+
+<https://github.com/tobymao/sqlglot/blob/main/posts/onboarding.md>
+<https://github.com/tobymao/sqlglot/blob/main/posts/ast_primer.md>
+<https://github.com/tobymao/sqlglot/blob/main/posts/python_sql_engine.md>
+
 ## Polars Documentation
 
 <https://narwhals-dev.github.io/narwhals/basics/dataframe/>
