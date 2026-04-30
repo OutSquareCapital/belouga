@@ -37,9 +37,11 @@ class ClassInstMethod[**P, R]:
         Returns:
             Callable[..., R]: The method bound to the instance or class.
         """
-        if instance is not None:
-            return self.func.__get__(instance, type_)
-        return self.func.__get__(type_, type_)
+        match instance:
+            case None:
+                return self.func.__get__(type_, type_)
+            case object():
+                return self.func.__get__(instance, type_)
 
 
 @dataclass(slots=True, init=False, unsafe_hash=True)
@@ -58,7 +60,7 @@ class DataType(ABC):
         Returns:
             DataType: The corresponding PQL DataType.
         """
-        return cls.from_sql(exp.DataType.build(str(dtype), dialect="duckdb"))
+        return exp.DataType.build(str(dtype), dialect="duckdb").pipe(cls.from_sql)
 
     @classmethod
     def from_sql(cls, dtype: exp.DataType) -> DataType:
@@ -230,11 +232,7 @@ class ComplexDataType(DataType):
         """
         instance = cls.__new__(cls)
         instance.raw = raw
-        instance._init_cache()
         return instance
-
-    def _init_cache(self) -> None:
-        """Initialize lazy caches for nested type properties. Override in subclasses."""
 
 
 @final
@@ -349,12 +347,12 @@ class Decimal(NumericType, ComplexDataType):
             precision (int, optional): The precision of the decimal type. Defaults to 18.
             scale (int, optional): The scale of the decimal type. Defaults to 0.
         """
+
+        def _nb(n: int) -> exp.DataTypeParam:
+            return exp.DataTypeParam(this=exp.Literal.number(n))
+
         self.raw = exp.DataType(
-            this=exp.DType.DECIMAL,
-            expressions=[
-                exp.DataTypeParam(this=exp.Literal.number(precision)),
-                exp.DataTypeParam(this=exp.Literal.number(scale)),
-            ],
+            this=exp.DType.DECIMAL, expressions=[_nb(precision), _nb(scale)]
         )
 
     @property
@@ -505,11 +503,8 @@ class Enum(StringType, ComplexDataType):
                 values: Iter[str] = Iter(categories).map(lambda i: i.value)  # pyright: ignore[reportAny]
             case Iterable():
                 values = Iter(categories)
-
-        self.raw = exp.DataType(
-            this=exp.DType.ENUM,
-            expressions=values.map(exp.Literal.string).collect(list),
-        )
+        exprs = values.map(exp.Literal.string).collect(list)
+        self.raw = exp.DataType(this=exp.DType.ENUM, expressions=exprs)
 
     @property
     def categories(self) -> Seq[str]:
@@ -531,14 +526,11 @@ class Union(NestedType, ComplexDataType):
         Args:
             fields (Iterable[DataType]): The fields of the union type.
         """
-        exprs = (
-            Iter(fields)
-            .enumerate()
-            .map_star(
-                lambda i, f: exp.ColumnDef(this=exp.to_identifier(f"v{i}"), kind=f.raw)
-            )
-            .collect(list)
-        )
+
+        def _into_col(i: int, field: DataType) -> exp.ColumnDef:
+            return exp.ColumnDef(this=exp.to_identifier(f"v{i}"), kind=field.raw)
+
+        exprs = Iter(fields).enumerate().map_star(_into_col).collect(list)
         self.raw = exp.DataType(this=exp.DType.UNION, expressions=exprs, nested=True)
 
     @property
@@ -589,17 +581,11 @@ class Struct(NestedType, ComplexDataType):
         Args:
             fields (IntoDict[str, DataType]): The fields of the struct type, either as a dictionary or an iterable of key-value pairs.
         """
-        exprs = (
-            Dict(fields)
-            .items()
-            .iter()
-            .map_star(
-                lambda name, col: exp.ColumnDef(
-                    this=exp.to_identifier(name), kind=col.raw
-                )
-            )
-            .collect(list)
-        )
+
+        def _into_col(name: str, col: DataType) -> exp.ColumnDef:
+            return exp.ColumnDef(this=exp.to_identifier(name), kind=col.raw)
+
+        exprs = Dict(fields).items().iter().map_star(_into_col).collect(list)
         self.raw = exp.DataType(this=exp.DType.STRUCT, expressions=exprs, nested=True)
 
     @property
