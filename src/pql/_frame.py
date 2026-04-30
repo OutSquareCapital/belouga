@@ -79,10 +79,10 @@ PIVOT_AGG: dict[PivotAgg, Callable[[Expr], Expr]] = {
 
 
 @dataclass(slots=True, init=False, repr=False)
-class LazyFrame(CoreHandler[exp.Expr]):
+class LazyFrame(CoreHandler[exp.Query]):
     """LazyFrame providing Polars-like API over DuckDB relations."""
 
-    _inner: exp.Expr
+    _inner: exp.Query
     _sources: Dict[str, ScanSource]
     _schema: Schema
 
@@ -98,11 +98,7 @@ class LazyFrame(CoreHandler[exp.Expr]):
                 self._sources = Dict.from_ref({source.identity: source})
                 self._schema = source.schema
 
-    def _make(
-        self,
-        ast: exp.Expr,
-        sources: Dict[str, ScanSource],
-    ) -> Self:
+    def _make(self, ast: exp.Query, sources: Dict[str, ScanSource]) -> Self:
         out = self.__class__.__new__(self.__class__)
         out._inner = ast
         out._sources = sources
@@ -1472,8 +1468,8 @@ def _slct_all() -> exp.Select:
     return exp.select(exp.Star())
 
 
-def _compute_schema(ast: exp.Expr, sources: Dict[str, ScanSource]) -> Schema:
-    schema = MappingSchema(dialect="duckdb")
+def _compute_schema(ast: exp.Query, sources: Dict[str, ScanSource]) -> Schema:
+    schema = MappingSchema()
     _ = (
         sources
         .items()
@@ -1488,28 +1484,23 @@ def _compute_schema(ast: exp.Expr, sources: Dict[str, ScanSource]) -> Schema:
                     .map_star(lambda c, dt: (c, dt.raw))
                     .collect(dict)
                 ),
-                dialect="duckdb",
             )
         )
     )
-    annotated = qualify(
-        ast.copy(),
-        schema=schema,
-        dialect="duckdb",
-        validate_qualify_columns=False,
-    ).pipe(annotate_types, schema=schema, dialect="duckdb")
-    match annotated:
-        case exp.Query() as query:
-            return (
-                Iter(query.selects)
-                .map(
-                    lambda p: (
-                        p.alias_or_name,
-                        Option(p.type).map(dt.DataType.from_sql).unwrap(),
-                    )
-                )
-                .collect(Dict)
+
+    def _into_selects(expr: exp.Query) -> Iter[exp.Expr]:
+        return Iter(expr.selects)
+
+    # NOTE: need to update annotations upstream to keep the return generic
+    return (
+        qualify(ast, schema=schema, validate_qualify_columns=False)
+        .pipe(annotate_types, schema=schema)
+        .pipe(_into_selects)  # pyright: ignore[reportArgumentType]
+        .map(
+            lambda p: (
+                p.alias_or_name,
+                Option(p.type).map(dt.DataType.from_sql).unwrap(),
             )
-        case _:
-            msg = f"Cannot compute schema for non-query AST: {annotated!r}"
-            raise TypeError(msg)
+        )
+        .collect(Dict)
+    )
