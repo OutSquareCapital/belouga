@@ -91,7 +91,7 @@ class Pql(KwordEnum):
     RELATION = "Relation"
     CORE_HANDLER = "CoreHandler"
     REL_HANDLER = "RelHandler"
-    DUCK_HANDLER = "DuckHandler"
+    EXPR_HANDLER = "ExprHandler"
     LAZY_FRAME = pql.LazyFrame.__name__
     LAZY_GROUP_BY = "LazyGroupBy"
     EXPR_STR_NAME_SPACE = "ExprStrNameSpace"

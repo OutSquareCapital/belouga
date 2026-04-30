@@ -123,7 +123,7 @@ _INTO_EXPR_COL_TYPES: pc.Set[str] = _set(
     Builtins.STR,
     Pql.EXPR,
     Pql.SQLEXPR,
-    Pql.DUCK_HANDLER,
+    Pql.EXPR_HANDLER,
 )
 
 TYPE_SUPERTYPES: pc.Dict[str, pc.Set[str]] = pc.Dict({

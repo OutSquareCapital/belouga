@@ -23,7 +23,7 @@ from ._code_gen import (
     StringFns,
     StructFns,
 )
-from ._core import DuckHandler, NameSpaceHandler, func, into_expr
+from ._core import ExprHandler, NameSpaceHandler, func, into_expr
 from ._expr import Expr
 from ._funcs import element, lit
 from ._meta import ExprPlan
@@ -550,7 +550,7 @@ class ExprDateTimeNameSpace(DateTimeFns[Expr]):
             Expr: A new expression that evaluates to the offset datetime.
         """
         match by:
-            case DuckHandler():
+            case ExprHandler():
                 return self.add(exp.to_interval(by.inner))
             case exp.Expr() | str():
                 return self.add(exp.to_interval(by))

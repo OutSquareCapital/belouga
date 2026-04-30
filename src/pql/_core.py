@@ -76,12 +76,12 @@ class CoreHandler[T]:
 
 
 @dataclass(slots=True, repr=False)
-class DuckHandler(CoreHandler[exp.Expr]):
-    """A wrapper for DuckDB expressions."""
+class ExprHandler(CoreHandler[exp.Expr]):
+    """A wrapper for `sqlglot` expressions."""
 
 
 @dataclass(slots=True)
-class NameSpaceHandler[T: DuckHandler]:
+class NameSpaceHandler[T: ExprHandler]:
     """A wrapper for expression namespaces that return the parent type."""
 
     _parent: T
@@ -150,7 +150,7 @@ def into_expr(value: IntoExpr, *, as_col: bool = True) -> exp.Expr:
         exp.Expr: The resulting sqlglot expression.
     """
     match value:
-        case DuckHandler():
+        case ExprHandler():
             return value.inner
         case str() if as_col:
             return exp.column(value)

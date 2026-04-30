@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     )
     from narwhals.typing import IntoFrame
 
-    from ._core import DuckHandler
+    from ._core import ExprHandler
     from ._expr import Expr
     from ._joins import JoinKeys
     from ._scans import ScanSource
@@ -80,7 +80,7 @@ type AnyArray = NPArrayLike[Any, Any]  # pyright: ignore[reportExplicitAny]
 
 
 type IntoDict[K, V] = Mapping[K, V] | Iterable[tuple[K, V]]
-type ExprLike = Expr | DuckHandler
+type ExprLike = Expr | ExprHandler
 """Types that are already expressions wrappers and can be used directly as expressions."""
 type BlobLiteral = DuckBlobLit
 type NonNestedLiteral = DuckNonNestedLit

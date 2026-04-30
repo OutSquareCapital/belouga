@@ -52,7 +52,7 @@ class {name}{params}({base}):
     doc = "Mixin providing auto-generated DuckDB functions as methods."
     return (
         f"{_header(path)}"
-        f"{_class_block('Fns', doc, base_fns, 'DuckHandler')}"
+        f"{_class_block('Fns', doc, base_fns, 'ExprHandler')}"
         f"{NAMESPACE_SPECS.iter().map(_namespace_block).join('')}\n"
     )
 
@@ -72,7 +72,7 @@ from __future__ import annotations
 {From(DateTime).import_(DateTime.DATE, DateTime.DATETIME, DateTime.TIME, DateTime.TIMEDELTA)}
 {From(Typing).import_(Typing.SELF, Typing.TYPE_CHECKING, Typing.CLASSVAR)}
 from decimal import Decimal
-from .._core import DuckHandler, NameSpaceHandler, anon, anon_agg, func
+from .._core import ExprHandler, NameSpaceHandler, anon, anon_agg, func
 
 if TYPE_CHECKING:
     from ..typing import SeqLiteral, {Pql.BLOB_LITERAL}, {Pql.INTO_EXPR_COLUMN}, {Pql.INTO_EXPR}
