@@ -1,6 +1,6 @@
 import polars as pl
 import pytest
-from pyochain import Seq
+from pyochain.traits import PyoIterable
 
 import pql
 
@@ -52,5 +52,5 @@ def test_when_alias(exprs: ExprPair) -> None:
     assert pql_cols == pl_cols
 
 
-def _slct(*exprs: pql.Expr) -> Seq[str]:
+def _slct(*exprs: pql.Expr) -> PyoIterable[str]:
     return _LF.select(*exprs).columns
