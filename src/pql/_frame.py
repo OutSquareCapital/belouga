@@ -1493,7 +1493,9 @@ def _compute_schema(ast: exp.Query, sources: Dict[str, ScanSource]) -> Schema:
 
     # NOTE: need to update annotations upstream to keep the return generic
     return (
-        qualify(ast, schema=schema, validate_qualify_columns=False)
+        ast
+        .copy()
+        .pipe(qualify, schema=schema, validate_qualify_columns=False)
         .pipe(annotate_types, schema=schema)
         .pipe(_into_selects)  # pyright: ignore[reportArgumentType]
         .map(
