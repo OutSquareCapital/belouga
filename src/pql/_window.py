@@ -6,7 +6,7 @@ from enum import auto
 from functools import partial
 from typing import TYPE_CHECKING, NamedTuple, Self, TypedDict, Unpack
 
-import pyochain as pc
+from pyochain import NONE, Iter, NoneOption as Null, Option, Seq, Some
 from sqlglot import exp
 
 from ._core import into_expr
@@ -33,26 +33,26 @@ class DirectionArgs(TypedDict):
 
 
 class FnArgs(TypedDict):
-    fn_order_by: pc.Option[TryIter[IntoExprColumn]]
+    fn_order_by: Option[TryIter[IntoExprColumn]]
     fn_descending: TryIter[bool]
     fn_nulls_last: TryIter[bool]
 
 
 class ClauseArgs(TypedDict):
-    partition_by: pc.Option[list[exp.Expr]]
-    order: pc.Option[exp.Order]
-    spec: pc.Option[exp.WindowSpec]
+    partition_by: Option[list[exp.Expr]]
+    order: Option[exp.Order]
+    spec: Option[exp.WindowSpec]
 
 
 class BoundArgs(TypedDict):
-    frame_start: pc.Option[FrameBound]
-    frame_end: pc.Option[FrameBound]
-    exclude: pc.Option[WindowExclude]
+    frame_start: Option[FrameBound]
+    frame_end: Option[FrameBound]
+    exclude: Option[WindowExclude]
 
 
 def get_partition(
-    partition_by: pc.Option[TryIter[IntoExprColumn]],
-) -> pc.Option[list[exp.Expr]]:
+    partition_by: Option[TryIter[IntoExprColumn]],
+) -> Option[list[exp.Expr]]:
     return partition_by.map(try_iter).map(
         lambda cols: cols.map(into_expr).collect(list)
     )
@@ -71,7 +71,7 @@ class OverBuilder:
             case _:
                 return self
 
-    def handle_filter(self, filter_cond: pc.Option[IntoExprColumn]) -> Self:
+    def handle_filter(self, filter_cond: Option[IntoExprColumn]) -> Self:
         return (
             filter_cond
             .map(
@@ -113,7 +113,7 @@ class OverBuilder:
                 return self
 
     def handle_fn_order_by(self, **kwargs: Unpack[FnArgs]) -> Self:
-        def _build(cols: pc.Seq[IntoExprColumn]) -> exp.WithinGroup:
+        def _build(cols: Seq[IntoExprColumn]) -> exp.WithinGroup:
             exprs = _ordered(
                 cols,
                 descending=kwargs["fn_descending"],
@@ -140,9 +140,9 @@ def rolling_agg(expr: exp.Expr, order_by: str, spec: BoundsValues) -> exp.Expr:
     return (
         OverBuilder(expr)
         .handle_clauses(
-            partition_by=pc.NONE,
-            order=get_order(pc.Some(order_by), descending=False, nulls_last=False),
-            spec=pc.Some(spec.into_spec("ROWS")),
+            partition_by=NONE,
+            order=get_order(Some(order_by), descending=False, nulls_last=False),
+            spec=Some(spec.into_spec("ROWS")),
         )
         .build()
     )
@@ -153,12 +153,12 @@ def _rewrite_forward_fill(
 ) -> tuple[exp.Expr, ClauseArgs]:
     from ._meta import Marker
 
-    def _last_value_arg(inner: exp.Expr) -> pc.Option[exp.Expr]:
+    def _last_value_arg(inner: exp.Expr) -> Option[exp.Expr]:
         match inner:
             case exp.Anonymous() as fn if fn.name.lower() == "last_value":
-                return pc.Some(fn.expressions[0])  # pyright: ignore[reportAny]
+                return Some(fn.expressions[0])  # pyright: ignore[reportAny]
             case _:
-                return pc.NONE
+                return NONE
 
     def _rewritten(arg: exp.Expr) -> tuple[exp.AnyValue, ClauseArgs]:
         return (
@@ -166,16 +166,16 @@ def _rewrite_forward_fill(
             ClauseArgs(
                 partition_by=clauses["partition_by"],
                 order=get_order(
-                    pc.Some(Marker.TEMP),
+                    Some(Marker.TEMP),
                     descending=True,
                     nulls_last=False,
                 ),
                 spec=make_spec(
                     "ROWS",
                     has_order_by=True,
-                    frame_start=pc.Some(0),
-                    frame_end=pc.NONE,
-                    exclude=pc.NONE,
+                    frame_start=Some(0),
+                    frame_end=NONE,
+                    exclude=NONE,
                 ),
             ),
         )
@@ -192,20 +192,20 @@ def _rewrite_forward_fill(
 
 
 def get_order(
-    order_by: pc.Option[TryIter[IntoExprColumn]], **kwargs: Unpack[DirectionArgs]
-) -> pc.Option[exp.Order]:
+    order_by: Option[TryIter[IntoExprColumn]], **kwargs: Unpack[DirectionArgs]
+) -> Option[exp.Order]:
     return order_by.map(lambda x: try_iter(x).collect()).map(
         lambda cols: exp.Order(expressions=_ordered(cols, **kwargs))
     )
 
 
 def _ordered(
-    cols: pc.Seq[IntoExprColumn], **kwargs: Unpack[DirectionArgs]
+    cols: Seq[IntoExprColumn], **kwargs: Unpack[DirectionArgs]
 ) -> list[exp.Ordered]:
-    def _expand_clauses(*, clauses: TryIter[bool], n: int) -> pc.Iter[bool]:
+    def _expand_clauses(*, clauses: TryIter[bool], n: int) -> Iter[bool]:
         match clauses:
             case Iterable() as seq:
-                return pc.Iter(seq)
+                return Iter(seq)
             case _ as val:
                 return try_iter(val).cycle().take(n)
 
@@ -227,7 +227,7 @@ def _ordered(
 
 def _inject_into_existing(expr: exp.Expr, clauses: ClauseArgs) -> exp.Expr:
     inj = partial(_inject, clauses=clauses, with_spec=False)
-    pc.Iter(expr.find_all(exp.Window)).for_each(inj)
+    Iter(expr.find_all(exp.Window)).for_each(inj)
     return expr
 
 
@@ -246,7 +246,7 @@ def _inject(w: exp.Window, clauses: ClauseArgs, *, with_spec: bool) -> None:
 
 def make_spec(
     mode: FrameMode, *, has_order_by: bool, **bounds: Unpack[BoundArgs]
-) -> pc.Option[exp.WindowSpec]:
+) -> Option[exp.WindowSpec]:
     return (
         BoundsValues
         .new(bounds, has_order_by=has_order_by)
@@ -296,35 +296,35 @@ class BoundsValues(NamedTuple):
                 )
 
     @classmethod
-    def new(cls, bounds: BoundArgs, *, has_order_by: bool) -> pc.Option[Self]:
+    def new(cls, bounds: BoundArgs, *, has_order_by: bool) -> Option[Self]:
         match (bounds["frame_start"], bounds["frame_end"]):
-            case (pc.Some(s), pc.Some(e)):
-                return pc.Some(
+            case (Some(s), Some(e)):
+                return Some(
                     cls(Side.new(s, Bounds.PRECEDING), Side.new(e, Bounds.FOLLOWING))
                 )
-            case (pc.Some(s), pc.NONE):
-                return pc.Some(
+            case (Some(s), Null()):
+                return Some(
                     cls(
                         Side.new(s, Bounds.PRECEDING),
                         Side.new(Bounds.UNBOUNDED, Bounds.FOLLOWING),
                     )
                 )
-            case (pc.NONE, pc.Some(e)):
-                return pc.Some(
+            case (Null(), Some(e)):
+                return Some(
                     cls(
                         Side.new(Bounds.UNBOUNDED, Bounds.PRECEDING),
                         Side.new(e, Bounds.FOLLOWING),
                     )
                 )
             case _ if has_order_by or bounds["exclude"].is_some():
-                return pc.Some(
+                return Some(
                     cls(
                         Side.new(Bounds.UNBOUNDED, Bounds.PRECEDING),
                         Side.new(Bounds.UNBOUNDED, Bounds.FOLLOWING),
                     )
                 )
             case _:
-                return pc.NONE
+                return NONE
 
     def into_spec(self, mode: FrameMode) -> exp.WindowSpec:
         return exp.WindowSpec(

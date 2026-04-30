@@ -5,10 +5,10 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, Self, override
 
 import duckdb
-import pyochain as pc
 import sqlparse
 from pygments import token
 from pygments.lexers.sql import SqlLexer  # pyright: ignore[reportMissingTypeStubs]
+from pyochain import Dict, Iter, Set, Some, Vec
 from rich.console import Console
 from rich.syntax import Syntax
 from sqlparse.lexer import Lexer
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from .typing import Themes
 
 CONSOLE = Console()
-DUCK_PYGMENT_MAP = pc.Dict.from_ref({
+DUCK_PYGMENT_MAP = Dict.from_ref({
     duckdb.token_type.identifier: token.Name,
     duckdb.token_type.keyword: token.Keyword,
     duckdb.token_type.string_const: token.String,
@@ -34,9 +34,9 @@ DUCK_PYGMENT_MAP = pc.Dict.from_ref({
 })
 
 
-def _get_names(lf: LazyFrame, col_name: str) -> pc.Set[str]:
+def _get_names(lf: LazyFrame, col_name: str) -> Set[str]:
 
-    return lf.select(col_name).fetch_all().iter().flatten().collect(pc.Set)
+    return lf.select(col_name).fetch_all().iter().flatten().collect(Set)
 
 
 type ProcessedToken = tuple[int, TokenType, str]
@@ -44,23 +44,23 @@ type ProcessedToken = tuple[int, TokenType, str]
 
 class DuckDbSqlLexer(SqlLexer):
     @override
-    def get_tokens_unprocessed(self, text: str) -> pc.Iter[ProcessedToken]:  # pyright: ignore[reportIncompatibleMethodOverride]
-        process = partial(self._process, pc.Dict(duckdb.tokenize(text)))
-        return pc.Iter(super().get_tokens_unprocessed(text)).map_star(process)
+    def get_tokens_unprocessed(self, text: str) -> Iter[ProcessedToken]:  # pyright: ignore[reportIncompatibleMethodOverride]
+        process = partial(self._process, Dict(duckdb.tokenize(text)))
+        return Iter(super().get_tokens_unprocessed(text)).map_star(process)
 
     def _process(  # noqa: PLR6301
         self,
-        duck_tokens: pc.Dict[int, duckdb.token_type],
+        duck_tokens: Dict[int, duckdb.token_type],
         pos: int,
         tokentype: TokenType,
         token_text: str,
     ) -> ProcessedToken:
         match duck_tokens.get_item(pos):
-            case pc.Some(duckdb.token_type.identifier) if token_text in FUNCTIONS:
+            case Some(duckdb.token_type.identifier) if token_text in FUNCTIONS:
                 return (pos, token.Name.Function, token_text)
-            case pc.Some(duckdb.token_type.keyword) if token_text in DTYPES:
+            case Some(duckdb.token_type.keyword) if token_text in DTYPES:
                 return (pos, token.Name.Builtin, token_text)
-            case pc.Some(duck_type):
+            case Some(duck_type):
                 return (
                     pos,
                     DUCK_PYGMENT_MAP.get_item(duck_type).unwrap_or(tokentype),
@@ -124,5 +124,5 @@ class ParsedQuery:
     def prettify(self) -> Self:
         return self.__class__(FORMATTER(self.raw))
 
-    def tokenize(self) -> pc.Vec[tuple[int, duckdb.token_type]]:
-        return pc.Vec.from_ref(duckdb.tokenize(self.raw))
+    def tokenize(self) -> Vec[tuple[int, duckdb.token_type]]:
+        return Vec.from_ref(duckdb.tokenize(self.raw))

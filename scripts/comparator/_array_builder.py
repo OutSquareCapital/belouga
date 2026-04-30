@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Self
 
-import pyochain as pc
+from pyochain import Vec
 
 from ._infos import ComparisonResult
 from ._rules import Status
@@ -26,10 +26,10 @@ class BarColor(StrEnum):
 
 @dataclass(slots=True)
 class ArrayBuilder:
-    results: pc.Vec[ComparisonResult]
-    _row: pc.Vec[str] = field(default_factory=pc.Vec.new)
+    results: Vec[ComparisonResult]
+    _row: Vec[str] = field(default_factory=Vec.new)
 
-    def build(self) -> pc.Vec[str]:
+    def build(self) -> Vec[str]:
         return self._row
 
     def count_cell(self) -> Self:

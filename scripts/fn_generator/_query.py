@@ -2,7 +2,7 @@ import re
 from collections.abc import Iterable
 
 import polars as pl
-import pyochain as pc
+from pyochain import Iter
 
 from .._utils import Pql, Typing
 from ._dtypes import DuckDbTypes, FuncTypes
@@ -257,8 +257,7 @@ def _token_pattern(token: str) -> str:
 
 def _simplify_generated_union(type_hint: str) -> str:
     tokens = (
-        pc
-        .Iter(type_hint.split("|"))
+        Iter(type_hint.split("|"))
         .map(str.strip)
         .filter(lambda type_name: type_name != "")
         .collect()

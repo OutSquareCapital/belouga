@@ -2,7 +2,7 @@ from dataclasses import asdict, dataclass, field
 from typing import final
 
 import polars as pl
-import pyochain as pc
+from pyochain import Dict, Iter
 
 from ._dtypes import CATEGORY_TYPES, DTYPES, FUNC_TYPES, SchemaName, Stability
 
@@ -22,9 +22,7 @@ def schema(cls: type[object]) -> pl.Schema:
             isinstance(v, pl.DataType) or issubclass(v, pl.DataType)
         )
 
-    return (
-        pc.Iter(cls.__dict__.items()).filter_star(_is_polars_dtype).collect(pl.Schema)
-    )
+    return Iter(cls.__dict__.items()).filter_star(_is_polars_dtype).collect(pl.Schema)
 
 
 @final
@@ -106,5 +104,5 @@ class DuckCols:
     parameters: pl.Expr = field(default=pl.col("parameters"))
     parameter_types: pl.Expr = field(default=pl.col("parameter_types"))
 
-    def to_dict(self) -> pc.Dict[str, pl.Expr]:
-        return pc.Dict.from_ref(asdict(self))
+    def to_dict(self) -> Dict[str, pl.Expr]:
+        return Dict.from_ref(asdict(self))

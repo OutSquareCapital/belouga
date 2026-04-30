@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Self, final, overload, override
 
-import pyochain as pc
+from pyochain import Iter, Option, Seq, Set
 
 from . import _funcs as fn  # pyright: ignore[reportPrivateUsage]
 from ._core import into_expr
@@ -60,12 +60,12 @@ class Resolver:
         return cls(_fixed)
 
     @classmethod
-    def all_fn(cls, exclude: pc.Option[TryIter[IntoExprColumn]]) -> Self:
+    def all_fn(cls, exclude: Option[TryIter[IntoExprColumn]]) -> Self:
         return exclude.map(
             lambda exc: (
                 try_iter(exc)
                 .map(lambda value: into_expr(value, as_col=True).name)
-                .collect(pc.Set)
+                .collect(Set)
                 .into(cls.exclude)
             )
         ).unwrap_or_else(cls.all_columns)
@@ -80,7 +80,7 @@ class Resolver:
     @classmethod
     def ordered_name(cls, names: Iterable[str]) -> Self:
         def _ordered(cols: Cols) -> Cols:
-            return pc.Iter(names).filter(lambda name: name in cols).collect()
+            return Iter(names).filter(lambda name: name in cols).collect()
 
         return cls(_ordered)
 
@@ -114,7 +114,7 @@ class Resolver:
 
     def union(self, right: Self) -> Self:
         def _union(cols: Cols) -> Cols:
-            selected = self(cols).iter().chain(right(cols)).collect(pc.Set)
+            selected = self(cols).iter().chain(right(cols)).collect(Set)
             return cols.iter().filter(lambda n: n in selected).collect()
 
         return self.__class__(_union)
@@ -426,7 +426,7 @@ def contains(*substring: str) -> Selector:
     Returns:
         Selector: A selector for columns with names containing any of the given substrings.
     """
-    subs = pc.Seq(substring)
+    subs = Seq(substring)
     return Resolver.name(lambda name: subs.any(lambda s: s in name)).into_selector()
 
 

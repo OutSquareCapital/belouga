@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from enum import StrEnum, auto
 
 import duckdb
-import pyochain as pc
+from pyochain import Dict, Iter, Option, Seq, Set, Vec
 
 import pql
 
@@ -21,20 +21,20 @@ class KwordEnum(StrEnum):
         return cls.__name__.lower()
 
     @classmethod
-    def into_iter(cls) -> pc.Iter[KwordEnum]:
-        return pc.Iter(cls)
+    def into_iter(cls) -> Iter[KwordEnum]:
+        return Iter(cls)
 
     def of_type(self, *dtypes: str, has_ellipsis: bool = False) -> str:
-        type_union = pc.Iter(dtypes).join(" | ")
+        type_union = Iter(dtypes).join(" | ")
         if has_ellipsis:
             type_union = f"{type_union}, ..."
         return f"{self.value}[{type_union}]"
 
     def into_union(self, *args: str) -> str:
-        return pc.Iter(args).insert(self).join(" | ")
+        return Iter(args).insert(self).join(" | ")
 
 
-def get_attr(obj: object, name: str) -> pc.Option[object]:
+def get_attr(obj: object, name: str) -> Option[object]:
     """Safe getattr returning Option.
 
     Args:
@@ -42,9 +42,9 @@ def get_attr(obj: object, name: str) -> pc.Option[object]:
         name (str): The name of the attribute to get.
 
     Returns:
-        pc.Option[object]: An Option containing the attribute value if it exists, or None if it does not.
+        Option[object]: An Option containing the attribute value if it exists, or None if it does not.
     """
-    return pc.Option(getattr(obj, name, None))
+    return Option(getattr(obj, name, None))
 
 
 @dataclass(slots=True)
@@ -52,7 +52,7 @@ class From[T: KwordEnum]:
     module: type[T]
 
     def import_(self, *names: T) -> str:
-        return f"from {self.module.module()} import {pc.Iter(names).map(lambda n: n.value).join(', ')}"
+        return f"from {self.module.module()} import {Iter(names).map(lambda n: n.value).join(', ')}"
 
 
 @dataclass(slots=True)
@@ -108,12 +108,12 @@ class Pql(KwordEnum):
 
 
 class Pyochain(KwordEnum):
-    OPTION = pc.Option.__name__
-    SEQ = pc.Seq.__name__
-    ITER = pc.Iter.__name__
-    VEC = pc.Vec.__name__
-    DICT = pc.Dict.__name__
-    SET = pc.Set.__name__
+    OPTION = Option.__name__
+    SEQ = Seq.__name__
+    ITER = Iter.__name__
+    VEC = Vec.__name__
+    DICT = Dict.__name__
+    SET = Set.__name__
 
 
 class Builtins(KwordEnum):

@@ -1,6 +1,6 @@
 from collections.abc import Callable
 
-import pyochain as pc
+from pyochain import Iter
 from sqlglot import Dialect, exp, parser
 from sqlglot.dialects.dialect import build_regexp_extract
 from sqlglot.dialects.duckdb import DuckDB
@@ -46,7 +46,7 @@ def _struct_insert(args: list[exp.Expr]) -> exp.Expr:
         case []:
             return exp.Struct(expressions=[])
         case [exp.Expr() as source, *fields]:
-            return pc.Iter(fields).fold(source, _object_insert)
+            return Iter(fields).fold(source, _object_insert)
         case _:
             return exp.Struct(expressions=args)
 

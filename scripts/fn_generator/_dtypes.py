@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import StrEnum, auto
 
 import polars as pl
-import pyochain as pc
+from pyochain import Dict, Option, Set
 
 from .._utils import Builtins, DateTime, Decimal, Pql, Typing
 
@@ -118,13 +118,13 @@ class DuckDbTypes(StrEnum):
                 return _base_type(value).unwrap_or("")
 
 
-def _base_type(value: str) -> pc.Option[str]:
+def _base_type(value: str) -> Option[str]:
     return CONVERSION_MAP.get_item(value).filter(
         lambda x: x != Pql.INTO_EXPR_COLUMN.value
     )
 
 
-GENERIC_CONTAINER = pc.Set((
+GENERIC_CONTAINER = Set((
     DuckDbTypes.ANY_ARRAY,
     DuckDbTypes.GENERIC_ARRAY,
     DuckDbTypes.V_ARRAY,
@@ -190,7 +190,7 @@ class SchemaName(StrEnum):
     PG_CATALOG = auto()
 
 
-CONVERSION_MAP: pc.Dict[str, str] = pc.Dict({
+CONVERSION_MAP: Dict[str, str] = Dict({
     DuckDbTypes.VARCHAR: Builtins.STR.value,
     DuckDbTypes.INTEGER: Builtins.INT.value,
     DuckDbTypes.BIGINT: Builtins.INT.value,

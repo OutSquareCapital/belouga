@@ -1,7 +1,7 @@
 from collections.abc import Callable, Iterable
 from typing import final
 
-import pyochain as pc
+from pyochain import Iter, Option
 from sqlglot import exp
 
 from ._core import into_expr, into_expr_list
@@ -24,9 +24,7 @@ def reduce(
     Returns:
         Expr: The result of reducing the expressions with the given function.
     """
-    return (
-        pc.Iter(exprs).map(lambda value: Expr.new(value, as_col=True)).reduce(function)
-    )
+    return Iter(exprs).map(lambda value: Expr.new(value, as_col=True)).reduce(function)
 
 
 def row_number() -> Expr:
@@ -113,7 +111,7 @@ def fn_once(rhs: IntoExpr) -> Expr:
 def all(exclude: TryIter[IntoExprColumn] = None) -> Expr:
     from .selectors import Resolver
 
-    exclude_opt: pc.Option[TryIter[IntoExprColumn]] = pc.Option(exclude)
+    exclude_opt: Option[TryIter[IntoExprColumn]] = Option(exclude)
     return (
         exclude_opt
         .map(lambda x: try_iter(x).map(into_expr).collect())

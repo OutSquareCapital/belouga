@@ -1,7 +1,7 @@
 from string import Formatter
 
 import polars as pl
-import pyochain as pc
+from pyochain import Dict, Iter, Option
 
 EMPTY_STR = pl.lit("")
 
@@ -9,14 +9,13 @@ EMPTY_STR = pl.lit("")
 def format_kwords(
     txt: str, *, ignore_nulls: bool = False, **kwargs: pl.Expr
 ) -> pl.Expr:
-    kword_map = pc.Dict.from_ref(kwargs)
+    kword_map = Dict.from_ref(kwargs)
     if ignore_nulls:
         kword_map = _ignore_nulls(kword_map)
 
     return (
-        pc
-        .Iter(Formatter().parse(txt))
-        .map_star(lambda lit, field, _fmt, _conv: (lit, pc.Option(field)))
+        Iter(Formatter().parse(txt))
+        .map_star(lambda lit, field, _fmt, _conv: (lit, Option(field)))
         .collect()
         .into(
             lambda parts: pl.format(
@@ -35,11 +34,11 @@ def format_kwords(
     )
 
 
-def _ignore_nulls(kwargs: pc.Dict[str, pl.Expr]) -> pc.Dict[str, pl.Expr]:
+def _ignore_nulls(kwargs: Dict[str, pl.Expr]) -> Dict[str, pl.Expr]:
     return (
         kwargs
         .items()
         .iter()
         .map_star(lambda k, v: (k, v.fill_null(EMPTY_STR)))
-        .collect(pc.Dict)
+        .collect(Dict)
     )

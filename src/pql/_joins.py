@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, NamedTuple
 
-import pyochain as pc
+from pyochain import NONE, Err, NoneOption as Null, Ok, Option, Seq, Some
 
 from ._funcs import col
 
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
     from ._expr import Expr
     from .typing import JoinKeysRes, JoinStrategy
-type OptSeq = pc.Option[pc.Seq[str]]
+type OptSeq = Option[Seq[str]]
 
 _RHS = partial(col, table="rhs")
 _LHS = partial(col, table="lhs")
@@ -32,23 +32,23 @@ class JoinBuilder:
     def lhs(name: str) -> Expr:
         return _LHS(name)
 
-    def for_inner_left(self, name: str) -> pc.Option[Expr]:
+    def for_inner_left(self, name: str) -> Option[Expr]:
         match (name in self.left, name in self.right):
             case (_, True):
-                return pc.NONE
+                return NONE
             case (True, False):
-                return pc.Some(self._aliased(name))
+                return Some(self._aliased(name))
             case _:
-                return pc.Some(self.rhs(name))
+                return Some(self.rhs(name))
 
-    def name_for_inner_left(self, name: str) -> pc.Option[str]:
+    def name_for_inner_left(self, name: str) -> Option[str]:
         match (name in self.left, name in self.right):
             case (_, True):
-                return pc.NONE
+                return NONE
             case (True, False):
-                return pc.Some(f"{name}{self.suffix}")
+                return Some(f"{name}{self.suffix}")
             case _:
-                return pc.Some(name)
+                return Some(name)
 
     def for_outer(self, name: str) -> Expr:
         match name in self.left:
@@ -82,65 +82,63 @@ class JoinBuilder:
         return _RHS(name)
 
 
-class JoinKeys[T: pc.Seq[str] | str](NamedTuple):
+class JoinKeys[T: Seq[str] | str](NamedTuple):
     left: T
     right: T
 
     @staticmethod
     def from_on(
-        on: pc.Option[str], left_on: pc.Option[str], right_on: pc.Option[str]
+        on: Option[str], left_on: Option[str], right_on: Option[str]
     ) -> JoinKeysRes[str]:
         match (on, left_on, right_on):
-            case (pc.Some(on_key), pc.NONE, pc.NONE):
-                return pc.Ok(JoinKeys(on_key, on_key))
-            case (pc.NONE, pc.Some(lk), pc.Some(rk)):
-                return pc.Ok(JoinKeys(lk, rk))
-            case (pc.NONE, _, _):
+            case (Some(on_key), Null(), Null()):
+                return Ok(JoinKeys(on_key, on_key))
+            case (Null(), Some(lk), Some(rk)):
+                return Ok(JoinKeys(lk, rk))
+            case (Null(), _, _):
                 msg = "Either (`left_on` and `right_on`) or `on` keys should be specified."
-                return pc.Err(ValueError(msg))
+                return Err(ValueError(msg))
             case _:
                 msg = "If `on` is specified, `left_on` and `right_on` should be None."
-                return pc.Err(ValueError(msg))
+                return Err(ValueError(msg))
 
     @staticmethod
-    def from_by(
-        by: OptSeq, by_left: OptSeq, by_right: OptSeq
-    ) -> JoinKeysRes[pc.Seq[str]]:
+    def from_by(by: OptSeq, by_left: OptSeq, by_right: OptSeq) -> JoinKeysRes[Seq[str]]:
         match (by, by_left, by_right):
-            case (pc.Some(vals), pc.NONE, pc.NONE):
-                return pc.Ok(JoinKeys(vals, vals))
-            case (pc.NONE, pc.Some(left_vals), pc.Some(right_vals)):
+            case (Some(vals), Null(), Null()):
+                return Ok(JoinKeys(vals, vals))
+            case (Null(), Some(left_vals), Some(right_vals)):
                 match left_vals.length() == right_vals.length():
                     case True:
-                        return pc.Ok(JoinKeys(left_vals, right_vals))
+                        return Ok(JoinKeys(left_vals, right_vals))
                     case False:
                         msg = "`by_left` and `by_right` must have the same length."
-                        return pc.Err(ValueError(msg))
-            case (pc.NONE, pc.NONE, pc.NONE):
-                empty = pc.Seq[str].new()
-                return pc.Ok(JoinKeys(empty, empty))
-            case (pc.NONE, _, _):
+                        return Err(ValueError(msg))
+            case (Null(), Null(), Null()):
+                empty = Seq[str].new()
+                return Ok(JoinKeys(empty, empty))
+            case (Null(), _, _):
                 msg = "Can not specify only `by_left` or `by_right`, you need to specify both."
-                return pc.Err(ValueError(msg))
+                return Err(ValueError(msg))
             case _:
                 msg = "If `by` is specified, `by_left` and `by_right` should be None."
-                return pc.Err(ValueError(msg))
+                return Err(ValueError(msg))
 
     @staticmethod
     def from_how(
         how: JoinStrategy, on: OptSeq, left_on: OptSeq, right_on: OptSeq
-    ) -> JoinKeysRes[pc.Seq[str]]:
+    ) -> JoinKeysRes[Seq[str]]:
         match (on, left_on, right_on):
-            case (pc.Some(on_vals), pc.NONE, pc.NONE):
-                return pc.Ok(JoinKeys(on_vals, on_vals))
-            case (pc.NONE, pc.Some(lv), pc.Some(rv)) if lv.length() == rv.length():
-                return pc.Ok(JoinKeys(lv, rv))
-            case (pc.NONE, pc.Some(_), pc.Some(_)):
+            case (Some(on_vals), Null(), Null()):
+                return Ok(JoinKeys(on_vals, on_vals))
+            case (Null(), Some(lv), Some(rv)) if lv.length() == rv.length():
+                return Ok(JoinKeys(lv, rv))
+            case (Null(), Some(_), Some(_)):
                 msg = "`left_on` and `right_on` must have the same length."
-                return pc.Err(ValueError(msg))
-            case (pc.Some(_), _, _):
+                return Err(ValueError(msg))
+            case (Some(_), _, _):
                 msg = f"If `on` is specified, `left_on` and `right_on` should be None for {how}."
-                return pc.Err(ValueError(msg))
+                return Err(ValueError(msg))
             case _:
                 msg = f"Either (`left_on` and `right_on`) or `on` keys should be specified for {how}."
-                return pc.Err(ValueError(msg))
+                return Err(ValueError(msg))

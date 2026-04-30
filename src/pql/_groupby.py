@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, final
 
-import pyochain as pc
+from pyochain import NONE, Iter, Option, Seq, Set, Some
 from sqlglot import exp
 
 from ._expr import Expr
@@ -16,12 +16,12 @@ if TYPE_CHECKING:
     from .utils import TryIter
 
 
-def _root_column_name(expr: Expr) -> pc.Option[str]:
+def _root_column_name(expr: Expr) -> Option[str]:
     match expr.inner:
         case exp.Column() as column:
-            return pc.Some(column.output_name)
+            return Some(column.output_name)
         case _:
-            return pc.NONE
+            return NONE
 
 
 @final
@@ -29,18 +29,18 @@ class LazyGroupBy:
     __slots__ = ("_cols", "_frame", "_keys", "_strategy")
 
     def __init__(
-        self, frame: LazyFrame, keys: pc.Seq[Expr], strategy: GroupByClause | None
+        self, frame: LazyFrame, keys: Seq[Expr], strategy: GroupByClause | None
     ) -> None:
         self._frame = frame
         self._keys = keys
         self._strategy: GroupByClause | None = strategy
-        keys_names = keys.iter().filter_map(_root_column_name).collect(pc.Set)
+        keys_names = keys.iter().filter_map(_root_column_name).collect(Set)
         self._cols = (
             frame.columns.iter().filter(lambda name: name not in keys_names).collect()
         )
 
     def len(self, name: str | None = None) -> LazyFrame:
-        return self.agg(pc.Option(name).map(len().alias).unwrap_or_else(len))
+        return self.agg(Option(name).map(len().alias).unwrap_or_else(len))
 
     def all(self) -> LazyFrame:
         return self._agg_columns(Expr.implode)
@@ -93,16 +93,15 @@ class LazyGroupBy:
         def _group_by_clause() -> Iterable[exp.Expr]:
             match self._strategy:
                 case "CUBE":
-                    return pc.Iter.once(exp.Cube(expressions=key_glots))
+                    return Iter.once(exp.Cube(expressions=key_glots))
                 case "ROLLUP":
-                    return pc.Iter.once(exp.Rollup(expressions=key_glots))
+                    return Iter.once(exp.Rollup(expressions=key_glots))
                 case None:
                     return key_glots
 
         plan = self._cols.into(ExprPlan, aggs, more_aggs, named_aggs)
         cols = (
-            pc
-            .Iter(key_glots)
+            Iter(key_glots)
             .map(lambda k: k.output_name)
             .chain(plan.select_names())
             .collect()
@@ -110,7 +109,7 @@ class LazyGroupBy:
 
         return (
             plan
-            .agg_ctx(pc.Iter(key_glots))
+            .agg_ctx(Iter(key_glots))
             .group_by(*_group_by_clause())
             .pipe(self._frame._execute, cols, src=self._frame)  # pyright: ignore[reportPrivateUsage]
         )

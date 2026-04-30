@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import polars as pl
-import pyochain as pc
 from polars.exceptions import ComputeError
+from pyochain import Iter
 from rich import print
 from rich.text import Text
 
@@ -46,7 +46,7 @@ def run_pipeline(caller: Path, source: Path, *, profile: bool = False) -> str:
         .pipe(_inspect if profile else lambda lf: lf)
         .collect()
         .map_rows(lambda x: FunctionInfo(*x), return_dtype=pl.Object)  # pyright: ignore[reportAny]
-        .pipe(lambda df: pc.Iter[FunctionInfo](df.to_series()))
+        .pipe(lambda df: Iter[FunctionInfo](df.to_series()))
         .collect()
         .inspect(
             lambda x: print(Text(f"Generated {x.length()} functions", style="yellow"))

@@ -3,13 +3,13 @@ import keyword
 from dataclasses import dataclass, field
 
 import polars as pl
-import pyochain as pc
+from pyochain import Dict, Iter, Seq, Set
 from sqlglot.parsers.duckdb import DuckDBParser
 
 from .._utils import Builtins, Pql, Typing
 from ._dtypes import Categories, DuckDbTypes
 
-CONVERTER = pc.Iter(DuckDbTypes).map(lambda t: (t, t.into_py())).collect(dict)
+CONVERTER = Iter(DuckDbTypes).map(lambda t: (t, t.into_py())).collect(dict)
 """DuckDB type -> Python type hint mapping."""
 
 DK_FUNC_KEYS = pl.LazyFrame({"glot_name": tuple(DuckDBParser.FUNCTIONS)})  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
@@ -22,11 +22,11 @@ SHADOWERS = (
     .map(lambda s: s.value)
     .chain(dir(builtins), keyword.kwlist)
     .insert("l")
-    .collect(pc.Set)
+    .collect(Set)
 )
 """Names that should be renamed to avoid shadowing."""
 
-RENAME_RULES = pc.Dict.from_ref({
+RENAME_RULES = Dict.from_ref({
     "list": "implode",
     "json": "json_parse",
     "map": "to_map",
@@ -44,7 +44,7 @@ RENAME_RULES = pc.Dict.from_ref({
 """Explicit SQL function name -> generated Python method name mapping."""
 
 
-SPECIAL_CASES = pc.Set({
+SPECIAL_CASES = Set({
     # "raw" operators
     "+",
     "-",
@@ -104,7 +104,7 @@ SPECIAL_CASES = pc.Set({
     "min_by",
 })
 """Function to exclude by name, either because they require special handling or because they conflict with existing names."""
-PREFIXES = pc.Set((
+PREFIXES = Set((
     "__",  # Internal functions
     "current_",  # Utility fns
     "has_",  # Utility fns
@@ -114,40 +114,40 @@ PREFIXES = pc.Set((
 """Functions to exclude by prefixes."""
 
 
-def _rule[T](*args: T) -> pc.Seq[T]:
-    return pc.Seq(args)
+def _rule[T](*args: T) -> Seq[T]:
+    return Seq(args)
 
 
 @dataclass(slots=True)
 class NamespaceSpec:
     name: str
     doc: str
-    prefixes: pc.Seq[str]
-    strip_prefixes: pc.Seq[str]
-    categories: pc.Seq[Categories] = field(default_factory=pc.Seq[Categories].new)
-    explicit_names: pc.Seq[str] = field(default_factory=pc.Seq[str].new)
+    prefixes: Seq[str]
+    strip_prefixes: Seq[str]
+    categories: Seq[Categories] = field(default_factory=Seq[Categories].new)
+    explicit_names: Seq[str] = field(default_factory=Seq[str].new)
 
 
-NAMESPACE_SPECS = pc.Seq((
+NAMESPACE_SPECS = Seq((
     NamespaceSpec(
         name="ListFns",
         doc="Mixin providing auto-generated DuckDB list functions as methods.",
-        prefixes=pc.Seq(("list_",)),
+        prefixes=Seq(("list_",)),
         categories=_rule(Categories.LIST),
         strip_prefixes=_rule("list_", "array_"),
     ),
     NamespaceSpec(
         name="StructFns",
         doc="Mixin providing auto-generated DuckDB struct functions as methods.",
-        prefixes=pc.Seq(("struct_",)),
+        prefixes=Seq(("struct_",)),
         categories=_rule(Categories.STRUCT),
-        strip_prefixes=pc.Seq(("struct_",)),
+        strip_prefixes=Seq(("struct_",)),
     ),
     NamespaceSpec(
         name="RegexFns",
         doc="Mixin providing auto-generated DuckDB regex functions as methods.",
-        prefixes=pc.Seq(("regexp_",)),
-        categories=pc.Seq((Categories.REGEX,)),
+        prefixes=Seq(("regexp_",)),
+        categories=Seq((Categories.REGEX,)),
         strip_prefixes=_rule("regexp_", "str_", "string_"),
     ),
     NamespaceSpec(
@@ -205,34 +205,34 @@ NAMESPACE_SPECS = pc.Seq((
     NamespaceSpec(
         name="ArrayFns",
         doc="Mixin providing auto-generated DuckDB array functions as methods.",
-        prefixes=pc.Seq(("array_",)),
-        categories=pc.Seq((Categories.ARRAY,)),
-        strip_prefixes=pc.Seq(("array_",)),
+        prefixes=Seq(("array_",)),
+        categories=Seq((Categories.ARRAY,)),
+        strip_prefixes=Seq(("array_",)),
     ),
     NamespaceSpec(
         name="JsonFns",
         doc="Mixin providing auto-generated DuckDB JSON functions as methods.",
-        prefixes=pc.Seq(("json_",)),
-        strip_prefixes=pc.Seq(("json_",)),
+        prefixes=Seq(("json_",)),
+        strip_prefixes=Seq(("json_",)),
     ),
     NamespaceSpec(
         name="MapFns",
         doc="Mixin providing auto-generated DuckDB map functions as methods.",
-        prefixes=pc.Seq(("map_",)),
-        strip_prefixes=pc.Seq(("map_",)),
+        prefixes=Seq(("map_",)),
+        strip_prefixes=Seq(("map_",)),
     ),
     NamespaceSpec(
         name="EnumFns",
         doc="Mixin providing auto-generated DuckDB enum functions as methods.",
-        prefixes=pc.Seq(("enum_",)),
-        strip_prefixes=pc.Seq(("enum_",)),
+        prefixes=Seq(("enum_",)),
+        strip_prefixes=Seq(("enum_",)),
     ),
     NamespaceSpec(
         name="GeoSpatialFns",
         doc="Mixin providing auto-generated DuckDB geospatial functions as methods.",
-        categories=pc.Seq((Categories.GEOMETRY,)),
-        prefixes=pc.Seq(("st_", "ST_")),
-        strip_prefixes=pc.Seq(("st_", "ST_")),
+        categories=Seq((Categories.GEOMETRY,)),
+        prefixes=Seq(("st_", "ST_")),
+        strip_prefixes=Seq(("st_", "ST_")),
     ),
 ))
 """Namespace metadata and function prefixes."""

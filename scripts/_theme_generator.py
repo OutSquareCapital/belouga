@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import pyochain as pc
+from pyochain import Iter
 
 
 def generate_themes(caller: Path, dest: Path) -> int:
@@ -9,7 +9,7 @@ def generate_themes(caller: Path, dest: Path) -> int:
     )
 
     styles = (
-        pc.Iter(STYLES.values()).map_star(lambda _, style, __: f'"{style}"').join(" ,")
+        Iter(STYLES.values()).map_star(lambda _, style, __: f'"{style}"').join(" ,")
     )
     file_content = dest.read_text(encoding="utf-8")
     start_marker = "# theme marker START"

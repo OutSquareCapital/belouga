@@ -6,7 +6,7 @@ from enum import StrEnum, auto
 from functools import partial
 from typing import TYPE_CHECKING, Self, override
 
-import pyochain as pc
+from pyochain import NONE, Dict, Iter, NoneOption as Null, Option, Seq, Set, Some
 from pyochain.traits import Pipeable
 from sqlglot import exp
 
@@ -97,7 +97,7 @@ def _has_window_ancestor(node: exp.Expr) -> bool:
                 return True
             case exp.Distinct() | exp.Filter() | exp.IgnoreNulls() | exp.WithinGroup():
                 return (
-                    pc.Option
+                    Option
                     .if_some(ancestor.parent)
                     .map(_ancestor_is_window)
                     .unwrap_or(default=False)
@@ -190,20 +190,20 @@ def _root_col_name(node: exp.Expr) -> str:
 class ExprMeta:
     """Metadata for expressions, used for tracking properties that affect query generation."""
 
-    alias_name: pc.Option[Aliaser] = field(default_factory=lambda: pc.NONE)
+    alias_name: Option[Aliaser] = field(default_factory=lambda: NONE)
 
-    def into_resolved(self, expr: Expr, _cols: Cols) -> pc.Iter[ResolvedExpr]:
+    def into_resolved(self, expr: Expr, _cols: Cols) -> Iter[ResolvedExpr]:
         output_name = (_extract_root_name(expr.inner),)
-        name = pc.Seq(output_name).into(self.get_output_names, expr).first()
-        return ResolvedExpr(expr, name).into(pc.Iter.once)
+        name = Seq(output_name).into(self.get_output_names, expr).first()
+        return ResolvedExpr(expr, name).into(Iter.once)
 
     def get_output_names(self, base_names: Cols, expr: Expr) -> Cols:
         match expr.inner, self.alias_name:
-            case exp.Alias() as inner, pc.Some(alias_fn):
-                return pc.Iter.once(inner.output_name).map(alias_fn).collect()
-            case exp.Alias() as inner, pc.NONE:
-                return pc.Seq((inner.output_name,))
-            case _, pc.Some(alias_fn):
+            case exp.Alias() as inner, Some(alias_fn):
+                return Iter.once(inner.output_name).map(alias_fn).collect()
+            case exp.Alias() as inner, Null():
+                return Seq((inner.output_name,))
+            case _, Some(alias_fn):
                 return base_names.iter().map(alias_fn).collect()
             case _:
                 return base_names
@@ -211,15 +211,15 @@ class ExprMeta:
     def with_alias_mapper(self, mapper: Aliaser) -> Self:
         def _get_mapper() -> Aliaser:
             match self.alias_name:
-                case pc.Some(current):
+                case Some(current):
                     return lambda name: mapper(current(name))
                 case _:
                     return mapper
 
-        return replace(self, alias_name=pc.Some(_get_mapper()))
+        return replace(self, alias_name=Some(_get_mapper()))
 
     def unalias(self) -> Self:
-        return replace(self, alias_name=pc.NONE)
+        return replace(self, alias_name=NONE)
 
 
 @dataclass(slots=True)
@@ -227,7 +227,7 @@ class MultiMeta(ExprMeta):
     resolver: Resolver = field(kw_only=True)
 
     @override
-    def into_resolved(self, expr: Expr, cols: Cols) -> pc.Iter[ResolvedExpr]:
+    def into_resolved(self, expr: Expr, cols: Cols) -> Iter[ResolvedExpr]:
         base_names = self.resolver(cols)
         output_names = self.get_output_names(base_names, expr)
 
@@ -251,8 +251,8 @@ class MultiMeta(ExprMeta):
 
 def _find_all[T: exp.Expr](
     expr: exp.Expr, *exprs: type[T], bfs: bool = True
-) -> pc.Iter[T]:
-    return pc.Iter(expr.find_all(*exprs, bfs=bfs))
+) -> Iter[T]:
+    return Iter(expr.find_all(*exprs, bfs=bfs))
 
 
 @dataclass(slots=True, init=False)
@@ -314,7 +314,7 @@ class ResolvedExpr(Pipeable):
     def is_windowed(self, marker: Marker) -> bool:
         def _check_temp(col: exp.Column) -> bool:
             return (
-                pc.Option
+                Option
                 .if_some(col.parts[-1])
                 .map(lambda part: part.name == marker)
                 .unwrap_or(default=False)
@@ -327,7 +327,7 @@ class ResolvedExpr(Pipeable):
 @dataclass(slots=True, init=False)
 class ExprPlan:
     cols: Cols
-    projections: pc.Seq[ResolvedExpr]
+    projections: Seq[ResolvedExpr]
 
     def __init__(
         self,
@@ -346,7 +346,7 @@ class ExprPlan:
                 case _:
                     return Expr.new(val, as_col=True).alias(name)
 
-        def _resolve(val: IntoExpr) -> pc.Iter[ResolvedExpr]:
+        def _resolve(val: IntoExpr) -> Iter[ResolvedExpr]:
             from ._expr import Expr
 
             match val:
@@ -357,20 +357,20 @@ class ExprPlan:
                         Expr
                         .new(val, as_col=True)
                         .pipe(lambda e: ResolvedExpr(e, e.inner.output_name))
-                        .into(pc.Iter.once)
+                        .into(Iter.once)
                     )
 
         self.cols = cols
         self.projections = (
             try_iter(exprs)
             .chain(more_exprs)
-            .chain(pc.Iter(named_exprs.items()).map_star(_alias_named_expr))
+            .chain(Iter(named_exprs.items()).map_star(_alias_named_expr))
             .flat_map(_resolve)
             .collect()
         )
 
-    def select_ctx(self) -> pc.Option[exp.Select]:
-        def _non_empty_slct(projs: pc.Seq[ResolvedExpr], lf: exp.Expr) -> exp.Select:
+    def select_ctx(self) -> Option[exp.Select]:
+        def _non_empty_slct(projs: Seq[ResolvedExpr], lf: exp.Expr) -> exp.Select:
             match projs.all(lambda r: r.has_projection_distinct):
                 case True:
                     return (
@@ -395,16 +395,16 @@ class ExprPlan:
         )
 
     def with_columns_ctx(self) -> exp.Select:
-        def _resolve() -> pc.Iter[exp.Expr]:
-            def _into_update(proj: ResolvedExpr) -> pc.Option[tuple[str, Expr]]:
+        def _resolve() -> Iter[exp.Expr]:
+            def _into_update(proj: ResolvedExpr) -> Option[tuple[str, Expr]]:
                 match proj.is_multi:
                     case True:
-                        return pc.NONE
+                        return NONE
                     case False:
                         expr = _broadcast_reducers(proj.expr)
-                        return pc.Some((proj.name, expr))
+                        return Some((proj.name, expr))
 
-            def _resolved(updates: pc.Dict[str, Expr]) -> pc.Iter[exp.Expr]:
+            def _resolved(updates: Dict[str, Expr]) -> Iter[exp.Expr]:
 
                 match updates.any(lambda name: name in self.cols):
                     case False:
@@ -437,7 +437,7 @@ class ExprPlan:
                 self.projections
                 .iter()
                 .filter_map(_into_update)
-                .collect(pc.Dict)
+                .collect(Dict)
                 .into(_resolved)
             )
 
@@ -461,23 +461,22 @@ class ExprPlan:
             .group_by("ALL")
         )
 
-    def _proj_names(self, proj: ResolvedExpr) -> pc.Iter[str]:
+    def _proj_names(self, proj: ResolvedExpr) -> Iter[str]:
         match proj.is_multi:
             case False:
-                return pc.Iter.once(proj.name)
+                return Iter.once(proj.name)
             case True:
                 excluded = (
-                    pc
-                    .Iter(proj.expr.inner.args.get("except_") or ())
+                    Iter(proj.expr.inner.args.get("except_") or ())
                     .map(lambda c: c.name)
-                    .collect(pc.Set)
+                    .collect(Set)
                 )
                 return self.cols.iter().filter(lambda c: c not in excluded)
 
-    def select_names(self) -> pc.Seq[str]:
+    def select_names(self) -> Seq[str]:
         return self.projections.iter().flat_map(self._proj_names).collect()
 
-    def with_columns_names(self) -> pc.Seq[str]:
+    def with_columns_names(self) -> Seq[str]:
         appended = (
             self.projections
             .iter()
@@ -487,25 +486,24 @@ class ExprPlan:
         )
         return self.cols.iter().chain(appended).collect()
 
-    def dropped_names(self) -> pc.Set[str]:
-        return self.projections.iter().map(lambda r: r.name).collect(pc.Set)
+    def dropped_names(self) -> Set[str]:
+        return self.projections.iter().map(lambda r: r.name).collect(Set)
 
-    def aliased_sql(self, *, broadcast_agg: bool) -> pc.Iter[exp.Expr]:
+    def aliased_sql(self, *, broadcast_agg: bool) -> Iter[exp.Expr]:
         def _into_expr(resolved: ResolvedExpr) -> exp.Expr:
             return resolved.as_aliased(broadcast_agg=broadcast_agg).inner
 
         return self.projections.iter().map(_into_expr)
 
     def agg_ctx(self, keys: PyoIterable[exp.Expr]) -> exp.Select:
-        def _lower_projection(proj: ResolvedExpr) -> pc.Iter[exp.Expr]:
-            def _excluded(star: exp.Star) -> pc.Set[str]:
+        def _lower_projection(proj: ResolvedExpr) -> Iter[exp.Expr]:
+            def _excluded(star: exp.Star) -> Set[str]:
                 return (
-                    pc
-                    .Option(star.args.get("except_"))
-                    .map(pc.Iter[exp.Expr])
-                    .unwrap_or_else(pc.Iter[exp.Expr].new)
+                    Option(star.args.get("except_"))
+                    .map(Iter[exp.Expr])
+                    .unwrap_or_else(Iter[exp.Expr].new)
                     .map(lambda e: e.name)
-                    .collect(pc.Set)
+                    .collect(Set)
                 )
 
             def _into_glot(name: str) -> exp.Expr:
@@ -523,7 +521,7 @@ class ExprPlan:
                         .map(_into_glot)
                     )
                 case exp.Explode(this=exp.Expr() as inner):
-                    return pc.Iter.once(
+                    return Iter.once(
                         proj.expr
                         .__class__(inner)
                         .pipe(
@@ -534,7 +532,7 @@ class ExprPlan:
                         .inner
                     )
                 case _:
-                    return pc.Iter.once(proj.implode_or_scalar().inner)
+                    return Iter.once(proj.implode_or_scalar().inner)
 
         plan = self.projections.iter().flat_map(_lower_projection)
 

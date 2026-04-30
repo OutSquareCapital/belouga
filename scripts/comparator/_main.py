@@ -1,8 +1,8 @@
 """Compare pql API coverage against Polars."""
 
 import polars as pl
-import pyochain as pc
 from polars.lazyframe.group_by import LazyGroupBy as plLazyGroupBy
+from pyochain import Iter
 
 import pql
 from pql._groupby import LazyGroupBy as pqlLazyGroupBy  # noqa: PLC2701
@@ -16,8 +16,7 @@ def get_comparisons() -> str:
     pl_col = pl.col("x")
     pql_col = pql.col("x")
     return (
-        pc
-        .Iter((
+        Iter((
             ClassComparison(
                 pl.LazyFrame,
                 pql.LazyFrame,

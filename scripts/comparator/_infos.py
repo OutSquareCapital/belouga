@@ -4,13 +4,13 @@ import inspect
 from dataclasses import dataclass, field
 from typing import Self
 
-import pyochain as pc
+from pyochain import NONE, Dict, Iter, NoneOption as Null, Option, Seq, Set, Some
 
 from .._utils import Builtins, Pql, get_attr
 from ._parse import annotations_compatible, extract_last_name
 from ._rules import IGNORED_PARAMS, Status
 
-type MapInfo = pc.Dict[str, ParamInfo]
+type MapInfo = Dict[str, ParamInfo]
 
 
 @dataclass(slots=True)
@@ -21,7 +21,7 @@ class ParamInfo:
     is_var_positional: bool
     is_var_keyword: bool
     has_default: bool
-    annotation: pc.Option[str]
+    annotation: Option[str]
 
     @classmethod
     def from_signature(cls, param: inspect.Parameter) -> Self:
@@ -56,8 +56,8 @@ class MethodInfo:
     """Information about a method."""
 
     name: str
-    params: pc.Seq[ParamInfo]
-    return_annotation: pc.Option[str]
+    params: Seq[ParamInfo]
+    return_annotation: Option[str]
     is_property: bool = False
 
     @classmethod
@@ -73,23 +73,22 @@ class MethodInfo:
         """
         return cls(
             name=name,
-            params=pc
-            .Iter(sig.parameters.values())
+            params=Iter(sig.parameters.values())
             .map(ParamInfo.from_signature)
             .collect(),
             return_annotation=_get_annotation_str(sig.return_annotation),  # pyright: ignore[reportAny]
         )
 
-    def signature_str(self, highlight_names: pc.Option[pc.Set[str]] = pc.NONE) -> str:
+    def signature_str(self, highlight_names: Option[Set[str]] = NONE) -> str:
         """Generate a human-readable signature string.
 
         Args:
-            highlight_names (pc.Option[pc.Set[str]]): Optional set of parameter names to highlight.
+            highlight_names (Option[Set[str]]): Optional set of parameter names to highlight.
 
         Returns:
             str: The formatted signature string.
         """
-        highlights = highlight_names.unwrap_or_else(pc.Set[str].new)
+        highlights = highlight_names.unwrap_or_else(Set[str].new)
         params_str = (
             self.params
             .iter()
@@ -111,7 +110,7 @@ class MethodInfo:
             .iter()
             .filter(lambda p: p.name != Builtins.SELF)
             .map(lambda p: (p.name, p))
-            .collect(pc.Dict)
+            .collect(Dict)
         )
 
 
@@ -119,21 +118,21 @@ class MethodInfo:
 class ComparisonInfos:
     """Holds MethodInfo for Polars and pql."""
 
-    polars: pc.Option[MethodInfo] = field(default_factory=lambda: pc.NONE)
-    pql_info: pc.Option[MethodInfo] = field(default_factory=lambda: pc.NONE)
-    ignored_params: pc.Set[str] = field(default_factory=pc.Set[str].new)
+    polars: Option[MethodInfo] = field(default_factory=lambda: NONE)
+    pql_info: Option[MethodInfo] = field(default_factory=lambda: NONE)
+    ignored_params: Set[str] = field(default_factory=Set[str].new)
 
     def has_reference(self) -> bool:
         return self.polars.is_some()
 
-    def status(self) -> pc.Option[Status]:
+    def status(self) -> Option[Status]:
         match (self.polars, self.pql_info):
-            case (pc.Some(_), pc.NONE):
-                return pc.Some(Status.MISSING)
-            case (pc.NONE, pc.Some(_)):
-                return pc.Some(Status.EXTRA)
-            case (pc.Some(reference), pc.Some(pql_info)):
-                return pc.Some(
+            case (Some(_), Null()):
+                return Some(Status.MISSING)
+            case (Null(), Some(_)):
+                return Some(Status.EXTRA)
+            case (Some(reference), Some(pql_info)):
+                return Some(
                     Status.SIGNATURE_MISMATCH
                     if _mismatch_against(
                         pql_info.to_map(),
@@ -143,7 +142,7 @@ class ComparisonInfos:
                     else Status.MATCH
                 )
             case _:
-                return pc.NONE
+                return NONE
 
     def to_status(self) -> Status:
         """Classify the method comparison result.
@@ -152,11 +151,11 @@ class ComparisonInfos:
             Status: The status of the method comparison.
         """
         match (self.pql_info, self.polars):
-            case (pc.NONE, pc.Some(_)):
+            case (NONE, Some(_)):  # noqa: N806  # pyright: ignore[reportUnusedVariable]
                 return Status.MISSING
-            case (pc.Some(_), pc.NONE):
+            case (Some(_), NONE):  # noqa: F841, N806  # pyright: ignore[reportConstantRedefinition, reportUnusedVariable]
                 return Status.EXTRA
-            case (pc.Some(target), pc.Some(pl_info)):
+            case (Some(target), Some(pl_info)):
                 is_mismatch = _mismatch_against(
                     target.to_map(), pl_info.to_map(), self.ignored_params
                 )
@@ -169,7 +168,7 @@ class ComparisonInfos:
                 return Status.MISSING
 
 
-def _mismatch_against(target: MapInfo, other: MapInfo, ignored: pc.Set[str]) -> bool:
+def _mismatch_against(target: MapInfo, other: MapInfo, ignored: Set[str]) -> bool:
     target_filtered = _without_ignored_params(target, ignored)
     other_filtered = _without_ignored_params(other, ignored)
     on_params = (
@@ -189,12 +188,12 @@ def _mismatch_against(target: MapInfo, other: MapInfo, ignored: pc.Set[str]) -> 
     return on_params or on_ann
 
 
-def ignored_params_for(class_name: Pql, method_name: str) -> pc.Set[str]:
+def ignored_params_for(class_name: Pql, method_name: str) -> Set[str]:
     return (
         IGNORED_PARAMS
         .get_item(class_name)
         .and_then(lambda method_map: method_map.get_item(method_name))
-        .unwrap_or_else(pc.Set.new)
+        .unwrap_or_else(Set.new)
     )
 
 
@@ -223,53 +222,51 @@ class ComparisonResult:
         self.classification = infos.to_status()
         self.infos = infos
 
-    def to_format(self, *, status: Status) -> pc.Iter[str]:
+    def to_format(self, *, status: Status) -> Iter[str]:
         """Format a single comparison result as markdown lines.
 
         Args:
             status (Status): The status to filter the results by.
 
         Returns:
-            pc.Iter[str]: An iterator over the formatted markdown lines.
+            Iter[str]: An iterator over the formatted markdown lines.
         """
         match (status, self.infos.polars, self.infos.pql_info):
             case (Status.MISSING, _, _):
-                return pc.Iter.once(f"- `{self.method_name}`").chain(
+                return Iter.once(f"- `{self.method_name}`").chain(
                     self.infos.polars.map(
-                        lambda info: pc.Iter.once(
+                        lambda info: Iter.once(
                             f"  - **Polars**: {info.signature_str()}"
                         )
-                    ).unwrap_or(pc.Iter(()))
+                    ).unwrap_or(Iter(()))
                 )
-            case (Status.SIGNATURE_MISMATCH, pc.Some(pl_info), pc.Some(pql_info)):
-                return pc.Iter((
+            case (Status.SIGNATURE_MISMATCH, Some(pl_info), Some(pql_info)):
+                return Iter((
                     f"- `{self.method_name}`",
                     f"  - **Polars**: {_signature_with_diff(pl_info, pql_info, self.infos.ignored_params)}",
                     f"  - **pql**: {_signature_with_diff(pql_info, pl_info, self.infos.ignored_params)}",
                 ))
             case _:
-                return pc.Iter.once(f"- `{self.method_name}`")
+                return Iter.once(f"- `{self.method_name}`")
 
 
-def _get_method_info(cls: object, name: str) -> pc.Option[MethodInfo]:
+def _get_method_info(cls: object, name: str) -> Option[MethodInfo]:
     return get_attr(cls, name).and_then(_build_method_info, name)
 
 
-def _build_method_info(attr: object, name: str) -> pc.Option[MethodInfo]:
+def _build_method_info(attr: object, name: str) -> Option[MethodInfo]:
     match attr:
         case property() as prop:
             match prop.fget:
                 case None:
-                    return pc.Some(
-                        MethodInfo(
-                            name, pc.Seq[ParamInfo].new(), pc.NONE, is_property=True
-                        )
+                    return Some(
+                        MethodInfo(name, Seq[ParamInfo].new(), NONE, is_property=True)
                     )
                 case getter:
-                    return pc.Some(
+                    return Some(
                         MethodInfo(
                             name,
-                            pc.Seq[ParamInfo].new(),
+                            Seq[ParamInfo].new(),
                             _get_annotation_str(
                                 inspect.signature(getter).return_annotation  # pyright: ignore[reportAny]
                             ),
@@ -278,49 +275,47 @@ def _build_method_info(attr: object, name: str) -> pc.Option[MethodInfo]:
                     )
         case attr if callable(attr):
             try:
-                return pc.Some(
+                return Some(
                     MethodInfo.from_signature(name=name, sig=inspect.signature(attr))
                 )
             except (ValueError, TypeError):
-                return pc.NONE
+                return NONE
         case _:
-            return pc.NONE
+            return NONE
 
 
-def _get_annotation_str(annotation: object) -> pc.Option[str]:
+def _get_annotation_str(annotation: object) -> Option[str]:
     """Convert annotation to string representation.
 
     Args:
         annotation (object): The annotation to convert.
 
     Returns:
-        pc.Option[str]: The string representation of the annotation, or pc.NONE if not available.
+        Option[str]: The string representation of the annotation, or NONE if not available.
     """
     match annotation:
         case inspect.Parameter.empty | inspect.Signature.empty:
-            return pc.NONE
+            return NONE
         case type():
-            return pc.Option(annotation.__name__)
+            return Option(annotation.__name__)
         case _:
-            return pc.Option(extract_last_name(str(annotation)))
+            return Option(extract_last_name(str(annotation)))
 
 
-def _format_param_str(param: ParamInfo, highlight_names: pc.Set[str]) -> str:
+def _format_param_str(param: ParamInfo, highlight_names: Set[str]) -> str:
     rendered = param.annotation.map(lambda a: f"{param.param_name()}: {a}").unwrap_or(
         param.param_name() + ("=..." if param.has_default else "")
     )
     return rendered if not highlight_names.contains(param.name) else f"`{rendered}`"
 
 
-def _signature_with_diff(
-    base: MethodInfo, other: MethodInfo, ignored: pc.Set[str]
-) -> str:
-    return base.signature_str(pc.Some(_diff_param_names(base, other, ignored)))
+def _signature_with_diff(base: MethodInfo, other: MethodInfo, ignored: Set[str]) -> str:
+    return base.signature_str(Some(_diff_param_names(base, other, ignored)))
 
 
 def _diff_param_names(
-    base: MethodInfo, other: MethodInfo, ignored: pc.Set[str]
-) -> pc.Set[str]:
+    base: MethodInfo, other: MethodInfo, ignored: Set[str]
+) -> Set[str]:
     base_map = _without_ignored_params(base.to_map(), ignored)
     other_map = _without_ignored_params(other.to_map(), ignored)
     return (
@@ -339,12 +334,12 @@ def _diff_param_names(
                 )
             )
         )
-        .collect(pc.Set)
+        .collect(Set)
     )
 
 
-def _without_ignored_params(mapping: MapInfo, ignored: pc.Set[str]) -> MapInfo:
-    def _get_fn(current: pc.Dict[str, ParamInfo], param: ParamInfo) -> ParamInfo:
+def _without_ignored_params(mapping: MapInfo, ignored: Set[str]) -> MapInfo:
+    def _get_fn(current: Dict[str, ParamInfo], param: ParamInfo) -> ParamInfo:
         key = (
             param.name.removeprefix("more_")
             if param.is_var_positional and param.name.startswith("more_")
@@ -359,7 +354,7 @@ def _without_ignored_params(mapping: MapInfo, ignored: pc.Set[str]) -> MapInfo:
         .filter_star(lambda k, _v: not ignored.contains(k))
         .map_star(lambda _name, param: param)
         .fold(
-            pc.Dict[str, ParamInfo].new(),
+            Dict[str, ParamInfo].new(),
             lambda acc, param: acc.inspect(_get_fn, param),
         )
     )
@@ -367,7 +362,7 @@ def _without_ignored_params(mapping: MapInfo, ignored: pc.Set[str]) -> MapInfo:
 
 def annotations_differ(pl_param: ParamInfo, pql_param: ParamInfo) -> bool:
     match (pl_param.annotation, pql_param.annotation):
-        case (pc.Some(pl_ann), pc.Some(pql_ann)):
+        case (Some(pl_ann), Some(pql_ann)):
             return not annotations_compatible(pl_ann, pql_ann)
         case _:
             return False

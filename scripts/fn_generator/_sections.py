@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-import pyochain as pc
+from pyochain import Option, Seq
 
 from .._utils import CollectionsABC, DateTime, From, Pql, Typing
 from ._rules import NAMESPACE_SPECS, NamespaceSpec
@@ -18,8 +18,8 @@ class FunctionInfo:
     func: str
 
 
-def build_file(fns: pc.Seq[FunctionInfo], path: Path) -> str:
-    def _body(funcs: pc.Seq[FunctionInfo]) -> str:
+def build_file(fns: Seq[FunctionInfo], path: Path) -> str:
+    def _body(funcs: Seq[FunctionInfo]) -> str:
         return funcs.then(
             lambda x: x.iter().map(lambda f: f.func).join("\n\n")
         ).unwrap_or("    pass")
@@ -27,11 +27,11 @@ def build_file(fns: pc.Seq[FunctionInfo], path: Path) -> str:
     def _class_block(
         name: str,
         doc: str,
-        funcs: pc.Seq[FunctionInfo],
+        funcs: Seq[FunctionInfo],
         base: str,
         type_params: str | None = None,
     ) -> str:
-        params = pc.Option(type_params).map(lambda tp: f"[{tp}]").unwrap_or("")
+        params = Option(type_params).map(lambda tp: f"[{tp}]").unwrap_or("")
         return f'''
 class {name}{params}({base}):
     __slots__ : ClassVar[Iterable[str]] = ()

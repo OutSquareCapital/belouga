@@ -2,7 +2,7 @@ import ast
 import re
 from typing import override
 
-import pyochain as pc
+from pyochain import NONE, Dict, Iter, Option, Seq, Some
 
 from .._utils import Builtins, CollectionsABC, Pql, Pyochain, Typing
 from ._rules import CONTAINER_SUPERTYPES, TYPE_SUPERTYPES, ContainerType
@@ -21,7 +21,7 @@ def _slice_to_expr(slice_node: ast.expr) -> ast.expr:
 
 
 class _AliasExpander(ast.NodeTransformer):
-    _single_param_aliases: pc.Dict[str, str] = pc.Dict.from_kwargs(
+    _single_param_aliases: Dict[str, str] = Dict.from_kwargs(
         TryIter="Iterable[{arg}] | {arg}",
         TrySeq="Sequence[{arg}] | {arg}",
     )
@@ -53,7 +53,7 @@ class _AliasExpander(ast.NodeTransformer):
 
 class _GenericCanonicalizer(ast.NodeTransformer):
     def __init__(self) -> None:
-        self._mapping: pc.Dict[str, str] = pc.Dict.new()
+        self._mapping: Dict[str, str] = Dict.new()
 
     @override
     def visit_Name(self, node: ast.Name) -> ast.AST:
@@ -77,31 +77,31 @@ class _UnionCanonicalizer(ast.NodeTransformer):
         match self.generic_visit(node):
             case ast.BinOp(op=ast.BitOr()):
 
-                def _build_union_expr(parts: pc.Seq[str]) -> ast.expr:
+                def _build_union_expr(parts: Seq[str]) -> ast.expr:
                     def _union_expr(left: ast.expr, right: ast.expr) -> ast.expr:
                         return ast.BinOp(left=left, op=ast.BitOr(), right=right)
 
                     def _build_union(
-                        acc: pc.Option[ast.expr], expr: ast.expr
-                    ) -> pc.Option[ast.expr]:
+                        acc: Option[ast.expr], expr: ast.expr
+                    ) -> Option[ast.expr]:
                         return acc.map(lambda left: _union_expr(left, expr)).or_(
-                            pc.Some(expr)
+                            Some(expr)
                         )
 
                     return (
                         parts
                         .iter()
                         .map(lambda part: ast.parse(part, mode="eval").body)
-                        .fold(pc.NONE, _build_union)
+                        .fold(NONE, _build_union)
                         .unwrap_or(ast.Constant(value=None))
                     )
 
-                def _union_members(node: ast.expr) -> pc.Iter[ast.expr]:
+                def _union_members(node: ast.expr) -> Iter[ast.expr]:
                     match node:
                         case ast.BinOp(left=left, op=ast.BitOr(), right=right):
                             return _union_members(left).chain(_union_members(right))
                         case _:
-                            return pc.Iter.once(node)
+                            return Iter.once(node)
 
                 members_as_text = _union_members(node).map(ast.unparse).collect()
                 has_float = members_as_text.any(lambda text: text == Builtins.FLOAT)
@@ -157,9 +157,9 @@ def _normalize_expr(parsed: ast.Expression) -> ast.expr:
 
 def _generic_base_accepts(
     target_base: CollectionsABC,
-    target_args: pc.Seq[ast.expr],
+    target_args: Seq[ast.expr],
     reference_base: ContainerType,
-    reference_args: pc.Seq[ast.expr],
+    reference_args: Seq[ast.expr],
 ) -> bool:
     return (
         _collection_item_type(target_base, target_args)
@@ -197,12 +197,12 @@ def _annotation_accepts(target: ast.expr, reference: ast.expr) -> bool:
     )
 
 
-def _union_members(reference: ast.expr) -> pc.Iter[ast.expr]:
+def _union_members(reference: ast.expr) -> Iter[ast.expr]:
     match reference:
         case ast.BinOp(left=left, op=ast.BitOr(), right=right):
             return _union_members(left).chain(_union_members(right))
         case _:
-            return pc.Iter.once(reference)
+            return Iter.once(reference)
 
 
 def _member_accepts(target: ast.expr, reference: ast.expr) -> bool:
@@ -242,15 +242,15 @@ def _generic_accepts(target: ast.Subscript, reference: ast.Subscript) -> bool:
     )
 
 
-def _into_seq_args(target: ast.expr) -> pc.Seq[ast.expr]:
+def _into_seq_args(target: ast.expr) -> Seq[ast.expr]:
     match target:
         case ast.Tuple():
-            return pc.Seq(target.elts)
+            return Seq(target.elts)
         case _:
-            return pc.Seq((target,))
+            return Seq((target,))
 
 
-def _collection_item_type(base: str, args: pc.Seq[ast.expr]) -> pc.Option[ast.expr]:
+def _collection_item_type(base: str, args: Seq[ast.expr]) -> Option[ast.expr]:
     match (base, args.length()):
         case (
             CollectionsABC.ITERABLE
@@ -263,29 +263,29 @@ def _collection_item_type(base: str, args: pc.Seq[ast.expr]) -> pc.Option[ast.ex
             | Pyochain.VEC,
             1,
         ):
-            return pc.Some(args.first())
+            return Some(args.first())
         case (Builtins.TUPLE, 1):
-            return pc.Some(args.first())
+            return Some(args.first())
         case (Builtins.TUPLE, 2):
             match args[1]:
                 case ast.Constant() as constant if constant.value is Ellipsis:
-                    return pc.Some(args.first())
+                    return Some(args.first())
                 case _:
-                    return pc.NONE
+                    return NONE
         case _:
-            return pc.NONE
+            return NONE
 
 
-def _type_name(node: ast.expr) -> pc.Option[str]:
+def _type_name(node: ast.expr) -> Option[str]:
     match node:
         case ast.Name(id=name):
-            return pc.Some(name)
+            return Some(name)
         case ast.Attribute(attr=name):
-            return pc.Some(name)
+            return Some(name)
         case ast.Constant(value=None):
-            return pc.Some(Builtins.NONE)
+            return Some(Builtins.NONE)
         case _:
-            return pc.NONE
+            return NONE
 
 
 def _type_accepts(target_name: str, reference_name: str) -> bool:

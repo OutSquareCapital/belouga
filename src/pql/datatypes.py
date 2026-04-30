@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from enum import Enum as PyEnum
 from typing import TYPE_CHECKING, Any, Concatenate, Self, TypeIs, final, overload
 
-import pyochain as pc
+from pyochain import Dict, Iter, Seq
 from sqlglot import exp
 
 if TYPE_CHECKING:
@@ -502,9 +502,9 @@ class Enum(StringType, ComplexDataType):
         """
         match categories:
             case type():
-                values: pc.Iter[str] = pc.Iter(categories).map(lambda i: i.value)  # pyright: ignore[reportAny]
+                values: Iter[str] = Iter(categories).map(lambda i: i.value)  # pyright: ignore[reportAny]
             case Iterable():
-                values = pc.Iter(categories)
+                values = Iter(categories)
 
         self.raw = exp.DataType(
             this=exp.DType.ENUM,
@@ -512,11 +512,11 @@ class Enum(StringType, ComplexDataType):
         )
 
     @property
-    def categories(self) -> pc.Seq[str]:
+    def categories(self) -> Seq[str]:
         """Get the categories of the enum type."""
         exprs: list[exp.Expr] = self.raw.expressions
         return (
-            pc.Iter(exprs).map(lambda lit: lit.this).collect()  # pyright: ignore[reportAny]
+            Iter(exprs).map(lambda lit: lit.this).collect()  # pyright: ignore[reportAny]
         )
 
 
@@ -532,8 +532,7 @@ class Union(NestedType, ComplexDataType):
             fields (Iterable[DataType]): The fields of the union type.
         """
         exprs = (
-            pc
-            .Iter(fields)
+            Iter(fields)
             .enumerate()
             .map_star(
                 lambda i, f: exp.ColumnDef(this=exp.to_identifier(f"v{i}"), kind=f.raw)
@@ -543,11 +542,10 @@ class Union(NestedType, ComplexDataType):
         self.raw = exp.DataType(this=exp.DType.UNION, expressions=exprs, nested=True)
 
     @property
-    def fields(self) -> pc.Seq[DataType]:
+    def fields(self) -> Seq[DataType]:
         """Get the fields of the union type."""
         return (
-            pc
-            .Iter(self.raw.expressions)
+            Iter(self.raw.expressions)
             .map(lambda col_def: self.from_sql(col_def.kind))  # pyright: ignore[reportAny]
             .collect()
         )
@@ -592,8 +590,7 @@ class Struct(NestedType, ComplexDataType):
             fields (IntoDict[str, DataType]): The fields of the struct type, either as a dictionary or an iterable of key-value pairs.
         """
         exprs = (
-            pc
-            .Dict(fields)
+            Dict(fields)
             .items()
             .iter()
             .map_star(
@@ -606,18 +603,17 @@ class Struct(NestedType, ComplexDataType):
         self.raw = exp.DataType(this=exp.DType.STRUCT, expressions=exprs, nested=True)
 
     @property
-    def fields(self) -> pc.Dict[str, DataType]:
+    def fields(self) -> Dict[str, DataType]:
         """Get the fields of the struct type."""
         return (
-            pc
-            .Iter(self.raw.expressions)
+            Iter(self.raw.expressions)
             .map(
                 lambda col_def: (  # pyright: ignore[reportAny]
                     col_def.this.this,  # pyright: ignore[reportAny]
                     self.from_sql(col_def.kind),  # pyright: ignore[reportAny]
                 )
             )
-            .collect(pc.Dict)
+            .collect(Dict)
         )
 
 
@@ -684,7 +680,7 @@ class List(NestedType, ComplexDataType):
         return self.from_sql(self.raw.expressions[0])  # pyright: ignore[reportAny]
 
 
-PRECISION_MAP: pc.Dict[EpochTimeUnit, exp.DataType] = pc.Dict.from_ref({
+PRECISION_MAP: Dict[EpochTimeUnit, exp.DataType] = Dict.from_ref({
     "s": exp.DType.TIMESTAMP_S.into_expr(),
     "ms": exp.DType.TIMESTAMP_MS.into_expr(),
     "us": exp.DType.TIMESTAMP.into_expr(),
@@ -692,7 +688,7 @@ PRECISION_MAP: pc.Dict[EpochTimeUnit, exp.DataType] = pc.Dict.from_ref({
 })
 
 
-NESTED_MAP: pc.Dict[exp.DType, type[ComplexDataType]] = pc.Dict.from_ref({
+NESTED_MAP: Dict[exp.DType, type[ComplexDataType]] = Dict.from_ref({
     exp.DType.LIST: List,
     exp.DType.ARRAY: Array,
     exp.DType.STRUCT: Struct,
@@ -702,7 +698,7 @@ NESTED_MAP: pc.Dict[exp.DType, type[ComplexDataType]] = pc.Dict.from_ref({
     exp.DType.DECIMAL: Decimal,
 })
 
-NON_NESTED_MAP: pc.Dict[exp.DType, DataType] = pc.Dict.from_ref({
+NON_NESTED_MAP: Dict[exp.DType, DataType] = Dict.from_ref({
     exp.DType.BIGINT: Int64(),
     exp.DType.BIT: BitString(),
     exp.DType.BIGNUM: Number(),

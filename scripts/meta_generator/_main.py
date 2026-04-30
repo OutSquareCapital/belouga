@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Self
 
 import polars as pl
-import pyochain as pc
+from pyochain import Iter, Option, Seq
 from rich import print
 from rich.text import Text
 
@@ -25,9 +25,9 @@ class MetaFnInfo:
 
     name: str
     final_name: str
-    description: pc.Option[str]
-    params: pc.Seq[tuple[str, str]]
-    varargs_type: pc.Option[str]
+    description: Option[str]
+    params: Seq[tuple[str, str]]
+    varargs_type: Option[str]
 
     @classmethod
     def from_row(  # noqa: PLR0913, PLR0917
@@ -42,9 +42,9 @@ class MetaFnInfo:
         return cls(
             name,
             final_name,
-            pc.Option(description),
-            pc.Iter(params).zip(py_types, strict=True).collect(),
-            pc.Option(varargs_type),
+            Option(description),
+            Iter(params).zip(py_types, strict=True).collect(),
+            Option(varargs_type),
         )
 
     def build(self) -> str:
@@ -66,8 +66,8 @@ def {self.final_name}({self._signature()}) -> LazyFrame:
             .map_star(lambda n, t: f"{n}: {t} | None = None")
             .chain(
                 self.varargs_type.map(
-                    lambda t: pc.Iter.once(f"*args: {t}")
-                ).unwrap_or_else(pc.Iter.new)
+                    lambda t: Iter.once(f"*args: {t}")
+                ).unwrap_or_else(Iter.new)
             )
             .join(", ")
         )
@@ -86,8 +86,8 @@ def {self.final_name}({self._signature()}) -> LazyFrame:
             .map_star(lambda n, t: f"        {n} ({t} | None): Parameter")
             .chain(
                 self.varargs_type.map(
-                    lambda t: pc.Iter.once(f"        *args ({t}): Variable arguments")
-                ).unwrap_or_else(pc.Iter.new)
+                    lambda t: Iter.once(f"        *args ({t}): Variable arguments")
+                ).unwrap_or_else(Iter.new)
             )
             .collect()
             .then(lambda docs: f"\n\n    Args:\n{docs.join(chr(10))}")
@@ -100,8 +100,8 @@ def {self.final_name}({self._signature()}) -> LazyFrame:
             .iter()
             .map_star(lambda n, _: n)
             .chain(
-                self.varargs_type.map(lambda _: pc.Iter.once("*args")).unwrap_or_else(
-                    pc.Iter.new
+                self.varargs_type.map(lambda _: Iter.once("*args")).unwrap_or_else(
+                    Iter.new
                 )
             )
             .collect()
@@ -126,7 +126,7 @@ def run_pipeline(caller: Path, source: Path) -> str:
     )
 
 
-def _build_file(fns: pc.Seq[MetaFnInfo], caller: Path) -> str:
+def _build_file(fns: Seq[MetaFnInfo], caller: Path) -> str:
     body = fns.iter().map(MetaFnInfo.build).join("\n\n\n")
     return f"{_header(caller)}\n\n\n{body}\n"
 
@@ -179,11 +179,11 @@ def _query(lf: pl.LazyFrame) -> pl.LazyFrame:
     )
 
 
-def _to_infos(df: pl.DataFrame) -> pc.Seq[MetaFnInfo]:
+def _to_infos(df: pl.DataFrame) -> Seq[MetaFnInfo]:
     return (
         df
         .map_rows(lambda x: MetaFnInfo.from_row(*x), return_dtype=pl.Object)  # pyright: ignore[reportAny]
-        .pipe(lambda df: pc.Iter[MetaFnInfo](df.to_series()))
+        .pipe(lambda df: Iter[MetaFnInfo](df.to_series()))
         .collect()
     )
 
