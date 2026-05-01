@@ -23,7 +23,6 @@ from ._funcs import (
     sum_horizontal,
 )
 from ._scans import (
-    Schema,
     from_df,
     from_dict,
     from_dicts,
@@ -98,7 +97,6 @@ __all__ = [
     "List",
     "Map",
     "Number",
-    "Schema",
     "String",
     "Struct",
     "Time",
