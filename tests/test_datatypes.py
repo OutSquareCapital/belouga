@@ -8,7 +8,7 @@ import pytest
 import pql
 
 if TYPE_CHECKING:
-    import pyochain as pc
+    from pyochain import Dict
 
 
 class MyEnum(Enum):
@@ -95,11 +95,11 @@ def sample_data() -> pql.LazyFrame:
 
 
 @pytest.fixture(scope="session")
-def cast_schema(sample_data: pql.LazyFrame) -> pql.Schema:
+def cast_schema(sample_data: pql.LazyFrame) -> Dict[str, pql.DataType]:
     return _create_schema(sample_data)
 
 
-def _create_schema(sample_data: pql.LazyFrame) -> pql.Schema:
+def _create_schema(sample_data: pql.LazyFrame) -> Dict[str, pql.DataType]:
     return sample_data.select(_exprs()).schema
 
 
@@ -148,11 +148,11 @@ def _exprs() -> tuple[pql.Expr, ...]:
     )
 
 
-def test_geometry(cast_schema: pc.Dict[str, pql.DataType]) -> None:
+def test_geometry(cast_schema: Dict[str, pql.DataType]) -> None:
     assert isinstance(cast_schema["geometry"], pql.Geometry)
 
 
-def test_signed_integer(cast_schema: pc.Dict[str, pql.DataType]) -> None:
+def test_signed_integer(cast_schema: Dict[str, pql.DataType]) -> None:
     assert isinstance(cast_schema["i8"], pql.Int8)
     assert isinstance(cast_schema["i16"], pql.Int16)
     assert isinstance(cast_schema["i32"], pql.Int32)
@@ -165,7 +165,7 @@ def test_signed_integer(cast_schema: pc.Dict[str, pql.DataType]) -> None:
     assert not pql.Int32.is_(pql.Int64())
 
 
-def test_unsigned_integer(cast_schema: pc.Dict[str, pql.DataType]) -> None:
+def test_unsigned_integer(cast_schema: Dict[str, pql.DataType]) -> None:
     assert isinstance(cast_schema["u8"], pql.UInt8)
     assert isinstance(cast_schema["u16"], pql.UInt16)
     assert isinstance(cast_schema["u32"], pql.UInt32)
@@ -176,7 +176,7 @@ def test_unsigned_integer(cast_schema: pc.Dict[str, pql.DataType]) -> None:
     assert pql.UInt16.is_numeric()
 
 
-def test_float(cast_schema: pc.Dict[str, pql.DataType]) -> None:
+def test_float(cast_schema: Dict[str, pql.DataType]) -> None:
     assert isinstance(cast_schema["f32"], pql.Float32)
     assert isinstance(cast_schema["f64"], pql.Float64)
     assert pql.Float32.is_float()
@@ -184,12 +184,12 @@ def test_float(cast_schema: pc.Dict[str, pql.DataType]) -> None:
     assert pql.Float64.is_numeric()
 
 
-def test_bool_str(cast_schema: pc.Dict[str, pql.DataType]) -> None:
+def test_bool_str(cast_schema: Dict[str, pql.DataType]) -> None:
     assert isinstance(cast_schema["bool"], pql.Boolean)
     assert isinstance(cast_schema["s"], pql.String)
 
 
-def test_decimal(cast_schema: pc.Dict[str, pql.DataType]) -> None:
+def test_decimal(cast_schema: Dict[str, pql.DataType]) -> None:
     dec: pql.Decimal = cast_schema["dec"]  # pyright: ignore[reportAssignmentType]
     assert isinstance(dec, pql.Decimal)
     assert dec.precision == 10
@@ -198,7 +198,7 @@ def test_decimal(cast_schema: pc.Dict[str, pql.DataType]) -> None:
     assert pql.Decimal.is_numeric()
 
 
-def test_temporal(cast_schema: pc.Dict[str, pql.DataType]) -> None:
+def test_temporal(cast_schema: Dict[str, pql.DataType]) -> None:
     assert isinstance(cast_schema["dates"], pql.Date)
     assert isinstance(cast_schema["hours"], pql.DatetimeTZ)
     assert isinstance(cast_schema["time"], pql.Time)
@@ -208,14 +208,14 @@ def test_temporal(cast_schema: pc.Dict[str, pql.DataType]) -> None:
     assert pql.Duration.is_temporal()
 
 
-def test_list(cast_schema: pc.Dict[str, pql.DataType]) -> None:
+def test_list(cast_schema: Dict[str, pql.DataType]) -> None:
     lst: pql.List = cast_schema["lst"]  # pyright: ignore[reportAssignmentType]
     assert isinstance(lst, pql.List)
     assert isinstance(lst.inner, pql.UInt16)
     assert pql.List.is_nested()
 
 
-def test_array(cast_schema: pc.Dict[str, pql.DataType]) -> None:
+def test_array(cast_schema: Dict[str, pql.DataType]) -> None:
     arr_1d: pql.Array = cast_schema["arr_1d"]  # pyright: ignore[reportAssignmentType]
     assert isinstance(arr_1d, pql.Array)
     assert isinstance(arr_1d.inner, pql.UInt16)
@@ -227,11 +227,11 @@ def test_array(cast_schema: pc.Dict[str, pql.DataType]) -> None:
     assert pql.Array.is_nested()
 
 
-def test_binary(cast_schema: pc.Dict[str, pql.DataType]) -> None:
+def test_binary(cast_schema: Dict[str, pql.DataType]) -> None:
     assert isinstance(cast_schema["blobs"], pql.Binary)
 
 
-def test_enum(cast_schema: pc.Dict[str, pql.DataType]) -> None:
+def test_enum(cast_schema: Dict[str, pql.DataType]) -> None:
     enumerated: pql.Enum = cast_schema["enumerated"]  # pyright: ignore[reportAssignmentType]
     assert isinstance(enumerated, pql.Enum)
     assert tuple(enumerated.categories) == ("A", "B", "C")
@@ -241,14 +241,14 @@ def test_enum(cast_schema: pc.Dict[str, pql.DataType]) -> None:
     assert tuple(enumerated_enum.categories) == ("A", "B", "C")
 
 
-def test_map(cast_schema: pc.Dict[str, pql.DataType]) -> None:
+def test_map(cast_schema: Dict[str, pql.DataType]) -> None:
     mapped: pql.Map = cast_schema["mapped"]  # pyright: ignore[reportAssignmentType]
     assert isinstance(mapped, pql.Map)
     assert isinstance(mapped.key, pql.String)
     assert isinstance(mapped.value, pql.Int32)
 
 
-def test_struct(cast_schema: pc.Dict[str, pql.DataType]) -> None:
+def test_struct(cast_schema: Dict[str, pql.DataType]) -> None:
     struct: pql.Struct = cast_schema["structured"]  # pyright: ignore[reportAssignmentType]
     assert isinstance(struct, pql.Struct)
     assert isinstance(struct.fields["a"], pql.Int32)
@@ -257,7 +257,7 @@ def test_struct(cast_schema: pc.Dict[str, pql.DataType]) -> None:
     assert pql.Struct.is_nested()
 
 
-def test_union(cast_schema: pc.Dict[str, pql.DataType]) -> None:
+def test_union(cast_schema: Dict[str, pql.DataType]) -> None:
     unioned: pql.Union = cast_schema["unioned"]  # pyright: ignore[reportAssignmentType]
     assert isinstance(unioned, pql.Union)
     assert isinstance(unioned.fields[0], pql.Int32)
@@ -265,11 +265,11 @@ def test_union(cast_schema: pc.Dict[str, pql.DataType]) -> None:
     assert isinstance(unioned.fields[2], pql.Float64)
 
 
-def test_time_tz(cast_schema: pc.Dict[str, pql.DataType]) -> None:
+def test_time_tz(cast_schema: Dict[str, pql.DataType]) -> None:
     assert isinstance(cast_schema["time_tz"], pql.TimeTZ)
 
 
-def test_datetime_all_time_units(cast_schema: pc.Dict[str, pql.DataType]) -> None:
+def test_datetime_all_time_units(cast_schema: Dict[str, pql.DataType]) -> None:
     datetime_s: pql.Datetime = cast_schema["datetime_s"]  # pyright: ignore[reportAssignmentType]
     assert isinstance(datetime_s, pql.Datetime)
     assert datetime_s.time_unit == "s"
@@ -287,13 +287,13 @@ def test_datetime_all_time_units(cast_schema: pc.Dict[str, pql.DataType]) -> Non
     assert datetime_ns.time_unit == "ns"
 
 
-def test_bitstring(cast_schema: pc.Dict[str, pql.DataType]) -> None:
+def test_bitstring(cast_schema: Dict[str, pql.DataType]) -> None:
     assert isinstance(cast_schema["bits"], pql.BitString)
 
 
-def test_uuid(cast_schema: pc.Dict[str, pql.DataType]) -> None:
+def test_uuid(cast_schema: Dict[str, pql.DataType]) -> None:
     assert isinstance(cast_schema["uuid_data"], pql.UUID)
 
 
-def test_number(cast_schema: pc.Dict[str, pql.DataType]) -> None:
+def test_number(cast_schema: Dict[str, pql.DataType]) -> None:
     assert isinstance(cast_schema["num"], pql.Number)

@@ -34,7 +34,7 @@ from ._expr import Expr
 from ._funcs import all, col, lit, row_number, unnest
 from ._joins import JoinBuilder, JoinKeys
 from ._meta import ExprPlan, Marker
-from ._scans import ScanSource, Schema
+from ._scans import ScanSource
 from .utils import TryIter, TrySeq, check_by_arg, try_iter, try_seq
 
 if TYPE_CHECKING:
@@ -61,6 +61,7 @@ if TYPE_CHECKING:
         ParquetCompression,
         PivotAgg,
         PythonLiteral,
+        Schema,
         UniqueKeepStrategy,
     )
 
@@ -199,7 +200,7 @@ class LazyFrame(CoreHandler[exp.Query]):
         Returns:
             Self: A new LazyFrame with the selected columns.
         """
-        plan = self.columns.into(ExprPlan, exprs, more_exprs, named_exprs)
+        plan = self._schema.into(ExprPlan, exprs, more_exprs, named_exprs)
         return plan.select_ctx().map_or_else(
             lambda: self.__class__(ScanSource.from_none().relation),
             lambda ast: self._execute(ast, src=self),
@@ -221,7 +222,7 @@ class LazyFrame(CoreHandler[exp.Query]):
         Returns:
             Self: A new LazyFrame with the added or replaced columns.
         """
-        plan = self.columns.into(ExprPlan, exprs, more_exprs, named_exprs)
+        plan = self._schema.into(ExprPlan, exprs, more_exprs, named_exprs)
         return self._execute(
             plan.with_columns_ctx(),
             src=self,
@@ -307,7 +308,7 @@ class LazyFrame(CoreHandler[exp.Query]):
             Self: A new LazyFrame with the aggregated rows.
         """
         return (
-            self.columns
+            self._schema
             .into(ExprPlan, exprs, more_exprs, named_exprs)
             .group_by_all_ctx()
             .pipe(self._execute, src=self)
@@ -508,7 +509,7 @@ class LazyFrame(CoreHandler[exp.Query]):
             Self: A new LazyFrame with the exploded columns.
         """
         to_explode_names = (
-            self.columns
+            self._schema
             .into(ExprPlan, columns, more_columns, {})
             .projections.iter()
             .map(lambda r: r.name)
@@ -808,16 +809,22 @@ class LazyFrame(CoreHandler[exp.Query]):
         return self._schema.length()
 
     @property
-    def schema(self) -> Schema:
-        return self._schema
+    def schema(self) -> Dict[str, dt.DataType]:
+        return (
+            self._schema
+            .items()
+            .iter()
+            .map_star(lambda name, dtype: (name, dt.DataType.from_sql(dtype)))
+            .collect(Dict)
+        )
 
-    def collect_schema(self) -> Schema:
+    def collect_schema(self) -> Dict[str, dt.DataType]:
         """Collect the schema (same as schema property for lazy).
 
         Returns:
             Schema: The schema of the LazyFrame.
         """
-        return self._schema
+        return self.schema
 
     def join(  # noqa: PLR0913
         self,

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import TYPE_CHECKING, final
 
-from pyochain import Seq
+from pyochain import Dict
 from sqlglot import exp
 
 from . import datatypes as dt
@@ -478,7 +478,7 @@ class ExprStructNameSpace(StructFns[Expr]):
             Expr
         """
         return (
-            Seq[str]
+            Dict[str, exp.DataType]
             .new()
             .into(ExprPlan, exprs, more_exprs, named_exprs)
             .with_fields_ctx(self.inner)

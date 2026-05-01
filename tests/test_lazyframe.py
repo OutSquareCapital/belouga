@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import polars as pl
-import pyochain as pc
 import pytest
+from pyochain import Dict, ResultUnwrapError
 from sqlglot import exp
 
 import pql
@@ -293,7 +293,7 @@ def test_rename(lf: pql.LazyFrame, mapping: dict[str, str]) -> None:
 
 
 def test_with_columns_star_exprs(lf: pql.LazyFrame) -> None:
-    cols = lf.columns
+    cols = lf.schema.items().iter().map_star(lambda k, v: (k, v.raw)).collect(Dict)
 
     def _plan(expr: pql.Expr) -> exp.Star | None:
         return m.ExprPlan(cols, expr, (), {}).with_columns_ctx().find(exp.Star)
@@ -363,7 +363,7 @@ def test_fill_null_with_non_directional_strategy_limit_error(
 def test_fill_null_with_negative_limit_error() -> None:
     df = pql.LazyFrame({"a": [1.0, None, None, 4.0]})
     msg = "Can't process negative `limit` value for fill_null"
-    with pytest.raises(pc.ResultUnwrapError, match=msg):
+    with pytest.raises(ResultUnwrapError, match=msg):
         _ = df.fill_null(strategy="forward", limit=-1)
 
 

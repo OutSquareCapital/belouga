@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
     from ._expr import Expr
     from .selectors import Cols, Resolver
-    from .typing import IntoExpr
+    from .typing import IntoExpr, Schema
 
 type Aliaser = Callable[[str], str]
 """Alias function type, used for generating deferred column aliases."""
@@ -192,7 +192,7 @@ class ExprMeta:
 
     alias_name: Option[Aliaser] = field(default_factory=lambda: NONE)
 
-    def into_resolved(self, expr: Expr, _cols: Cols) -> Iter[ResolvedExpr]:
+    def into_resolved(self, expr: Expr, _schema: Schema) -> Iter[ResolvedExpr]:
         output_name = (_extract_root_name(expr.inner),)
         name = Seq(output_name).into(self.get_output_names, expr).first()
         return ResolvedExpr(expr, name).into(Iter.once)
@@ -227,8 +227,8 @@ class MultiMeta(ExprMeta):
     resolver: Resolver = field(kw_only=True)
 
     @override
-    def into_resolved(self, expr: Expr, cols: Cols) -> Iter[ResolvedExpr]:
-        base_names = self.resolver(cols)
+    def into_resolved(self, expr: Expr, schema: Schema) -> Iter[ResolvedExpr]:
+        base_names = self.resolver(schema)
         output_names = self.get_output_names(base_names, expr)
 
         def _resolved(expr: Expr, col_name: str, name: str) -> ResolvedExpr:
@@ -326,12 +326,12 @@ class ResolvedExpr(Pipeable):
 
 @dataclass(slots=True, init=False)
 class ExprPlan:
-    cols: Cols
+    schema: Schema
     projections: Seq[ResolvedExpr]
 
     def __init__(
         self,
-        cols: Cols,
+        schema: Schema,
         exprs: TryIter[IntoExpr],
         more_exprs: Iterable[IntoExpr],
         named_exprs: dict[str, IntoExpr],
@@ -351,7 +351,7 @@ class ExprPlan:
 
             match val:
                 case Expr() as expr:
-                    return expr.meta.into_resolved(expr, cols)
+                    return expr.meta.into_resolved(expr, schema)
                 case _:
                     return (
                         Expr
@@ -360,7 +360,7 @@ class ExprPlan:
                         .into(Iter.once)
                     )
 
-        self.cols = cols
+        self.schema = schema
         self.projections = (
             try_iter(exprs)
             .chain(more_exprs)
@@ -406,7 +406,7 @@ class ExprPlan:
 
             def _resolved(updates: Dict[str, Expr]) -> Iter[exp.Expr]:
 
-                match updates.any(lambda name: name in self.cols):
+                match updates.any(lambda name: name in self.schema):
                     case False:
                         return (
                             updates
@@ -417,7 +417,7 @@ class ExprPlan:
                         )
                     case True:
                         return (
-                            self.cols
+                            self.schema
                             .iter()
                             .map(
                                 lambda name: updates.get_item(name).map_or(
@@ -428,7 +428,9 @@ class ExprPlan:
                                 updates
                                 .items()
                                 .iter()
-                                .filter_star(lambda name, _expr: name not in self.cols)
+                                .filter_star(
+                                    lambda name, _expr: name not in self.schema
+                                )
                                 .map_star(lambda name, e: e.alias(name).inner)
                             )
                         )
@@ -487,7 +489,7 @@ class ExprPlan:
                 case exp.Star() as star:
                     excluded = _excluded(star)
                     return (
-                        self.cols
+                        self.schema
                         .iter()
                         .filter(lambda name: name not in excluded)
                         .map(_into_glot)

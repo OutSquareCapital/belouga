@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, final
 
-from pyochain import NONE, Iter, Option, Seq, Set, Some
+from pyochain import NONE, Dict, Iter, Option, Seq, Set, Some
 from sqlglot import exp
 
 from ._expr import Expr
@@ -26,7 +26,7 @@ def _root_column_name(expr: Expr) -> Option[str]:
 
 @final
 class LazyGroupBy:
-    __slots__ = ("_cols", "_frame", "_keys", "_strategy")
+    __slots__ = ("_frame", "_keys", "_schema", "_strategy")
 
     def __init__(
         self, frame: LazyFrame, keys: Seq[Expr], strategy: GroupByClause | None
@@ -35,8 +35,12 @@ class LazyGroupBy:
         self._keys = keys
         self._strategy: GroupByClause | None = strategy
         keys_names = keys.iter().filter_map(_root_column_name).collect(Set)
-        self._cols = (
-            frame.columns.iter().filter(lambda name: name not in keys_names).collect()
+        self._schema = (
+            frame.schema
+            .items()
+            .iter()
+            .filter_star(lambda name, _dt: name not in keys_names)
+            .collect(Dict)
         )
 
     def len(self, name: str | None = None) -> LazyFrame:
@@ -76,7 +80,7 @@ class LazyGroupBy:
 
     def _agg_columns(self, func: Callable[[Expr], Expr]) -> LazyFrame:
         return (
-            self._cols
+            self._schema
             .iter()
             .map(lambda name: col(name).pipe(func).alias(name))
             .into(self.agg)
@@ -99,10 +103,13 @@ class LazyGroupBy:
                 case None:
                     return key_glots
 
-        plan = self._cols.into(ExprPlan, aggs, more_aggs, named_aggs)
-
         return (
-            plan
+            self._schema
+            .items()
+            .iter()
+            .map_star(lambda k, v: (k, v.raw))
+            .collect(Dict)
+            .into(ExprPlan, aggs, more_aggs, named_aggs)
             .agg_ctx(Iter(key_glots))
             .group_by(*_group_by_clause())
             .pipe(self._frame._execute, src=self._frame)  # pyright: ignore[reportPrivateUsage]

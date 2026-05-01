@@ -8,7 +8,10 @@ from typing import TYPE_CHECKING, Self, final, overload, override
 
 from pyochain import Iter, Option, Seq, Set
 
-from . import _funcs as fn  # pyright: ignore[reportPrivateUsage]
+from . import (
+    _funcs as fn,  # pyright: ignore[reportPrivateUsage]
+    datatypes as dt,
+)
 from ._core import into_expr
 from ._expr import Expr
 from ._meta import MultiMeta
@@ -20,8 +23,7 @@ if TYPE_CHECKING:
     from pyochain.traits import PyoCollection
     from sqlglot import exp
 
-    from . import datatypes as dt
-    from .typing import IntoExpr, IntoExprColumn
+    from .typing import IntoExpr, IntoExprColumn, Schema
 
 
 type Cols = PyoCollection[str]
@@ -29,15 +31,15 @@ type Cols = PyoCollection[str]
 
 @dataclass(slots=True, repr=False)
 class Resolver:
-    _fn: Callable[[Cols], Cols]
+    _fn: Callable[[Schema], Cols]
 
     @override
     def __repr__(self) -> str:
         fn = self._fn.__name__.replace("_", " ").title()
         return f"{self.__class__.__name__}({fn})"
 
-    def __call__(self, cols: Cols) -> Cols:
-        return self._fn(cols)
+    def __call__(self, schema: Schema) -> Cols:
+        return self._fn(schema)
 
     def into_selector(self) -> Selector:
         return Selector(fn.all().inner, self.into_meta())
@@ -47,14 +49,14 @@ class Resolver:
 
     @classmethod
     def all_columns(cls) -> Self:
-        def _all_columns(cols: Cols) -> Cols:
-            return cols
+        def _all_columns(schema: Schema) -> Cols:
+            return schema.keys()
 
         return cls(_all_columns)
 
     @classmethod
     def fixed(cls, names: Cols) -> Self:
-        def _fixed(_: Cols) -> Cols:
+        def _fixed(_: Schema) -> Cols:
             return names
 
         return cls(_fixed)
@@ -72,50 +74,66 @@ class Resolver:
 
     @classmethod
     def exclude(cls, excluded: Cols) -> Self:
-        def _exclude(cols: Cols) -> Cols:
-            return cols.iter().filter(lambda n: n not in excluded).collect()
+        def _exclude(schema: Schema) -> Cols:
+            return schema.iter().filter(lambda n: n not in excluded).collect()
 
         return cls(_exclude)
 
     @classmethod
     def ordered_name(cls, names: Iterable[str]) -> Self:
-        def _ordered(cols: Cols) -> Cols:
-            return Iter(names).filter(lambda name: name in cols).collect()
+        def _ordered(schema: Schema) -> Cols:
+            return Iter(names).filter(lambda name: name in schema).collect()
 
         return cls(_ordered)
 
     @classmethod
     def name(cls, predicate: Callable[[str], bool]) -> Self:
-        def _name(cols: Cols) -> Cols:
-            return cols.iter().filter(predicate).collect()
+        def _name(schema: Schema) -> Cols:
+            return schema.iter().filter(predicate).collect()
 
         return cls(_name)
 
+    @classmethod
+    def dtype(cls, predicate: Callable[[dt.DataType], bool]) -> Self:
+        def _dtype(schema: Schema) -> Cols:
+            return (
+                schema
+                .items()
+                .iter()
+                .filter_star(
+                    lambda _name, dtype: predicate(dt.DataType.from_sql(dtype))
+                )
+                .map_star(lambda name, _dtype: name)
+                .collect()
+            )
+
+        return cls(_dtype)
+
     def difference(self, right_fn: Self) -> Self:
-        def _difference(cols: Cols) -> Cols:
-            right = right_fn(cols)
-            return self(cols).iter().filter(lambda n: n not in right).collect()
+        def _difference(schema: Schema) -> Cols:
+            right = right_fn(schema)
+            return self(schema).iter().filter(lambda n: n not in right).collect()
 
         return self.__class__(_difference)
 
     def complement(self) -> Self:
-        def _complement(cols: Cols) -> Cols:
-            excluded = self(cols)
-            return cols.iter().filter(lambda n: n not in excluded).collect()
+        def _complement(schema: Schema) -> Cols:
+            excluded = self(schema)
+            return schema.iter().filter(lambda n: n not in excluded).collect()
 
         return self.__class__(_complement)
 
     def intersection(self, right: Self) -> Self:
-        def _intersection(cols: Cols) -> Cols:
-            right_set = right(cols)
-            return self(cols).iter().filter(lambda n: n in right_set).collect()
+        def _intersection(schema: Schema) -> Cols:
+            right_set = right(schema)
+            return self(schema).iter().filter(lambda n: n in right_set).collect()
 
         return self.__class__(_intersection)
 
     def union(self, right: Self) -> Self:
-        def _union(cols: Cols) -> Cols:
-            selected = self(cols).iter().chain(right(cols)).collect(Set)
-            return cols.iter().filter(lambda n: n in selected).collect()
+        def _union(schema: Schema) -> Cols:
+            selected = self(schema).iter().chain(right(schema)).collect(Set)
+            return schema.iter().filter(lambda n: n in selected).collect()
 
         return self.__class__(_union)
 
@@ -200,7 +218,7 @@ class Selector(Expr):
         return self._resolver.complement().into_selector()
 
 
-def by_dtype(*dtypes: type[dt.DataType]) -> Selector:  # pyright: ignore[reportUnusedParameter]
+def by_dtype(*dtypes: type[dt.DataType]) -> Selector:
     """Select columns matching any of the given dtype classes.
 
     Args:
@@ -209,7 +227,7 @@ def by_dtype(*dtypes: type[dt.DataType]) -> Selector:  # pyright: ignore[reportU
     Returns:
         Selector: A selector for columns matching the specified dtypes.
     """
-    raise NotImplementedError
+    return Resolver.dtype(lambda d: isinstance(d, dtypes)).into_selector()
 
 
 def numeric() -> Selector:
@@ -218,7 +236,7 @@ def numeric() -> Selector:
     Returns:
         Selector: A selector for all numeric columns.
     """
-    raise NotImplementedError
+    return by_dtype(dt.NumericType)
 
 
 def string() -> Selector:
@@ -227,7 +245,7 @@ def string() -> Selector:
     Returns:
         Selector: A selector for all string columns.
     """
-    raise NotImplementedError
+    return by_dtype(dt.StringType)
 
 
 def boolean() -> Selector:
@@ -236,7 +254,7 @@ def boolean() -> Selector:
     Returns:
         Selector: A selector for all boolean columns.
     """
-    raise NotImplementedError
+    return by_dtype(dt.Boolean)
 
 
 def all() -> Selector:
@@ -254,7 +272,7 @@ def float() -> Selector:
     Returns:
         Selector: A selector for all float columns.
     """
-    raise NotImplementedError
+    return by_dtype(dt.FloatType)
 
 
 def integer() -> Selector:
@@ -263,7 +281,7 @@ def integer() -> Selector:
     Returns:
         Selector: A selector for all integer columns.
     """
-    raise NotImplementedError
+    return by_dtype(dt.IntegerType)
 
 
 def signed_integer() -> Selector:
@@ -272,7 +290,7 @@ def signed_integer() -> Selector:
     Returns:
         Selector: A selector for all signed integer columns.
     """
-    raise NotImplementedError
+    return by_dtype(dt.SignedIntegerType)
 
 
 def unsigned_integer() -> Selector:
@@ -281,7 +299,7 @@ def unsigned_integer() -> Selector:
     Returns:
         Selector: A selector for all unsigned integer columns.
     """
-    raise NotImplementedError
+    return by_dtype(dt.UnsignedIntegerType)
 
 
 def temporal() -> Selector:
@@ -290,7 +308,7 @@ def temporal() -> Selector:
     Returns:
         Selector: A selector for all temporal columns.
     """
-    raise NotImplementedError
+    return by_dtype(dt.TemporalType)
 
 
 def date() -> Selector:
@@ -299,7 +317,7 @@ def date() -> Selector:
     Returns:
         Selector: A selector for all date columns.
     """
-    raise NotImplementedError
+    return by_dtype(dt.Date)
 
 
 def time() -> Selector:
@@ -308,7 +326,7 @@ def time() -> Selector:
     Returns:
         Selector: A selector for all time columns.
     """
-    raise NotImplementedError
+    return by_dtype(dt.Time, dt.TimeTZ)
 
 
 def duration() -> Selector:
@@ -317,7 +335,7 @@ def duration() -> Selector:
     Returns:
         Selector: A selector for all duration columns.
     """
-    raise NotImplementedError
+    return by_dtype(dt.Duration)
 
 
 def binary() -> Selector:
@@ -326,7 +344,7 @@ def binary() -> Selector:
     Returns:
         Selector: A selector for all binary columns.
     """
-    raise NotImplementedError
+    return by_dtype(dt.Binary)
 
 
 def enum() -> Selector:
@@ -335,7 +353,7 @@ def enum() -> Selector:
     Returns:
         Selector: A selector for all enum columns.
     """
-    raise NotImplementedError
+    return by_dtype(dt.Enum)
 
 
 def decimal() -> Selector:
@@ -344,7 +362,7 @@ def decimal() -> Selector:
     Returns:
         Selector: A selector for all decimal columns.
     """
-    raise NotImplementedError
+    return by_dtype(dt.Decimal)
 
 
 def nested() -> Selector:
@@ -353,7 +371,7 @@ def nested() -> Selector:
     Returns:
         Selector: A selector for all nested columns.
     """
-    raise NotImplementedError
+    return by_dtype(dt.NestedType)
 
 
 def struct() -> Selector:
@@ -362,7 +380,7 @@ def struct() -> Selector:
     Returns:
         Selector: A selector for all struct columns.
     """
-    raise NotImplementedError
+    return by_dtype(dt.Struct)
 
 
 # ──── name-based selectors ────

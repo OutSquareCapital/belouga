@@ -14,8 +14,6 @@ from pql import selectors as cs
 from ._data import sample_lf, sample_pql
 from ._utils import assert_eq, assert_lf_eq
 
-skipped = pytest.mark.skip(reason="Temp deletion of selectors by dtype")
-
 
 def test_with_columns() -> None:
     assert_lf_eq(
@@ -24,12 +22,10 @@ def test_with_columns() -> None:
     )
 
 
-@skipped
 def test_by_dtype_single() -> None:
     assert_eq(cs.by_dtype(pql.Boolean), cs_pl.by_dtype(pl.Boolean))
 
 
-@skipped
 def test_by_dtype_multiple() -> None:
     assert_eq(cs.by_dtype(pql.Float64, pql.Int64), cs_pl.by_dtype(pl.Float64, pl.Int64))
 
@@ -194,7 +190,6 @@ _SELECTOR_FNS = Seq((
     _SELECTOR_FNS,
     ids=_SELECTOR_FNS.iter().map_star(lambda f1, _f2: f1.__name__),
 )
-@skipped
 def test_dtype_selector(
     fns: tuple[Callable[[], cs.Selector], Callable[[], cs_pl.Selector]],
 ) -> None:
@@ -205,7 +200,6 @@ def test_all_selector() -> None:
     assert_eq(cs.all(), cs_pl.all())
 
 
-@skipped
 def test_duration_selector() -> None:
     """Dedicated test: DuckDB INTERVAL can't roundtrip via Arrow to Polars."""
     col_names = ["dur"]
@@ -215,7 +209,6 @@ def test_duration_selector() -> None:
     assert pl_lf.select(cs_pl.duration()).collect_schema().names() == col_names
 
 
-@skipped
 def test_enum() -> None:
     cats = ["foo", "bar", "baz"]
     lf = pql.LazyFrame(sample_lf())
@@ -280,7 +273,6 @@ def test_contains_vals_minus_by_name() -> None:
     )
 
 
-@skipped
 def test_temporal_union_string() -> None:
     assert_eq(
         cs.temporal().__or__(cs.string()),
