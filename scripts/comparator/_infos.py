@@ -150,22 +150,7 @@ class ComparisonInfos:
         Returns:
             Status: The status of the method comparison.
         """
-        match (self.pql_info, self.polars):
-            case (NONE, Some(_)):  # noqa: N806  # pyright: ignore[reportUnusedVariable]
-                return Status.MISSING
-            case (Some(_), NONE):  # noqa: F841, N806  # pyright: ignore[reportConstantRedefinition, reportUnusedVariable]
-                return Status.EXTRA
-            case (Some(target), Some(pl_info)):
-                is_mismatch = _mismatch_against(
-                    target.to_map(), pl_info.to_map(), self.ignored_params
-                )
-                match is_mismatch:
-                    case True:
-                        return Status.SIGNATURE_MISMATCH
-                    case False:
-                        return Status.MATCH
-            case _:
-                return Status.MISSING
+        return self.status().unwrap_or(Status.MISSING)
 
 
 def _mismatch_against(target: MapInfo, other: MapInfo, ignored: Set[str]) -> bool:
