@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import partial
-from typing import TYPE_CHECKING, Self, override
+from typing import TYPE_CHECKING, override
 
 import duckdb
 from pygments import token
@@ -90,18 +90,12 @@ SYNTAX = partial(Syntax, lexer=DuckDbSqlLexer(), background_color="default")
 @dataclass(slots=True)
 class ParsedQuery:
     query: exp.Query
-    pretty: bool = field(default=False, init=False)
 
-    @property
-    def raw(self) -> str:
-        return self.query.sql(dialect="duckdb", pretty=self.pretty)
+    def sql(self, *, pretty: bool = False) -> str:
+        return self.query.sql(dialect="duckdb", pretty=pretty)
 
-    def show(self, theme: Themes = "github-dark") -> None:
-        return CONSOLE.print(SYNTAX(self.raw, theme=theme))
-
-    def prettify(self) -> Self:
-        self.pretty = True
-        return self
+    def show(self, theme: Themes = "github-dark", *, pretty: bool = True) -> None:
+        return CONSOLE.print(SYNTAX(self.sql(pretty=pretty), theme=theme))
 
     def tokenize(self) -> Vec[tuple[int, duckdb.token_type]]:
-        return Vec.from_ref(duckdb.tokenize(self.raw))
+        return Vec.from_ref(duckdb.tokenize(self.sql()))

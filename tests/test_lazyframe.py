@@ -94,12 +94,12 @@ def test_clone(lf: pql.LazyFrame) -> None:
 def test_sql_query(lf: pql.LazyFrame) -> None:
     query = lf.filter(pql_age.gt(25)).select("name", "age")
     parsed = query.sql_query()
-    assert parsed.raw == query.inner.sql(dialect="duckdb")
-    assert parsed.raw != parsed.prettify().raw
-    assert parsed.tokenize() != parsed.prettify().tokenize()
-    assert "SELECT" in parsed.raw
-    assert "WHERE" in parsed.raw
-    assert parsed.raw.upper().count("WHERE") == 1
+    assert parsed.sql() == query.inner.sql(dialect="duckdb")
+    assert parsed.sql() != parsed.sql(pretty=True)
+    assert parsed.tokenize() != parsed.sql(pretty=True)
+    assert "SELECT" in parsed.sql()
+    assert "WHERE" in parsed.sql()
+    assert parsed.sql().upper().count("WHERE") == 1
 
 
 @pytest.mark.parametrize("theme", t.Themes.__args__)
