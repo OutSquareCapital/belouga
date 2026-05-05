@@ -649,7 +649,7 @@ class Array(NestedType, ComplexDataType):
     @property
     def shape(self) -> int:
         """Get the number of dimensions of the array."""
-        values = self.raw.args.get("values")
+        values: exp.Values | None = self.raw.args.get("values")
         return int(values[0].this) if values else 1  # pyright: ignore[reportAny]
 
 
@@ -665,7 +665,7 @@ class List(NestedType, ComplexDataType):
             inner (DataType): The inner type of the list.
         """
         self.raw = exp.DataType(
-            this=exp.DType.ARRAY, expressions=[inner.raw], nested=True
+            this=exp.DType.LIST, expressions=[inner.raw], nested=True
         )
 
     @property
