@@ -3,6 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING
 
+import duckdb
 import pytest
 
 import pql
@@ -213,6 +214,12 @@ def test_list(cast_schema: Dict[str, pql.DataType]) -> None:
     assert isinstance(lst, pql.List)
     assert isinstance(lst.inner, pql.UInt16)
     assert pql.List.is_nested()
+
+
+def test_list_from_sql_dtype() -> None:
+    parsed = pql.DataType.from_duckdb(duckdb.list_type("varchar"))
+    assert isinstance(parsed, pql.List)
+    assert isinstance(parsed.inner, pql.String)
 
 
 def test_array(cast_schema: Dict[str, pql.DataType]) -> None:
