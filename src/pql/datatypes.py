@@ -472,14 +472,6 @@ class String(StringType):
 
 @final
 @dataclass(slots=True, unsafe_hash=True)
-class Unknown(DataType):
-    """Unknown data type, used when type inference cannot resolve a column."""
-
-    raw: exp.DataType = field(init=False, default=exp.DType.UNKNOWN.into_expr())
-
-
-@final
-@dataclass(slots=True, unsafe_hash=True)
 class Json(StringType):
     """JSON data type."""
 
@@ -728,6 +720,5 @@ NON_NESTED_MAP: Dict[exp.DType, DataType] = Dict.from_ref({
     exp.DType.UTINYINT: UInt8(),
     exp.DType.TEXT: String(),
     exp.DType.VARCHAR: String(),
-    exp.DType.UNKNOWN: Unknown(),
     exp.DType.VARIANT: Number(),
 })
