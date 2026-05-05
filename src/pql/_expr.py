@@ -685,6 +685,15 @@ class Expr(Fns):
             case (lower, upper):
                 return self.greatest(lower).least(upper)
 
+    @override
+    def len(self) -> Self:
+        """Get the number of rows in context (including nulls).
+
+        Returns:
+            Self
+        """
+        return self.is_null().count()
+
     def null_count(self) -> Self:
         """Count null values.
 
