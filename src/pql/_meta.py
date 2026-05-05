@@ -118,16 +118,7 @@ def _case_root_name(node: exp.Case) -> str:
         case [exp.If() as first_if, *_]:
             match first_if.args.get("true"):
                 case exp.Expr() as then_val:
-                    name = _extract_root_name(then_val)
-                    match name:
-                        case Marker.LITERAL:
-                            match node.args.get("default"):
-                                case exp.Expr() as default_val:
-                                    return _extract_root_name(default_val)
-                                case _:
-                                    return name
-                        case _:
-                            return name
+                    return _extract_root_name(then_val)
                 case _:
                     return Marker.LITERAL
         case _:  # pyright: ignore[reportAny]

@@ -113,17 +113,18 @@ class ExprStringNameSpace(StringFns[Expr]):
         """Return the first match offset as a zero-based index."""
         match literal:
             case True:
-                return self.strpos(pattern).pipe(
+                expr = self.strpos(pattern).pipe(
                     lambda pos: when(pos.eq(0)).then(Lit.NONE).otherwise(pos.sub(1))
                 )
             case False:
-                return self.inner.re.extract(pattern, 0).pipe(
+                expr = self.inner.re.extract(pattern, 0).pipe(
                     lambda matched: (
                         when(matched.eq(Lit.EMPTY_STR))
                         .then(Lit.NONE)
                         .otherwise(self.strpos(matched).sub(1))
                     )
                 )
+        return expr.alias(self.inner.inner.output_name)
 
     def join(
         self, delimiter: IntoExprColumn = Lit.EMPTY_STR, *, ignore_nulls: bool = True
@@ -137,15 +138,17 @@ class ExprStringNameSpace(StringFns[Expr]):
         Returns:
             Expr: A new expression that evaluates to the joined string.
         """
-        aggregated = self.agg(self.inner.new(delimiter))
+        inner = self.inner
+        aggregated = self.agg(inner.new(delimiter))
         match ignore_nulls:
             case True:
                 return aggregated
             case False:
                 return (
-                    when(self.inner.is_null().any())
+                    when(inner.is_null().any())
                     .then(Lit.NONE)
                     .otherwise(aggregated)
+                    .alias(inner.inner.output_name)
                 )
 
     def count_matches(self, pattern: IntoExprColumn, *, literal: bool = False) -> Expr:
@@ -765,6 +768,7 @@ class ExprListNameSpace(ListFns[Expr]):
                     when(self.filter(element().is_null()).list.length().gt(0))
                     .then(Lit.NONE)
                     .otherwise(joined)
+                    .alias(self.inner.inner.output_name)
                 )
 
     def count_matches(self, elem: IntoExpr) -> Expr:
@@ -929,6 +933,7 @@ class ExprArrayNameSpace(ArrayFns[Expr]):
                     when(self.filter(element().is_null()).arr.length().gt(0))
                     .then(Lit.NONE)
                     .otherwise(joined)
+                    .alias(self.inner.inner.output_name)
                 )
 
     def count_matches(self, elem: IntoExpr) -> Expr:

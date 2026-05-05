@@ -747,7 +747,13 @@ class Expr(Fns):
         """
         from ._when import when
 
-        return self._cls(when(self.eq(old)).then(new).otherwise(self).inner)
+        return self._cls(
+            when(self.eq(old))
+            .then(new)
+            .otherwise(self)
+            .alias(self.inner.output_name)
+            .inner
+        )
 
     def is_close(
         self,
@@ -776,6 +782,7 @@ class Expr(Fns):
                     when(self.is_nan().and_(other_expr.is_nan()))
                     .then(value=True)
                     .otherwise(close)
+                    .alias(self.inner.output_name)
                     .inner
                 )
 
@@ -859,7 +866,13 @@ class Expr(Fns):
         """
         from ._when import when
 
-        return self._cls(when(self.is_nan()).then(value).otherwise(self).inner)
+        return self._cls(
+            when(self.is_nan())
+            .then(value)
+            .otherwise(self)
+            .alias(self.inner.output_name)
+            .inner
+        )
 
     def dot(self, other: IntoExpr) -> Self:
         """Compute the dot product with another expression.
