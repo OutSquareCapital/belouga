@@ -161,7 +161,8 @@ print(result)
 import pql
 
 (
-    pql.meta.functions()
+    pql.meta
+    .functions()
     .filter(pql.col("function_name").str.contains("json"))
     .select("function_name", "parameter_types", "return_type")
     .sort("function_name")
