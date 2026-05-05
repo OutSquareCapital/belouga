@@ -42,13 +42,22 @@ def test_alias_mutability() -> None:
     ],
     ids=["then_y", "then_lit", "then_mul"],
 )
-@pytest.mark.skip(
-    reason="""Currently, the alias resolution logic can't make it work with when-then-otherwise expressions without resorting to complex special handling.
-    We should rather prioritize improving the architecture first, and then see if we can make it work without too much complexity."""
-)
 def test_when_alias(exprs: ExprPair) -> None:
     pl_cols = _LF.collect().select(exprs.pl_expr).columns
     pql_cols = _slct(exprs.pql_expr).into(list)
+    assert pql_cols == pl_cols
+
+
+def test_when_alias_chained_then_lit() -> None:
+    pl_cols = (
+        _LF
+        .collect()
+        .select(pl.when(pl_x.gt(0)).then(1).when(pl_y.gt(0)).then(pl_y).otherwise(pl_x))
+        .columns
+    )
+    pql_cols = _slct(
+        pql.when(pql_x.gt(0)).then(1).when(pql_y.gt(0)).then(pql_y).otherwise(pql_x)
+    ).into(list)
     assert pql_cols == pl_cols
 
 
