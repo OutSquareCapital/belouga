@@ -17,7 +17,7 @@ from rich.text import Text
 class _Paths:
     SELF = Path(__file__).relative_to(Path().cwd())
     PQL = Path("src", "pql")
-    FNS = PQL.joinpath("_code_gen", "_fns.py")
+    FNS = PQL.joinpath("_fns.py")
     META = PQL.joinpath("meta.py")
     TYPING = PQL.joinpath("typing.py")
 

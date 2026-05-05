@@ -27,7 +27,7 @@ Generated files live in `src/pql/sql/_code_gen/` and must not be edited manually
 Generate typed wrappers for DuckDB SQL functions.
 
 - Source data: `scripts/fn_generator/functions.parquet`
-- Default output: `src/pql/sql/_code_gen/_fns.py`
+- Default output: `src/pql/_fns.py`
 - Implementation: `scripts/fn_generator/`
 
 Examples:

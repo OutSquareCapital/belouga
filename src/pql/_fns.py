@@ -14,10 +14,10 @@ from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING, ClassVar, Self
 
-from .._core import ExprHandler, NameSpaceHandler, anon, anon_agg, func
+from ._core import ExprHandler, NameSpaceHandler, anon, anon_agg, func
 
 if TYPE_CHECKING:
-    from ..typing import IntoExpr, IntoExprColumn, SeqLiteral
+    from .typing import IntoExpr, IntoExprColumn, SeqLiteral
 
 
 class Fns(ExprHandler):

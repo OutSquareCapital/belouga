@@ -71,7 +71,7 @@
     [tool.ruff.lint.pydocstyle]
         convention = "google"
     [tool.ruff.lint.per-file-ignores]
-        "src/pql/_code_gen/*.py" = [
+        "src/pql/_fns.py" = [
             "A002",
             "ANN401",
             "FBT001",

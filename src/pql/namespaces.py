@@ -11,7 +11,9 @@ from pyochain import Dict
 from sqlglot import exp
 
 from . import datatypes as dt
-from ._code_gen import (
+from ._core import ExprHandler, NameSpaceHandler, func, into_expr
+from ._expr import Expr
+from ._fns import (
     ArrayFns,
     DateTimeFns,
     EnumFns,
@@ -23,8 +25,6 @@ from ._code_gen import (
     StringFns,
     StructFns,
 )
-from ._core import ExprHandler, NameSpaceHandler, func, into_expr
-from ._expr import Expr
 from ._funcs import element, lit
 from ._meta import ExprPlan
 from ._when import when

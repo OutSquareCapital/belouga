@@ -61,7 +61,7 @@ sql = query.sql_query()
 
 sql.show("friendly")
 print("---" * 10)
-sql.prettify().show()
+sql.show(pretty=True)
 ```
 
 ![alt text](docs/sql_highlight.png)
@@ -191,7 +191,7 @@ import pql
 
 ## How It Works
 
-`pql` compiles `Expr` and `LazyFrame` operations into a `sqlglot` AST, then materializes queries through `ScanSource` against a DuckDB relation. Generated code in `src/pql/_code_gen/_fns.py` covers most of the DuckDB function catalog.
+`pql` compiles `Expr` and `LazyFrame` operations into a `sqlglot` AST, then materializes queries through `ScanSource` against a DuckDB relation. Generated code in `src/pql/_fns.py` covers most of the DuckDB function catalog.
 
 ## Contributing
 

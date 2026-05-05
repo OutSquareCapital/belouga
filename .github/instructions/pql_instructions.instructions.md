@@ -63,7 +63,7 @@ This layer should remain Polars-like and user ergonomic.
 
 `Expr` is the public expression object.
 
-- Extends the generated `Fns` mixin from `src/pql/_code_gen/_fns.py`.
+- Extends the generated `Fns` mixin from `src/pql/_fns.py`.
 - Wraps a `sqlglot.exp.Expr` through `ExprHandler`/`CoreHandler`.
 - Carries `meta: ExprMeta` to preserve naming, aliasing, and context-sensitive behavior.
 - Uses `Expr.new(...)` as the normal coercion entrypoint.
@@ -127,7 +127,7 @@ The current SQL core layer is centered on `sqlglot` AST composition plus a DuckD
 
 ### 6) Auto-generated code (do not edit manually)
 
-- `src/pql/_code_gen/_fns.py`: generated DuckDB function wrappers and generated namespace mixins.
+- `src/pql/_fns.py`: generated DuckDB function wrappers and generated namespace mixins.
 - `src/pql/meta.py`: generated `duckdb_*` module-level meta helpers.
 
 Generated from scripts in `scripts/`.
@@ -152,7 +152,7 @@ Edit generator pipelines and regenerate instead of patching generated files by h
 
 2. Do not patch generated files directly:
 
-- Never hand-edit `src/pql/_code_gen/_fns.py` or `src/pql/meta.py`.
+- Never hand-edit `src/pql/_fns.py` or `src/pql/meta.py`.
 - Modify generator logic in `scripts/fn_generator/*` or `scripts/meta_generator/*` and regenerate.
 - Note that 90% of the time, a few modifications in the `_rules.py` module are all of what is needed to fix a generator issue or add an exception. Always check the rules before considering a generator code patch.
 

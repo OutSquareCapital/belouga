@@ -72,8 +72,8 @@ from __future__ import annotations
 {From(DateTime).import_(DateTime.DATE, DateTime.DATETIME, DateTime.TIME, DateTime.TIMEDELTA)}
 {From(Typing).import_(Typing.SELF, Typing.TYPE_CHECKING, Typing.CLASSVAR)}
 from decimal import Decimal
-from .._core import ExprHandler, NameSpaceHandler, anon, anon_agg, func
+from ._core import ExprHandler, NameSpaceHandler, anon, anon_agg, func
 
 if TYPE_CHECKING:
-    from ..typing import SeqLiteral, {Pql.BLOB_LITERAL}, {Pql.INTO_EXPR_COLUMN}, {Pql.INTO_EXPR}
+    from .typing import SeqLiteral, {Pql.BLOB_LITERAL}, {Pql.INTO_EXPR_COLUMN}, {Pql.INTO_EXPR}
 '''

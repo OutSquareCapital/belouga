@@ -52,7 +52,7 @@ This layer is responsible for normalizing Python values into `sqlglot` nodes and
 
 `Expr` lives in `src/pql/_expr.py`.
 
-It wraps a `sqlglot.exp.Expr` and extends the generated `Fns` mixin from `src/pql/_code_gen/_fns.py`, which provides DuckDB function wrappers.
+It wraps a `sqlglot.exp.Expr` and extends the generated `Fns` mixin from `src/pql/_fns.py`, which provides DuckDB function wrappers.
 
 `Expr` also carries `ExprMeta` from `src/pql/_meta.py`. This metadata is important for aliasing, naming resolution, selectors support, and context-sensitive behavior when the expression is used inside a frame operation.
 
@@ -102,7 +102,7 @@ Some important supporting modules are:
 
 Two important files are generated and should not be edited by hand:
 
-- `src/pql/_code_gen/_fns.py` for DuckDB function wrappers and generated namespace mixins
+- `src/pql/_fns.py` for DuckDB function wrappers and generated namespace mixins
 - `src/pql/meta.py` for DuckDB meta table-function helpers
 
 If a generated API needs to change, update the generator logic in `scripts/` and regenerate the file instead of patching the generated output directly.
@@ -128,7 +128,7 @@ The generators are driven from `scripts/` and produce source files used by the p
 
 The main outputs are:
 
-- [DuckDB function wrappers and namespace mixins](src/pql/_code_gen/_fns.py)
+- [DuckDB function wrappers and namespace mixins](src/pql/_fns.py)
 - [DuckDB meta table-function helpers](src/pql/meta.py)
 - [The SQL display theme literal](src/pql/typing.py)
 

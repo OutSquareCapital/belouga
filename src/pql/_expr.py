@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Self, override
 from pyochain import NONE, Err, Iter, NoneOption as Null, Ok, Option, Result, Some
 from sqlglot import exp
 
-from ._code_gen import Fns
 from ._core import func, into_expr, into_expr_list
+from ._fns import Fns
 from ._meta import ExprMeta, Marker
 from ._window import (
     BoundsValues,
