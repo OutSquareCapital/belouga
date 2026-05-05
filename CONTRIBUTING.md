@@ -5,19 +5,15 @@ Thank you for your interest in contributing to `pql`!
 
 Contributions are always welcome, whether it's a bug fix, a new feature, or just improving the documentation.
 
-## Testing Philosophy
+## Testing
 
 The project heavily compares `pql` behavior against reference Polars chains where parity is expected.
 
-Tests cover:
+We want to periodically check the coverage. To do so, run:
 
-- frame operations
-- expressions and alias behavior
-- joins, pivots, group-bys, and conversions
-- namespace behavior for strings, lists, arrays, structs, datetimes, and more
-- datatype handling and selectors
-
-This makes the repository useful both as a library and as a living parity tracker.
+```shell
+uv run pytest tests/ --cov=src/ --cov-report=term-missing
+```
 
 ## Architecture
 
