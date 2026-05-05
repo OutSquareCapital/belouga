@@ -83,7 +83,8 @@ def _run_qry() -> str:
                 .explode("function_name")
                 .join(fn_keys, left_on=function_name, right_on="glot_name", how="anti")
                 .join(
-                    Dict(DUCKDB_FUNCTIONS)
+                    Dict
+                    .from_ref(DUCKDB_FUNCTIONS)
                     .iter()
                     .collect()
                     .into(pl.Series)
