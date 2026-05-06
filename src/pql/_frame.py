@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self, SupportsInt, overload
 
 from pyochain import (
+    NONE,
     Dict,
     Err,
     Iter,
@@ -103,14 +104,25 @@ class LazyFrame(CoreHandler[exp.Selectable]):
                 self._sources = Dict.from_ref({source.identity: source})
                 self._schema = source.schema
 
-    def _make(self, ast: exp.Selectable, sources: Dict[str, ScanSource]) -> Self:
+    def _make(
+        self,
+        ast: exp.Selectable,
+        sources: Dict[str, ScanSource],
+        schema: Option[Schema] = NONE,
+    ) -> Self:
         out = self.__class__.__new__(self.__class__)
         out._inner = ast
         out._sources = sources
-        out._schema = _compute_schema(ast, sources)
+        out._schema = schema.unwrap_or_else(lambda: _compute_schema(ast, sources))
         return out
 
-    def _from_ast(self, ast: exp.Selectable, **subs: Self | ScanSource) -> Self:
+    def _from_ast(
+        self,
+        ast: exp.Selectable,
+        *,
+        schema: Option[Schema] = NONE,
+        **subs: Self | ScanSource,
+    ) -> Self:
         def _src_pairs(
             _name: str, v: Self | ScanSource
         ) -> Iter[tuple[str, ScanSource]]:
@@ -127,7 +139,11 @@ class LazyFrame(CoreHandler[exp.Selectable]):
             .chain(self._sources.items())
             .collect(Dict)
         )
-        return ast.transform(_replacer, subs=subs).pipe(self._make, new_sources)  # pyright: ignore[reportArgumentType]
+        return ast.transform(_replacer, subs=subs).pipe(
+            self._make,  # pyright: ignore[reportArgumentType]
+            new_sources,
+            schema,
+        )
 
     def _materialize(self) -> DuckDBPyRelation:
         return self._inner.pipe(ScanSource.from_query, **self._sources).relation
@@ -188,7 +204,11 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         plan = self._schema.into(ExprPlan, exprs, more_exprs, named_exprs)
         return plan.select_ctx().map_or_else(
             lambda: self.__class__(ScanSource.from_none().relation),
-            lambda ast: self._from_ast(ast, src=self),
+            lambda ast: self._from_ast(
+                ast,
+                schema=Some(_compute_input_schema(ast, self._schema)),
+                src=self,
+            ),
         )
 
     def with_columns(
@@ -208,7 +228,12 @@ class LazyFrame(CoreHandler[exp.Selectable]):
             Self: A new LazyFrame with the added or replaced columns.
         """
         plan = self._schema.into(ExprPlan, exprs, more_exprs, named_exprs)
-        return self._from_ast(plan.with_columns_ctx(), src=self)
+        ast = plan.with_columns_ctx()
+        return self._from_ast(
+            ast,
+            schema=Some(_compute_input_schema(ast, self._schema)),
+            src=self,
+        )
 
     def filter(
         self,
@@ -1469,13 +1494,30 @@ def _select(exprs: Iterable[exp.Expr | str]) -> exp.Select:
     return exp.select(*exprs)
 
 
+def _compute_input_schema(ast: exp.Selectable, source_schema: Schema) -> Schema:
+    return _compute_schema_from_tables(ast, Dict.from_ref({"src": source_schema}))
+
+
 def _compute_schema(ast: exp.Selectable, sources: Dict[str, ScanSource]) -> Schema:
-    schema = MappingSchema(dialect="duckdb")
-    _ = (
+    return _compute_schema_from_tables(
+        ast,
         sources
         .items()
         .iter()
-        .for_each_star(lambda k, v: schema.add_table(k, v.schema.into(dict)))  # pyright: ignore[reportUnknownMemberType]
+        .map_star(lambda name, source: (name, source.schema))
+        .collect(Dict),
+    )
+
+
+def _compute_schema_from_tables(
+    ast: exp.Selectable, tables: Dict[str, Schema]
+) -> Schema:
+    schema = MappingSchema(dialect="duckdb")
+    _ = (
+        tables
+        .items()
+        .iter()
+        .for_each_star(lambda name, table: schema.add_table(name, table.into(dict)))  # pyright: ignore[reportUnknownMemberType]
     )
 
     def _into_selects(expr: exp.Selectable) -> Iter[exp.Expr]:
