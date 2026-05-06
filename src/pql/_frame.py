@@ -123,7 +123,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
             .chain(self._sources.items())
             .collect(Dict)
         )
-        return ast.transform(_replacer).pipe(self._make, new_sources)  # pyright: ignore[reportArgumentType]
+        return ast.transform(_replacer, subs=subs).pipe(self._make, new_sources)  # pyright: ignore[reportArgumentType]
 
     def _materialize(self) -> DuckDBPyRelation:
         return self._inner.pipe(ScanSource.from_query, **self._sources).relation
