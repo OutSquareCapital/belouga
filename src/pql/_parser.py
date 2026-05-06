@@ -15,7 +15,7 @@ from . import meta
 
 if TYPE_CHECKING:
     from pygments.token import (
-        _TokenType as TokenType,  # pyright: ignore[reportPrivateUsage]
+        _TokenType as TokenType,  # pyright: ignore[reportPrivateUsage]  # noqa: PLC2701
     )
     from sqlglot import exp
 
@@ -66,12 +66,8 @@ class DuckDbSqlLexer(SqlLexer):
 
 
 def _get_dtypes() -> Set[str]:
-    return (
-        meta
-        .types()
-        .pipe(_get_names, "type_name")
-        .union(meta.types().pipe(_get_names, "logical_type"))
-    )
+    lf_for = meta.types().pipe
+    return lf_for(_get_names, "type_name").union(lf_for(_get_names, "logical_type"))
 
 
 def _get_functions() -> Set[str]:
