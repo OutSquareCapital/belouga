@@ -113,7 +113,16 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         out = self.__class__.__new__(self.__class__)
         out._inner = ast
         out._sources = sources
-        out._schema = schema.unwrap_or_else(lambda: _compute_schema(ast, sources))
+        out._schema = schema.unwrap_or_else(
+            lambda: _compute_schema(
+                ast,
+                sources
+                .items()
+                .iter()
+                .map_star(lambda name, source: (name, source.schema))
+                .collect(Dict),
+            )
+        )
         return out
 
     def _from_ast(
@@ -1503,23 +1512,10 @@ def _select(exprs: Iterable[exp.Expr | str]) -> exp.Select:
 
 
 def _compute_input_schema(ast: exp.Selectable, source_schema: Schema) -> Schema:
-    return _compute_schema_from_tables(ast, Dict.from_ref({"src": source_schema}))
+    return _compute_schema(ast, Dict.from_ref({"src": source_schema}))
 
 
-def _compute_schema(ast: exp.Selectable, sources: Dict[str, ScanSource]) -> Schema:
-    return _compute_schema_from_tables(
-        ast,
-        sources
-        .items()
-        .iter()
-        .map_star(lambda name, source: (name, source.schema))
-        .collect(Dict),
-    )
-
-
-def _compute_schema_from_tables(
-    ast: exp.Selectable, tables: Dict[str, Schema]
-) -> Schema:
+def _compute_schema(ast: exp.Selectable, tables: Dict[str, Schema]) -> Schema:
     schema = MappingSchema(dialect="duckdb")
     _ = (
         tables
