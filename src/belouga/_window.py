@@ -157,12 +157,12 @@ def get_order(
 def _ordered(
     cols: Seq[IntoExprColumn], **kwargs: Unpack[DirectionArgs]
 ) -> list[exp.Ordered]:
-    def _expand_clauses(*, clauses: TryIter[bool], n: int) -> Iter[bool]:
+    def _expand_clauses(*, clauses: TryIter[bool], n: int) -> Iterable[bool]:
         match clauses:
             case Iterable() as seq:
-                return Iter(seq)
-            case _ as val:
-                return try_iter(val).cycle().take(n)
+                return seq
+            case _:
+                return try_iter(clauses).cycle().take(n)
 
     return (
         cols
