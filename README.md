@@ -3,13 +3,38 @@
 
 <p align="center">
     <img src="docs/Bélouga.jpg" alt="Belouga" width="260" />
+    <br/>
+    <em>First a bear, and now two whales, seems like arctic is a good inspiration for data scientists.</em>
 </p>
 
-`belouga` is a lazy dataframe library for DuckDB with a Polars-like API.
+`belouga` (French term for beluga), is a dataframe library with a `DuckDB` backend.
 
-It compiles expression trees to DuckDB SQL via `sqlglot`, which are then converted to SQL queries and passed to DuckDB for execution.
+Just like his cetacean cousin [narwhals](https://github.com/narwhals-dev/narwhals), `belouga` API is inspired by [polars](https://github.com/pola-rs/polars), with a fluent, lazy API, focused on building reusable expressions chains that can be executed once passed in a `LazyFrame` context.
 
-It targets the case where DuckDB is the execution engine, and you want a fluent dataframe API close to Polars rather than handwritten SQL or a generic multi-backend abstraction.
+Contrary to `narwhals` or [`Ibis`](https://github.com/ibis-project/ibis), `belouga` is a specialized tool, aiming to expose the full power of `DuckDB` possibilities, in a syntax familiar to `polars` users, without concessions on functionnality.
+
+It is not trying to be portable across multiple backends, but rather to be the best possible interface for users who want to write expressive queries in Python and execute them on `DuckDB`.
+
+## Features
+
+The two main pillars of `belouga` are:
+
+- `Expr`, the base class for all expressions, created from `col`, `lit`, and all the available functions, that can be combined together to build complex expressions chains.
+- `LazyFrame`, the main entry point for all data manipulation, that can be created from various data sources, and on which you can call all the available methods to build your query.
+
+`belouga` currently provides:
+
+- `LazyFrame::{select, filter, with_columns, join, join_asof, pivot, unpivot, sort, sink_csv, sink_parquet, ...}`
+- Aggregations contexts with `LazyFrame::group_by::{agg, all, len, ...}`
+- A **rich expressions catalog covering +700 of DuckDB's built-in functions**, with custom expressions implementations for `polars` functionnalities that `DuckDB` currently don't provide
+- `Expr` namespaces for **geospatial, json, map, regex functions, and more**
+- A `when/then/otherwise` expression builder for complex conditional logic
+- A complete family of Datatypes, including `Enums`, `List`, `Array`, `Struct`, `Map`, and `Geometry`, with the same ergonomics of the polars library
+- selectors by dtypes, by name, regex, and more, just like `polars`
+- Conversions to `LazyFrame` from python Mapping and Sequence, numpy arrays, pandas and polars dataframes, and more.
+- Various module level functions, like `unnest`, `scan_csv`, `coalesce`, `all`, and more.
+- Query introspections, with syntax highlighted SQL in your terminal with +20 color themes, sql formatting, AST inspection, query plan inspection, and more.
+- A `meta` module with all the table and metadata functions provided by `DuckDB` to inspect your database schema, list functions, and more.
 
 ## Quick Start
 
@@ -105,8 +130,6 @@ Output:
 └───────────────────────────┘
 ```
 
-## API
-
 ## Dependencies
 
 ### DuckDB
@@ -135,17 +158,20 @@ print(result)
 
 ## Comparison with other tools
 
+**DuckDB Relational API** is the native way to interact with DuckDB in Python, but as it currently stands, `belouga` offers much more possibilities. For example, `LazyFrame::{unpivot, join_asof, pivot}` are not available in the relational API, and the function catalog is only available trough raw str passed to functions, without hover documentation nor type safety on the argument types.
+
+### Narwhals
+
 **Narwhals** is a compatibility layer aimed at library authors who want to write dataframe-agnostic code that runs across Polars, pandas, and other backends. The API is Polars-inspired but intentionally limited to what can be expressed portably — it is not trying to expose deep DuckDB surface. End users doing data work are not the primary audience.
 
-**Ibis** targets portability across 20+ backends (DuckDB, BigQuery, Snowflake, Spark, ...) under a single Ibis-native API. It also uses `sqlglot` internally and can use DuckDB as a local backend. The tradeoff is that the API stays generic enough to compile to all those targets, so DuckDB-specific functionality is not exposed. If you need the same query graph to run on multiple engines, Ibis is the right tool.
+### Ibis
+
+**Ibis** targets portability across 20+ backends (DuckDB, BigQuery, Snowflake, Spark, ...) under a single Ibis-native API. It also uses `sqlglot` internally and can use DuckDB as a local backend. The tradeoff is that the API stays generic enough to compile to all those targets, so DuckDB-specific functionality is not exposed. If you need the same query graph to run on multiple engines, or don't wan't to purely use `DuckDB` and polars, Ibis is the right tool.
+It's also closer to polars than `SQLFrame` in terms of API design (take this with a grain of salt, I haven't used any of those libraries extensively, just browsed their docs and codebase).
+
+### SQLFrame
 
 **SQLFrame** implements the PySpark DataFrame API on top of SQL engines. The syntax is PySpark-first — `withColumn`, `F.col`, `SparkSession` — not Polars-like. It is designed for teams who want to run PySpark transformation pipelines on DuckDB, BigQuery, or Snowflake without an actual Spark cluster.
-
-`belouga` sits in a different spot: Polars-like syntax, DuckDB as the fixed target, and access to the full DuckDB function surface (700+ methods, geospatial, `GROUP BY ALL`, catalog introspection) that generalist multi-backend tools do not expose.
-
-## How It Works
-
-`belouga` compiles `Expr` and `LazyFrame` operations into a `sqlglot` AST, then materializes queries through `ScanSource` against a DuckDB relation. Generated code in `src/belouga/_fns.py` covers most of the DuckDB function catalog.
 
 ## Contributing
 
