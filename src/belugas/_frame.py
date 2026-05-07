@@ -125,21 +125,21 @@ class LazyFrame(CoreHandler[exp.Selectable]):
             .chain(self._sources.items())
             .collect(Dict)
         )
-        new_schema = schema.unwrap_or_else(
-            lambda: _compute_schema(
-                ast,
-                new_sources
-                .items()
-                .iter()
-                .map_star(lambda name, source: (name, source.schema))
-                .collect(Dict),
+
+        def _build(transformed: exp.Selectable) -> Self:
+            new_schema = schema.unwrap_or_else(
+                lambda: _compute_schema(
+                    transformed,
+                    new_sources
+                    .items()
+                    .iter()
+                    .map_star(lambda name, source: (name, source.schema))
+                    .collect(Dict),
+                )
             )
-        )
-        return ast.transform(_replacer, subs=subs).pipe(
-            self._make,  # pyright: ignore[reportArgumentType]
-            new_sources,
-            new_schema,
-        )
+            return self._make(transformed, new_sources, new_schema)
+
+        return ast.transform(_replacer, subs=subs).pipe(_build)  # pyright: ignore[reportArgumentType]
 
     @override
     def _cls(self, value: exp.Selectable) -> Self:
