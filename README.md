@@ -133,15 +133,17 @@ Output:
 
 ### DuckDB
 
-`belugas` uses `DuckDB` as the execution engine.
+`belugas` uses [DuckDB](https://duckdb.org/) as the execution engine.
 
 ### sqlglot
 
-`sqlglot` is used to build and manipulate SQL ASTs for the IR between `LazyFrame`/`Expr` operations and the generated SQL queries.
+[`sqlglot`](https://github.com/tobymao/sqlglot) is used to build and manipulate SQL ASTs for the IR between `LazyFrame`/`Expr` operations and the generated SQL queries.
 
 ### Pyochain
 
-Iterable-returning methods return `pyochain` objects, so column lists and schema views stay chainable:
+[`pyochain`](https://github.com/OutSquareCapital/pyochain) is used for iterable-returning methods, and internal implementations.
+
+This means that column lists and schema views stay chainable:
 
 ```python
 import belugas as bl
