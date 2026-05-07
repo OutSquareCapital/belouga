@@ -159,20 +159,72 @@ print(result)
 
 ## Comparison with other tools
 
-**DuckDB Relational API** is the native way to interact with DuckDB in Python, but as it currently stands, `belugas` offers much more possibilities. For example, `LazyFrame::{unpivot, join_asof, pivot}` are not available in the relational API, and the function catalog is only available trough raw str passed to functions, without hover documentation nor type safety on the argument types.
+### DuckDB Relational API
+
+**DuckDB Relational API** is the native way to interact with DuckDB in Python, but as it currently stands, `belugas` offers much more possibilities.
+
+For example, `LazyFrame::{unpivot, join_asof, pivot}` are not available in the relational API, and the function catalog is only available trough raw str passed to functions, without hover documentation nor type safety on the argument types.
+
+The conversion from python objects is also more limited and less ergonomic.
+
+#### Example
+
+To convert a simple python mapping *one key, one list* to a DuckDB relation, you must first wrap the value in an expression, and then would need to manually unnest and alias it to get the same output as `belugas`:
+
+```python
+import duckdb
+
+import belugas as bl
+
+data = {"foo": [1, 2, 3]}
+bl_lf = bl.LazyFrame(data).show()
+rel = duckdb.values(duckdb.ConstantExpression(data)).show()
+```
+
+output:
+
+```shell
+┌───────┐
+│  foo  │
+│ int32 │
+├───────┤
+│     1 │
+│     2 │
+│     3 │
+└───────┘
+
+┌───────────────────────┐
+│  {'foo': [1, 2, 3]}   │
+│ struct(foo integer[]) │
+├───────────────────────┤
+│ {'foo': [1, 2, 3]}    │
+└───────────────────────┘
+```
 
 ### Narwhals
 
-**Narwhals** is a compatibility layer aimed at library authors who want to write dataframe-agnostic code that runs across Polars, pandas, and other backends. The API is Polars-inspired but intentionally limited to what can be expressed portably — it is not trying to expose deep DuckDB surface. End users doing data work are not the primary audience.
+**Narwhals** is a compatibility layer aimed at library authors who want to write dataframe-agnostic code that runs across Polars, pandas, and other backends.
+
+The API is Polars-inspired but intentionally limited to what can be expressed portably — it is not trying to expose deep DuckDB surface. End users doing data work are not the primary audience.
 
 ### Ibis
 
-**Ibis** targets portability across 20+ backends (DuckDB, BigQuery, Snowflake, Spark, ...) under a single Ibis-native API. It also uses `sqlglot` internally and can use DuckDB as a local backend. The tradeoff is that the API stays generic enough to compile to all those targets, so DuckDB-specific functionality is not exposed. If you need the same query graph to run on multiple engines, or don't wan't to purely use `DuckDB` and polars, Ibis is the right tool.
+**Ibis** targets portability across 20+ backends (DuckDB, BigQuery, Snowflake, Spark, ...) under a single Ibis-native API.
+
+It also uses `sqlglot` internally and can use DuckDB as a local backend.
+The tradeoff is that the API stays generic enough to compile to all those targets, so DuckDB-specific functionality is not exposed.
+
+If you need the same query graph to run on multiple engines, or don't wan't to purely use `DuckDB` and polars, Ibis is the right tool.
+
 It's also closer to polars than `SQLFrame` in terms of API design (take this with a grain of salt, I haven't used any of those libraries extensively, just browsed their docs and codebase).
 
 ### SQLFrame
 
-**SQLFrame** implements the PySpark DataFrame API on top of SQL engines. The syntax is PySpark-first — `withColumn`, `F.col`, `SparkSession` — not Polars-like. It is designed for teams who want to run PySpark transformation pipelines on DuckDB, BigQuery, or Snowflake without an actual Spark cluster.
+**SQLFrame** implements the PySpark DataFrame API on top of SQL engines.
+
+The syntax is PySpark-first, i.e `withColumn`, `F.col`, `SparkSession`, not Polars-like.
+
+It is designed for teams who want to run PySpark transformation pipelines on DuckDB, BigQuery, or Snowflake without an actual Spark cluster.
 
 ## Contributing
 
