@@ -316,6 +316,9 @@ class ExprPlan:
     ) -> None:
 
         def _alias_named_expr(name: str, val: IntoExpr) -> IntoExpr:
+            # TODO: if we don't match on `Expr` here, we lose the `ExprMeta` information
+            # This is an hidden issue in a LOT of contexts, and can only be truly discovered in tests when there's selectors involved.
+            # We shoud refactor this in a new architecture.
             from ._expr import Expr
 
             match val:
