@@ -4,12 +4,11 @@
 <p align="center">
     <img src="docs/Bélouga.jpg" alt="Belouga" width="260" />
     <br/>
-    <em>First a bear, and now two whales, seems like arctic is a good inspiration for data scientists.</em>
 </p>
 
 `belouga` (French term for beluga), is a dataframe library with a `DuckDB` backend.
 
-Just like his cetacean cousin [narwhals](https://github.com/narwhals-dev/narwhals), `belouga` API is inspired by [polars](https://github.com/pola-rs/polars), with a fluent, lazy API, focused on building reusable expressions chains that can be executed once passed in a `LazyFrame` context.
+Just like his arctic cetacean cousin [narwhals](https://github.com/narwhals-dev/narwhals), `belouga` API is inspired by [polars](https://github.com/pola-rs/polars), with a fluent, lazy API, focused on building reusable expressions chains that can be executed once passed in a `LazyFrame` context.
 
 Contrary to `narwhals` or [`Ibis`](https://github.com/ibis-project/ibis), `belouga` is a specialized tool, aiming to expose the full power of `DuckDB` possibilities, in a syntax familiar to `polars` users, without concessions on functionnality.
 
