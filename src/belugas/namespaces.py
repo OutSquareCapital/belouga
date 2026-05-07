@@ -26,7 +26,7 @@ from ._fns import (
     StructFns,
 )
 from ._funcs import element, lit
-from ._meta import ExprPlan
+from ._meta import ExprPlan, extract_root_name
 from ._when import when
 
 if TYPE_CHECKING:
@@ -1231,8 +1231,15 @@ class ExprNameNameSpace(NameSpaceHandler[Expr]):
                 return self._with_alias_mapper(lambda name: regex.sub(value, name))
 
     def _with_alias_mapper(self, mapper: Aliaser) -> Expr:
+        from .selectors import Selector
+
         expr = self.inner
-        return expr.inner.pipe(Expr, expr.meta.with_alias_mapper(mapper))
+        match expr:
+            case Selector():
+                return expr.inner.pipe(Expr, expr.meta.with_alias_mapper(mapper))
+            case _:
+                name = expr.inner.pipe(extract_root_name)
+                return expr.alias(mapper(name))
 
 
 @dataclass(slots=True)
