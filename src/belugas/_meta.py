@@ -153,17 +153,6 @@ class MultiMeta(ExprMeta):
     resolver: Resolver
     alias_name: Option[Aliaser] = field(default_factory=lambda: NONE)
 
-    def get_output_names(self, base_names: Cols, expr: Expr) -> Cols:
-        match expr.inner, self.alias_name:
-            case exp.Alias() as inner, Some(alias_fn):
-                return Iter.once(inner.output_name).map(alias_fn).collect()
-            case exp.Alias() as inner, Null():
-                return Seq((inner.output_name,))
-            case _, Some(alias_fn):
-                return base_names.iter().map(alias_fn).collect()
-            case _:
-                return base_names
-
     def with_alias_mapper(self, mapper: Aliaser) -> Self:
         def _get_mapper() -> Aliaser:
             match self.alias_name:
@@ -173,10 +162,6 @@ class MultiMeta(ExprMeta):
                     return mapper
 
         return self.__class__(self.resolver, Some(_get_mapper()))
-
-    @override
-    def unalias(self) -> Self:
-        return self.__class__(self.resolver, NONE)
 
     def into_resolved(self, expr: Expr, schema: Schema) -> Iter[ResolvedExpr]:
         base_names = self.resolver(schema)
@@ -212,6 +197,21 @@ class MultiMeta(ExprMeta):
                     .zip(output_names)
                     .map_star(lambda name, output: _resolved(expr, name, output))
                 )
+
+    def get_output_names(self, base_names: Cols, expr: Expr) -> Cols:
+        match expr.inner, self.alias_name:
+            case exp.Alias() as inner, Some(alias_fn):
+                return Iter.once(inner.output_name).map(alias_fn).collect()
+            case exp.Alias() as inner, Null():
+                return Seq((inner.output_name,))
+            case _, Some(alias_fn):
+                return base_names.iter().map(alias_fn).collect()
+            case _:
+                return base_names
+
+    @override
+    def unalias(self) -> Self:
+        return self.__class__(self.resolver, NONE)
 
 
 def _find_all[T: exp.Expr](
@@ -341,11 +341,6 @@ class ExprPlan:
             .collect()
         )
 
-    def _should_broadcast_agg(self, *, include_source_cols: bool) -> bool:
-        return include_source_cols or not self.projections.all(
-            lambda resolved: resolved.is_pure_reducer
-        )
-
     def select_ctx(self) -> Option[exp.Select]:
         def _non_empty_slct(source: exp.Expr) -> exp.Select:
             if self.projections.all(lambda resolved: resolved.has_projection_distinct):
@@ -395,6 +390,11 @@ class ExprPlan:
         )
         return exp.select(*updates.into(_resolved)).from_(
             self.projections.into(_into_windowed)
+        )
+
+    def _should_broadcast_agg(self, *, include_source_cols: bool) -> bool:
+        return include_source_cols or not self.projections.all(
+            lambda resolved: resolved.is_pure_reducer
         )
 
     def with_fields_ctx(self, expr: Expr) -> Expr:
