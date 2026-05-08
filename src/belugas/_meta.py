@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from enum import StrEnum, auto
 from functools import partial
 from typing import TYPE_CHECKING, Self, override
@@ -156,7 +156,7 @@ class ExprMeta:
 
 @dataclass(slots=True)
 class MultiMeta(ExprMeta):
-    resolver: Resolver = field(kw_only=True)
+    resolver: Resolver
     alias_name: Option[Aliaser] = field(default_factory=lambda: NONE)
 
     def get_output_names(self, base_names: Cols, expr: Expr) -> Cols:
@@ -178,11 +178,11 @@ class MultiMeta(ExprMeta):
                 case _:
                     return mapper
 
-        return replace(self, alias_name=Some(_get_mapper()))
+        return self.__class__(self.resolver, Some(_get_mapper()))
 
     @override
     def unalias(self) -> Self:
-        return replace(self, alias_name=NONE)
+        return self.__class__(self.resolver, NONE)
 
     def into_resolved(self, expr: Expr, schema: Schema) -> Iter[ResolvedExpr]:
         base_names = self.resolver(schema)
@@ -323,16 +323,14 @@ class ExprPlan:
 
         def _resolve(val: IntoExpr) -> Iter[ResolvedExpr]:
             from ._expr import Expr
+            from .selectors import Selector
 
             match val:
-                case Expr() as expr:
-                    match expr.meta:
-                        case MultiMeta() as meta:
-                            return meta.into_resolved(expr, schema)
-                        case _:
-                            return ResolvedExpr(
-                                expr, extract_root_name(expr.inner)
-                            ).into(Iter.once)
+                case Selector():
+                    return val.meta.into_resolved(val, schema)
+                case Expr():
+                    name = extract_root_name(val.inner)
+                    return ResolvedExpr(val, name).into(Iter.once)
                 case _:
                     return (
                         Expr

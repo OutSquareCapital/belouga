@@ -45,7 +45,7 @@ class Resolver:
         return Selector(fn.all().inner, self.into_meta())
 
     def into_meta(self) -> MultiMeta:
-        return MultiMeta(resolver=self)
+        return MultiMeta(self)
 
     @classmethod
     def all_columns(cls) -> Self:
