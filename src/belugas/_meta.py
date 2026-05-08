@@ -347,16 +347,10 @@ class ExprPlan:
 
     def select_ctx(self) -> Option[exp.Select]:
         def _non_empty_slct(source: exp.Expr) -> exp.Select:
-            if self.projections.all(
-                lambda resolved: resolved.has_projection_distinct
-            ):
-                return (
-                    self.aliased_sql(broadcast_agg=False).from_(source).distinct()
-                )
+            if self.projections.all(lambda resolved: resolved.has_projection_distinct):
+                return self.aliased_sql(broadcast_agg=False).from_(source).distinct()
             return self.aliased_sql(
-                broadcast_agg=self._should_broadcast_agg(
-                    include_source_cols=False
-                )
+                broadcast_agg=self._should_broadcast_agg(include_source_cols=False)
             ).from_(source)
 
         return self.projections.then(

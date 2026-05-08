@@ -242,9 +242,7 @@ class BoundsValues(NamedTuple):
                 Side(str(left), Bounds.PRECEDING),
                 Side(str(right), Bounds.FOLLOWING),
             )
-        return cls(
-            Side(str(size), Bounds.PRECEDING), Side(Bounds.CURRENT, Bounds.ROW)
-        )
+        return cls(Side(str(size), Bounds.PRECEDING), Side(Bounds.CURRENT, Bounds.ROW))
 
     @classmethod
     def new(cls, bounds: BoundArgs, *, has_order_by: bool) -> Option[Self]:

@@ -1211,9 +1211,7 @@ class ExprNameNameSpace(NameSpaceHandler[Expr]):
             Expr
         """
         if literal:
-            return self._with_alias_mapper(
-                lambda name: name.replace(pattern, value)
-            )
+            return self._with_alias_mapper(lambda name: name.replace(pattern, value))
         regex = re.compile(pattern)
         return self._with_alias_mapper(lambda name: regex.sub(value, name))
 

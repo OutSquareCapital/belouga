@@ -876,10 +876,9 @@ class Expr(Fns):
             Self: An expression representing the entropy.
         """
         from ._funcs import lit
+
         if normalize:
-            expr = (
-                self.sum().ln().sub(self.mul(self.ln()).sum().truediv(self.sum()))
-            )
+            expr = self.sum().ln().sub(self.mul(self.ln()).sum().truediv(self.sum()))
         else:
             expr = self.mul(self.ln().neg()).sum()
         return expr.truediv(lit(base).ln())
