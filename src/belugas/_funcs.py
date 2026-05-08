@@ -109,15 +109,12 @@ def fn_once(rhs: IntoExpr) -> Expr:
 
 
 def all(exclude: TryIter[IntoExprColumn] = None) -> Expr:
-    from .selectors import Resolver
-
-    exclude_opt: Option[TryIter[IntoExprColumn]] = Option(exclude)
     return (
-        exclude_opt
-        .map(lambda x: try_iter(x).map(into_expr).collect())
+        Option(exclude)
+        .map(lambda x: try_iter(x).map(into_expr).collect(list))
         .map(lambda exc: exp.Star(except_=exc))
         .unwrap_or_else(exp.Star)
-        .pipe(Expr, Resolver.all_fn(exclude_opt).into_meta())
+        .pipe(Expr)
     )
 
 

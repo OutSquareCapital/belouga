@@ -6,16 +6,14 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Self, final, overload, override
 
-from pyochain import Iter, Option, Seq, Set
+from pyochain import Iter, Seq, Set
 
 from . import (
     _funcs as fn,  # pyright: ignore[reportPrivateUsage]
     datatypes as dt,
 )
-from ._core import into_expr
 from ._expr import Expr
 from ._meta import MultiAliasMapper
-from .utils import TryIter, try_iter
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -23,7 +21,7 @@ if TYPE_CHECKING:
     from pyochain.traits import PyoCollection
     from sqlglot import exp
 
-    from .typing import IntoExpr, IntoExprColumn, Schema
+    from .typing import IntoExpr, Schema
 
 
 type Cols = PyoCollection[str]
@@ -53,24 +51,6 @@ class Resolver:
             return schema.keys()
 
         return cls(_all_columns)
-
-    @classmethod
-    def all_fn(cls, exclude: Option[TryIter[IntoExprColumn]]) -> Self:
-        return exclude.map(
-            lambda exc: (
-                try_iter(exc)
-                .map(lambda value: into_expr(value, as_col=True).name)
-                .collect(Set)
-                .into(cls.exclude)
-            )
-        ).unwrap_or_else(cls.all_columns)
-
-    @classmethod
-    def exclude(cls, excluded: Cols) -> Self:
-        def _exclude(schema: Schema) -> Cols:
-            return schema.iter().filter(lambda n: n not in excluded).collect()
-
-        return cls(_exclude)
 
     @classmethod
     def ordered_name(cls, names: Iterable[str]) -> Self:

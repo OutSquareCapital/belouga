@@ -172,7 +172,7 @@ class ResolvedExpr(Pipeable):
         return self.name != marker and is_temp
 
 
-def _resolve(val: IntoExpr, schema: Schema) -> Iter[ResolvedExpr]:
+def _resolve(val: IntoExpr, schema: Schema) -> Iter[ResolvedExpr]:  # noqa: PLR0912
     from ._expr import Expr
 
     def _get_inner_node(inner_node: exp.Star | list[exp.Expr]) -> Cols:
@@ -201,8 +201,30 @@ def _resolve(val: IntoExpr, schema: Schema) -> Iter[ResolvedExpr]:
                 case _:
                     match val.inner.find(exp.Columns):
                         case None:
-                            name = extract_root_name(val.inner)
-                            return ResolvedExpr(val, name).into(Iter.once)
+                            match val.inner:
+                                case exp.Star() as star:
+                                    excepts: list[exp.Expr] | None = star.args.get(
+                                        "except_"
+                                    )
+                                    match excepts:
+                                        case None:
+                                            base_names = schema.keys()
+                                        case list():
+                                            excluded = (
+                                                Iter(excepts)
+                                                .map(lambda c: c.name)
+                                                .collect(Set)
+                                            )
+                                            base_names = (
+                                                schema
+                                                .iter()
+                                                .filter(lambda n: n not in excluded)
+                                                .collect()
+                                            )
+                                    return _expand_columns(val, base_names, base_names)
+                                case _:
+                                    name = extract_root_name(val.inner)
+                                    return ResolvedExpr(val, name).into(Iter.once)
                         case _ as columns_node:
                             base_names = _get_inner_node(columns_node.this)  # pyright: ignore[reportAny]
                             return _expand_columns(val, base_names, base_names)
