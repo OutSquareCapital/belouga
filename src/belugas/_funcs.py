@@ -128,8 +128,7 @@ def any(names: TryIter[str], *more_names: str, ignore_nulls: bool = True) -> Exp
             names,
             more_names,
         )
-    else:
-        return _agg_expr(Expr.any, names, more_names)
+    return _agg_expr(Expr.any, names, more_names)
 
 
 def lit(value: PythonLiteral) -> Expr:

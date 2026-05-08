@@ -164,8 +164,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         df = self._materialize().pl(lazy=lazy)
         if Marker.TEMP in self.columns:
             return df.drop(Marker.TEMP)
-        else:
-            return df
+        return df
 
     def lazy(self) -> pl.LazyFrame:
         """Get a Polars LazyFrame.
@@ -363,9 +362,8 @@ class LazyFrame(CoreHandler[exp.Selectable]):
                     len_arg = len(arg)
                     if len_arg == length:
                         return Ok(try_iter(arg))
-                    else:
-                        msg = f"the length of `{name}` ({len_arg}) does not match the length of `by` ({length})"
-                        return Err(ValueError(msg))
+                    msg = f"the length of `{name}` ({len_arg}) does not match the length of `by` ({length})"
+                    return Err(ValueError(msg))
 
                 case _:
                     return Ok(try_iter(arg).cycle().take(length))
@@ -573,9 +571,8 @@ class LazyFrame(CoreHandler[exp.Selectable]):
                 case (True, True):
                     if is_single_explode:
                         return replace.alias(name)
-                    else:
-                        field = zipped_index.get_item(name).unwrap()
-                        return replace.struct.extract(field).alias(name)
+                    field = zipped_index.get_item(name).unwrap()
+                    return replace.struct.extract(field).alias(name)
                 case (False, True):
                     return lit(None).alias(name)
                 case _:
@@ -1147,8 +1144,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
                     .chain(val_cols.iter().flat_map(_rename_col))
                     .into(expr.pipe(self._from_ast, src=self).select)
                 )
-            else:
-                return expr.pipe(self._from_ast, src=self)
+            return expr.pipe(self._from_ast, src=self)
 
         return pivoted.pipe(_handle_multi)
 

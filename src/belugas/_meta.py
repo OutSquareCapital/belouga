@@ -43,8 +43,7 @@ def _into_windowed(cols: PyoIterable[ResolvedExpr]) -> exp.Expr:
     if cols.any(lambda p: p.is_windowed(Marker.TEMP)):
         row_nb = row_number().window().sub(1).alias(Marker.TEMP).inner
         return exp.select(row_nb, exp.Star()).from_(source).subquery("src")
-    else:
-        return source
+    return source
 
 
 def _has_window_ancestor(node: exp.Expr) -> bool:
@@ -71,8 +70,7 @@ def _is_projection_distinct(node: exp.Expr) -> bool:
 def _resolve_exploded(expr: Expr, *, is_distinct: bool) -> Expr:
     if is_distinct:
         return expr.implode().list.distinct()
-    else:
-        return expr.implode()
+    return expr.implode()
 
 
 def extract_root_name(node: exp.Expr) -> str:  # noqa: PLR0911
@@ -130,8 +128,7 @@ def _window_root_name(node: exp.Window) -> str:
     name = extract_root_name(node.this)  # pyright: ignore[reportAny]
     if name in {Marker.LITERAL, Marker.TEMP}:
         return _root_col_name(node)
-    else:
-        return name
+    return name
 
 
 def _root_col_name(node: exp.Expr) -> str:
@@ -356,12 +353,11 @@ class ExprPlan:
                 return (
                     self.aliased_sql(broadcast_agg=False).from_(source).distinct()
                 )
-            else:
-                return self.aliased_sql(
-                    broadcast_agg=self._should_broadcast_agg(
-                        include_source_cols=False
-                    )
-                ).from_(source)
+            return self.aliased_sql(
+                broadcast_agg=self._should_broadcast_agg(
+                    include_source_cols=False
+                )
+            ).from_(source)
 
         return self.projections.then(
             lambda _projs: _projs.into(_into_windowed).pipe(_non_empty_slct)
@@ -374,21 +370,20 @@ class ExprPlan:
                 return update_iter.map_star(lambda _name, expr: expr.inner).insert(
                     exp.Star()
                 )
-            else:
-                return (
-                    self.schema
-                    .iter()
-                    .map(
-                        lambda name: updates.get_item(name).map_or(
-                            exp.column(name), lambda expr: expr.inner
-                        )
-                    )
-                    .chain(
-                        update_iter.filter_star(
-                            lambda name, _expr: name not in self.schema
-                        ).map_star(lambda _name, expr: expr.inner)
+            return (
+                self.schema
+                .iter()
+                .map(
+                    lambda name: updates.get_item(name).map_or(
+                        exp.column(name), lambda expr: expr.inner
                     )
                 )
+                .chain(
+                    update_iter.filter_star(
+                        lambda name, _expr: name not in self.schema
+                    ).map_star(lambda _name, expr: expr.inner)
+                )
+            )
 
         broadcast_agg = self._should_broadcast_agg(include_source_cols=True)
         updates = (

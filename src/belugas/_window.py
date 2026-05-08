@@ -106,8 +106,7 @@ class OverBuilder:
     def handle_nulls(self, *, ignore_nulls: bool) -> Self:
         if ignore_nulls:
             return self.__class__(exp.IgnoreNulls(this=self.expr))
-        else:
-            return self
+        return self
 
     def handle_fn_order_by(self, **kwargs: Unpack[FnArgs]) -> Self:
         def _build(cols: Seq[IntoExprColumn]) -> exp.WithinGroup:
@@ -243,10 +242,9 @@ class BoundsValues(NamedTuple):
                 Side(str(left), Bounds.PRECEDING),
                 Side(str(right), Bounds.FOLLOWING),
             )
-        else:
-            return cls(
-                Side(str(size), Bounds.PRECEDING), Side(Bounds.CURRENT, Bounds.ROW)
-            )
+        return cls(
+            Side(str(size), Bounds.PRECEDING), Side(Bounds.CURRENT, Bounds.ROW)
+        )
 
     @classmethod
     def new(cls, bounds: BoundArgs, *, has_order_by: bool) -> Option[Self]:

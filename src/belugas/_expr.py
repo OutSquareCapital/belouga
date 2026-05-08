@@ -435,8 +435,7 @@ class Expr(Fns):
     def _reversed(self, *, reverse: bool = False) -> Self:
         if reverse:
             return self.window(frame_start=0)
-        else:
-            return self.window(frame_end=0)
+        return self.window(frame_end=0)
 
     @property
     def arr(self) -> nm.ExprArrayNameSpace:
@@ -611,24 +610,21 @@ class Expr(Fns):
     def kurtosis_fisher(self, *, bias: bool = True) -> Self:
         if bias:
             return self.kurtosis_pop()
-        else:
-            return self.kurtosis_samp()
+        return self.kurtosis_samp()
 
     def kurtosis(self, *, fisher: bool = True, bias: bool = True) -> Self:
         base = self.kurtosis_fisher(bias=bias)
         if fisher:
             return base
-        else:
-            return base.add(3)
+        return base.add(3)
 
     def skew(self, *, bias: bool) -> Self:
         adjusted = self.skewness()
         if not bias:
             return adjusted
-        else:
-            n = self.count()
-            factor = n.sub(2).truediv(n.mul(n.sub(1)).sqrt())
-            return adjusted.mul(factor)
+        n = self.count()
+        factor = n.sub(2).truediv(n.mul(n.sub(1)).sqrt())
+        return adjusted.mul(factor)
 
     def shift(self, n: int = 1) -> Self:
         match n:
@@ -649,8 +645,7 @@ class Expr(Fns):
     def quantile(self, quantile: float, *, interpolation: bool = True) -> Self:
         if interpolation:
             return self.quantile_cont(quantile)
-        else:
-            return self.quantile_disc(quantile)
+        return self.quantile_disc(quantile)
 
     def is_between(
         self, lower_bound: IntoExpr, upper_bound: IntoExpr, closed: ClosedInterval
@@ -770,14 +765,13 @@ class Expr(Fns):
         close = self.sub(other_expr).abs().le(threshold)
         if not nans_equal:
             return close
-        else:
-            return self._cls(
-                when(self.is_nan().and_(other_expr.is_nan()))
-                .then(value=True)
-                .otherwise(close)
-                .alias(self.inner.output_name)
-                .inner
-            )
+        return self._cls(
+            when(self.is_nan().and_(other_expr.is_nan()))
+            .then(value=True)
+            .otherwise(close)
+            .alias(self.inner.output_name)
+            .inner
+        )
 
     def is_first_distinct(self) -> Self:
         """Check if value is first occurrence.
