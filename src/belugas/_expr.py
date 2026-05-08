@@ -433,11 +433,10 @@ class Expr(Fns):
         print(self.inner.sql(dialect="duckdb", identify=True))
 
     def _reversed(self, *, reverse: bool = False) -> Self:
-        match reverse:
-            case True:
-                return self.window(frame_start=0)
-            case False:
-                return self.window(frame_end=0)
+        if reverse:
+            return self.window(frame_start=0)
+        else:
+            return self.window(frame_end=0)
 
     @property
     def arr(self) -> nm.ExprArrayNameSpace:
@@ -610,29 +609,26 @@ class Expr(Fns):
                 return self.stddev_samp()
 
     def kurtosis_fisher(self, *, bias: bool = True) -> Self:
-        match bias:
-            case True:
-                return self.kurtosis_pop()
-            case False:
-                return self.kurtosis_samp()
+        if bias:
+            return self.kurtosis_pop()
+        else:
+            return self.kurtosis_samp()
 
     def kurtosis(self, *, fisher: bool = True, bias: bool = True) -> Self:
         base = self.kurtosis_fisher(bias=bias)
-        match fisher:
-            case True:
-                return base
-            case False:
-                return base.add(3)
+        if fisher:
+            return base
+        else:
+            return base.add(3)
 
     def skew(self, *, bias: bool) -> Self:
         adjusted = self.skewness()
-        match bias:
-            case False:
-                return adjusted
-            case True:
-                n = self.count()
-                factor = n.sub(2).truediv(n.mul(n.sub(1)).sqrt())
-                return adjusted.mul(factor)
+        if not bias:
+            return adjusted
+        else:
+            n = self.count()
+            factor = n.sub(2).truediv(n.mul(n.sub(1)).sqrt())
+            return adjusted.mul(factor)
 
     def shift(self, n: int = 1) -> Self:
         match n:
@@ -651,11 +647,10 @@ class Expr(Fns):
                 return self.round_from_zero(decimals)
 
     def quantile(self, quantile: float, *, interpolation: bool = True) -> Self:
-        match interpolation:
-            case True:
-                return self.quantile_cont(quantile)
-            case False:
-                return self.quantile_disc(quantile)
+        if interpolation:
+            return self.quantile_cont(quantile)
+        else:
+            return self.quantile_disc(quantile)
 
     def is_between(
         self, lower_bound: IntoExpr, upper_bound: IntoExpr, closed: ClosedInterval
@@ -773,17 +768,16 @@ class Expr(Fns):
         other_expr = self.new(other)
         threshold = lit(abs_tol).add(lit(rel_tol).mul(other_expr.abs()))
         close = self.sub(other_expr).abs().le(threshold)
-        match nans_equal:
-            case False:
-                return close
-            case True:
-                return self._cls(
-                    when(self.is_nan().and_(other_expr.is_nan()))
-                    .then(value=True)
-                    .otherwise(close)
-                    .alias(self.inner.output_name)
-                    .inner
-                )
+        if not nans_equal:
+            return close
+        else:
+            return self._cls(
+                when(self.is_nan().and_(other_expr.is_nan()))
+                .then(value=True)
+                .otherwise(close)
+                .alias(self.inner.output_name)
+                .inner
+            )
 
     def is_first_distinct(self) -> Self:
         """Check if value is first occurrence.
@@ -888,14 +882,12 @@ class Expr(Fns):
             Self: An expression representing the entropy.
         """
         from ._funcs import lit
-
-        match normalize:
-            case True:
-                expr = (
-                    self.sum().ln().sub(self.mul(self.ln()).sum().truediv(self.sum()))
-                )
-            case False:
-                expr = self.mul(self.ln().neg()).sum()
+        if normalize:
+            expr = (
+                self.sum().ln().sub(self.mul(self.ln()).sum().truediv(self.sum()))
+            )
+        else:
+            expr = self.mul(self.ln().neg()).sum()
         return expr.truediv(lit(base).ln())
 
     def log(self, x: IntoExprColumn | float | None = None) -> Self:

@@ -111,19 +111,18 @@ class ExprStringNameSpace(StringFns[Expr]):
 
     def find(self, pattern: IntoExprColumn, *, literal: bool = False) -> Expr:
         """Return the first match offset as a zero-based index."""
-        match literal:
-            case True:
-                expr = self.strpos(pattern).pipe(
-                    lambda pos: when(pos.eq(0)).then(Lit.NONE).otherwise(pos.sub(1))
+        if literal:
+            expr = self.strpos(pattern).pipe(
+                lambda pos: when(pos.eq(0)).then(Lit.NONE).otherwise(pos.sub(1))
+            )
+        else:
+            expr = self.inner.re.extract(pattern, 0).pipe(
+                lambda matched: (
+                    when(matched.eq(Lit.EMPTY_STR))
+                    .then(Lit.NONE)
+                    .otherwise(self.strpos(matched).sub(1))
                 )
-            case False:
-                expr = self.inner.re.extract(pattern, 0).pipe(
-                    lambda matched: (
-                        when(matched.eq(Lit.EMPTY_STR))
-                        .then(Lit.NONE)
-                        .otherwise(self.strpos(matched).sub(1))
-                    )
-                )
+            )
         return expr.alias(self.inner.inner.output_name)
 
     def join(
@@ -140,16 +139,15 @@ class ExprStringNameSpace(StringFns[Expr]):
         """
         inner = self.inner
         aggregated = self.agg(inner.new(delimiter))
-        match ignore_nulls:
-            case True:
-                return aggregated
-            case False:
-                return (
-                    when(inner.is_null().any())
-                    .then(Lit.NONE)
-                    .otherwise(aggregated)
-                    .alias(inner.inner.output_name)
-                )
+        if ignore_nulls:
+            return aggregated
+        else:
+            return (
+                when(inner.is_null().any())
+                .then(Lit.NONE)
+                .otherwise(aggregated)
+                .alias(inner.inner.output_name)
+            )
 
     def count_matches(self, pattern: IntoExprColumn, *, literal: bool = False) -> Expr:
         """Count pattern matches.
@@ -159,16 +157,15 @@ class ExprStringNameSpace(StringFns[Expr]):
         """
         expr = self.inner
         pattern_expr = expr.new(pattern)
-        match literal:
-            case False:
-                return expr.re.extract_all(pattern_expr).list.len()
-            case True:
-                return (
-                    self
-                    .length()
-                    .sub(self.replace(pattern_expr, Lit.EMPTY_STR).str.length())
-                    .truediv(pattern_expr.str.length())
-                )
+        if not literal:
+            return expr.re.extract_all(pattern_expr).list.len()
+        else:
+            return (
+                self
+                .length()
+                .sub(self.replace(pattern_expr, Lit.EMPTY_STR).str.length())
+                .truediv(pattern_expr.str.length())
+            )
 
     def strip_prefix(self, prefix: IntoExpr) -> Expr:
         """Strip prefix from string.
@@ -268,11 +265,10 @@ class ExprStringNameSpace(StringFns[Expr]):
         Returns:
             Expr: A new expression that evaluates to the string with the replacements applied.
         """
-        match literal:
-            case True:
-                return self.replace(pattern, value)
-            case False:
-                return self.inner.re.replace(pattern, value, Lit.G_PARAM)
+        if literal:
+            return self.replace(pattern, value)
+        else:
+            return self.inner.re.replace(pattern, value, Lit.G_PARAM)
 
     def normalize(self) -> Expr:
         """Normalize strings using NFC normalization.
@@ -760,16 +756,15 @@ class ExprListNameSpace(ListFns[Expr]):
             Expr: A new expression that evaluates to the joined string.
         """
         joined = self.aggregate(Lit.STR_AGG, separator).coalesce(Lit.EMPTY_STR)
-        match ignore_nulls:
-            case True:
-                return joined
-            case False:
-                return (
-                    when(self.filter(element().is_null()).list.length().gt(0))
-                    .then(Lit.NONE)
-                    .otherwise(joined)
-                    .alias(self.inner.inner.output_name)
-                )
+        if ignore_nulls:
+            return joined
+        else:
+            return (
+                when(self.filter(element().is_null()).list.length().gt(0))
+                .then(Lit.NONE)
+                .otherwise(joined)
+                .alias(self.inner.inner.output_name)
+            )
 
     def count_matches(self, elem: IntoExpr) -> Expr:
         """Count matches in each array.
@@ -943,16 +938,15 @@ class ExprArrayNameSpace(ArrayFns[Expr]):
             Expr: A new expression that evaluates to the joined string.
         """
         joined = self.aggregate(Lit.STR_AGG, separator).coalesce(Lit.EMPTY_STR)
-        match ignore_nulls:
-            case True:
-                return joined
-            case False:
-                return (
-                    when(self.filter(element().is_null()).arr.length().gt(0))
-                    .then(Lit.NONE)
-                    .otherwise(joined)
-                    .alias(self.inner.inner.output_name)
-                )
+        if ignore_nulls:
+            return joined
+        else:
+            return (
+                when(self.filter(element().is_null()).arr.length().gt(0))
+                .then(Lit.NONE)
+                .otherwise(joined)
+                .alias(self.inner.inner.output_name)
+            )
 
     def count_matches(self, elem: IntoExpr) -> Expr:
         """Count matches in each array.
@@ -1221,14 +1215,13 @@ class ExprNameNameSpace(NameSpaceHandler[Expr]):
         Returns:
             Expr
         """
-        match literal:
-            case True:
-                return self._with_alias_mapper(
-                    lambda name: name.replace(pattern, value)
-                )
-            case False:
-                regex = re.compile(pattern)
-                return self._with_alias_mapper(lambda name: regex.sub(value, name))
+        if literal:
+            return self._with_alias_mapper(
+                lambda name: name.replace(pattern, value)
+            )
+        else:
+            regex = re.compile(pattern)
+            return self._with_alias_mapper(lambda name: regex.sub(value, name))
 
     def _with_alias_mapper(self, mapper: Aliaser) -> Expr:
         from .selectors import Selector

@@ -162,12 +162,10 @@ class LazyFrame(CoreHandler[exp.Selectable]):
     def _into_pl(self, *, lazy: Literal[False]) -> pl.DataFrame: ...
     def _into_pl(self, *, lazy: bool) -> pl.LazyFrame | pl.DataFrame:
         df = self._materialize().pl(lazy=lazy)
-
-        match Marker.TEMP in self.columns:
-            case True:
-                return df.drop(Marker.TEMP)
-            case False:
-                return df
+        if Marker.TEMP in self.columns:
+            return df.drop(Marker.TEMP)
+        else:
+            return df
 
     def lazy(self) -> pl.LazyFrame:
         """Get a Polars LazyFrame.
@@ -363,12 +361,11 @@ class LazyFrame(CoreHandler[exp.Selectable]):
             match arg:
                 case Sequence():
                     len_arg = len(arg)
-                    match len_arg == length:
-                        case True:
-                            return Ok(try_iter(arg))
-                        case False:
-                            msg = f"the length of `{name}` ({len_arg}) does not match the length of `by` ({length})"
-                            return Err(ValueError(msg))
+                    if len_arg == length:
+                        return Ok(try_iter(arg))
+                    else:
+                        msg = f"the length of `{name}` ({len_arg}) does not match the length of `by` ({length})"
+                        return Err(ValueError(msg))
 
                 case _:
                     return Ok(try_iter(arg).cycle().take(length))
@@ -574,12 +571,11 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         def _project_col(name: str, *, nested: bool, replace: Expr) -> Expr:
             match (nested, name in to_explode_names):
                 case (True, True):
-                    match is_single_explode:
-                        case True:
-                            return replace.alias(name)
-                        case False:
-                            field = zipped_index.get_item(name).unwrap()
-                            return replace.struct.extract(field).alias(name)
+                    if is_single_explode:
+                        return replace.alias(name)
+                    else:
+                        field = zipped_index.get_item(name).unwrap()
+                        return replace.struct.extract(field).alias(name)
                 case (False, True):
                     return lit(None).alias(name)
                 case _:
@@ -1133,27 +1129,26 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         )
 
         def _handle_multi(expr: exp.Selectable) -> Self:
-            match multi:
-                case True:
-                    on_values = Iter(on_columns).map(str).collect()
+            if multi:
+                on_values = Iter(on_columns).map(str).collect()
 
-                    def _rename_col(val_col: str) -> Iter[Expr]:
-                        def _swap(on_val: str) -> Expr:
-                            in_ = f"{on_val}_{val_col}"
-                            out = f"{val_col}{separator}{on_val}"
-                            return col(in_).alias(out)
+                def _rename_col(val_col: str) -> Iter[Expr]:
+                    def _swap(on_val: str) -> Expr:
+                        in_ = f"{on_val}_{val_col}"
+                        out = f"{val_col}{separator}{on_val}"
+                        return col(in_).alias(out)
 
-                        return on_values.iter().map(_swap)
+                    return on_values.iter().map(_swap)
 
-                    return (
-                        idx_cols
-                        .iter()
-                        .map(col)
-                        .chain(val_cols.iter().flat_map(_rename_col))
-                        .into(expr.pipe(self._from_ast, src=self).select)
-                    )
-                case False:
-                    return expr.pipe(self._from_ast, src=self)
+                return (
+                    idx_cols
+                    .iter()
+                    .map(col)
+                    .chain(val_cols.iter().flat_map(_rename_col))
+                    .into(expr.pipe(self._from_ast, src=self).select)
+                )
+            else:
+                return expr.pipe(self._from_ast, src=self)
 
         return pivoted.pipe(_handle_multi)
 

@@ -122,15 +122,14 @@ def all(exclude: TryIter[IntoExprColumn] = None) -> Expr:
 
 
 def any(names: TryIter[str], *more_names: str, ignore_nulls: bool = True) -> Expr:
-    match ignore_nulls:
-        case True:
-            return _agg_expr(
-                lambda expr: expr.any().fill_null(lit(value=False)),
-                names,
-                more_names,
-            )
-        case False:
-            return _agg_expr(Expr.any, names, more_names)
+    if ignore_nulls:
+        return _agg_expr(
+            lambda expr: expr.any().fill_null(lit(value=False)),
+            names,
+            more_names,
+        )
+    else:
+        return _agg_expr(Expr.any, names, more_names)
 
 
 def lit(value: PythonLiteral) -> Expr:
