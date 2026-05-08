@@ -8,9 +8,6 @@ if TYPE_CHECKING:
 
 
 def check_missing_sqlglot(output: Path) -> int:
-    from ._utils import set_pl_config
-
-    set_pl_config()
     txt = _header(_run_qry())
     output.touch()
     return output.write_text(txt, encoding="utf-8")
@@ -21,17 +18,18 @@ def _run_qry() -> str:
     from pyochain import Dict
     from sqlglot.parsers.duckdb import DuckDBParser
 
-    import belugas as bl
-
     original = Dict(DuckDBParser.FUNCTIONS)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType, reportUnknownVariableType]
     _check_no_overlap(original)  # pyright: ignore[reportUnknownArgumentType]
+    import belugas as bl
     from belugas._sqlglot_patch import DUCKDB_FUNCTIONS  # noqa: PLC2701
 
+    from ._utils import set_pl_config
     from .fn_generator._query import (
         DuckCols,  # pyright: ignore[reportPrivateLocalImportUsage]
         _filters,  # pyright: ignore[reportPrivateUsage]
     )
 
+    set_pl_config()
     function_name = pl.col("function_name")
     alias_of = pl.col("alias_of")
     alias_root = pl.col("alias_root")
