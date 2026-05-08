@@ -1,5 +1,5 @@
 """Code generator for typed SQL function wrappers."""
 
-from ._main import get_data, run_pipeline
+from ._main import run_pipeline
 
-__all__ = ["get_data", "run_pipeline"]
+__all__ = ["run_pipeline"]

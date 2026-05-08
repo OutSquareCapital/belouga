@@ -14,10 +14,11 @@ Contributions are always welcome, whether it's a bug fix, a new feature, or just
 
 The project heavily compares `belugas` behavior against reference Polars chains where parity is expected.
 
-We want to periodically check the coverage. To do so, run:
+To run the tests, use:
 
 ```shell
-uv run pytest tests/ --cov=src/ --cov-report=term-missing
+uv run pytest tests/
+uv run pytest tests/ --cov=src/ --cov-report=term-missing # If we want to check the uncovered lines
 ```
 
 ## Type checking and formatting
@@ -130,5 +131,3 @@ The main generated outputs are:
 - [DuckDB function wrappers and namespace mixins](src/belugas/_fns.py)
 - [DuckDB meta table-function helpers](src/belugas/meta.py)
 - [The SQL display theme literal](src/belugas/typing.py)
-
-If you never generated the function wrappers before, run `fns-to-parquet` once to build the cached metadata, then `gen-fns`.

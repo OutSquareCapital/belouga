@@ -15,33 +15,9 @@ from ._schemas import TableSchema
 from ._sections import FunctionInfo, build_file
 
 
-def get_data(path: Path) -> None:
-
-    import duckdb
-
-    qry = """--sql
-    LOAD spatial;
-    SELECT *
-    FROM duckdb_functions()
-    """
-
-    return duckdb.connect().sql(qry).pl().cast(TableSchema).write_parquet(path)
-
-
-def _inspect(lf: pl.LazyFrame) -> pl.LazyFrame:
-    try:
-        lf.profile()[1].with_columns(
-            pl.col("end").sub(pl.col("start")).alias("duration")
-        ).sort("duration", descending=True).show(10, fmt_str_lengths=100)
-    except ComputeError:
-        return lf
-    return lf
-
-
 def run_pipeline(caller: Path, source: Path, *, profile: bool = False) -> str:
     return (
-        pl
-        .scan_parquet(source)
+        _try_scan(source)
         .pipe(run_qry)
         .pipe(_inspect if profile else lambda lf: lf)
         .collect()
@@ -53,3 +29,26 @@ def run_pipeline(caller: Path, source: Path, *, profile: bool = False) -> str:
         )
         .into(build_file, caller)
     )
+
+
+def _try_scan(source: Path) -> pl.LazyFrame:
+    if source.exists():
+        return pl.scan_parquet(source)
+    import duckdb
+
+    conn = duckdb.connect()
+    conn.install_extension("spatial")
+    conn.load_extension("spatial")
+    df = conn.table_function("duckdb_functions").pl().cast(TableSchema)
+    df.write_parquet(source)
+    return df.lazy()
+
+
+def _inspect(lf: pl.LazyFrame) -> pl.LazyFrame:
+    try:
+        lf.profile()[1].with_columns(
+            pl.col("end").sub(pl.col("start")).alias("duration")
+        ).sort("duration", descending=True).show(10, fmt_str_lengths=100)
+    except ComputeError:
+        return lf
+    return lf

@@ -72,16 +72,6 @@ def gen_themes(path: InputPath = _Paths.TYPING) -> None:
 
 
 @app.command()
-def fns_to_parquet(path: InputPath = _Paths.DATA) -> None:
-    """Fetch function metadata from DuckDB and store as parquet at `scripts/generator/functions.parquet`."""
-    from .fn_generator import get_data
-
-    get_data(path)
-
-    console.print(f"Fetched function metadata and stored at {path}")
-
-
-@app.command()
 def gen_meta(
     data_path: InputPath = _Paths.DATA,
     output: OutputPath = _Paths.META,
