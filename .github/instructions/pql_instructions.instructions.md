@@ -65,7 +65,7 @@ This layer should remain Polars-like and user ergonomic.
 
 - Extends the generated `Fns` mixin from `src/belugas/_fns.py`.
 - Wraps a `sqlglot.exp.Expr` through `ExprHandler`/`CoreHandler`.
-- Carries `meta: ExprMeta` to preserve naming, aliasing, and context-sensitive behavior.
+- Carries `aliaser: AliasMapper` to preserve naming, aliasing, and context-sensitive behavior.
 - Uses `Expr.new(...)` as the normal coercion entrypoint.
 - Exposes namespaces such as `.str`, `.list`, `.struct`, `.dt`, `.arr`, `.json`, `.re`, `.map`, `.enum`, `.geo`, and `.name`.
 
@@ -164,7 +164,7 @@ Edit generator pipelines and regenerate instead of patching generated files by h
 
 4. Preserve expression metadata and naming behavior:
 
-- Changes around `ExprMeta`, `Marker`, aliasing, reverse operators, and output names can easily break `select()` and `with_columns()` parity.
+- Changes around `AliasMapper`, `Marker`, aliasing, reverse operators, and output names can easily break `select()` and `with_columns()` parity.
 - Treat naming regressions as real behavior regressions.
 
 5. Keep generated SQL/relations efficient:

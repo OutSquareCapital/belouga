@@ -11,7 +11,7 @@ from sqlglot import exp
 
 from ._core import func, into_expr, into_expr_list
 from ._fns import Fns
-from ._meta import ExprMeta, Marker
+from ._meta import AliasMapper, Marker
 from ._window import (
     BoundsValues,
     FrameBound,
@@ -56,7 +56,7 @@ _FILL_STRATEGY: dict[FillNullStrategy, Callable[[Expr], Expr]] = {
 class Expr(Fns):
     """A wrapper around sqlglot.exp.Expr that provides operator overloading and SQL function methods."""
 
-    meta: ExprMeta = field(default_factory=ExprMeta)
+    aliaser: AliasMapper = field(default_factory=AliasMapper)
 
     @classmethod
     def new(cls, value: IntoExpr, *, as_col: bool = False) -> Self:
@@ -73,7 +73,7 @@ class Expr(Fns):
 
     @override
     def _cls(self, value: exp.Expr) -> Self:
-        return self.__class__(value, self.meta)
+        return self.__class__(value, self.aliaser)
 
     def _rolling_agg(
         self,
@@ -383,7 +383,7 @@ class Expr(Fns):
 
     def alias(self, name: str) -> Self:
         expr = exp.Alias(this=self.inner.unalias(), alias=exp.to_identifier(name))
-        return self.__class__(expr, self.meta.unalias())
+        return self.__class__(expr, self.aliaser.reset())
 
     def between(self, lower: IntoExpr, upper: IntoExpr) -> Self:
         return self._cls(

@@ -30,7 +30,7 @@ from ._meta import ExprPlan, extract_root_name
 from ._when import when
 
 if TYPE_CHECKING:
-    from ._meta import Aliaser
+    from ._meta import AliasFn
     from .typing import (
         EpochTimeUnit,
         IntoExpr,
@@ -1156,10 +1156,10 @@ class ExprNameNameSpace(NameSpaceHandler[Expr]):
             Expr
         """
         expr = self.inner
-        meta = expr.meta.unalias()
-        return expr.inner.unalias().pipe(Expr, meta)
+        aliaser = expr.aliaser.reset()
+        return expr.inner.unalias().pipe(Expr, aliaser)
 
-    def map(self, function: Aliaser) -> Expr:
+    def map(self, function: AliasFn) -> Expr:
         """Map the expression name using the provided function.
 
         Returns:
@@ -1215,13 +1215,13 @@ class ExprNameNameSpace(NameSpaceHandler[Expr]):
         regex = re.compile(pattern)
         return self._with_alias_mapper(lambda name: regex.sub(value, name))
 
-    def _with_alias_mapper(self, mapper: Aliaser) -> Expr:
+    def _with_alias_mapper(self, mapper: AliasFn) -> Expr:
         from .selectors import Selector
 
         expr = self.inner
         match expr:
             case Selector():
-                return expr.inner.pipe(Expr, expr.meta.with_alias_mapper(mapper))
+                return expr.inner.pipe(Expr, expr.aliaser.with_mapper(mapper))
             case _:
                 name = expr.inner.pipe(extract_root_name)
                 return expr.alias(mapper(name))

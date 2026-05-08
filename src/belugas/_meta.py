@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from .selectors import Cols, Resolver
     from .typing import IntoExpr, Schema
 
-type Aliaser = Callable[[str], str]
+type AliasFn = Callable[[str], str]
 """Alias function type, used for generating deferred column aliases."""
 
 
@@ -141,20 +141,20 @@ def _root_col_name(node: exp.Expr) -> str:
 
 
 @dataclass(slots=True)
-class ExprMeta:
+class AliasMapper:
     """Metadata for expressions, used for tracking properties that affect query generation."""
 
-    def unalias(self) -> Self:
+    def reset(self) -> Self:
         return self
 
 
 @dataclass(slots=True)
-class MultiMeta(ExprMeta):
+class MultiAliasMapper(AliasMapper):
     resolver: Resolver
-    alias_name: Option[Aliaser] = field(default_factory=lambda: NONE)
+    alias_name: Option[AliasFn] = field(default_factory=lambda: NONE)
 
-    def with_alias_mapper(self, mapper: Aliaser) -> Self:
-        def _get_mapper() -> Aliaser:
+    def with_mapper(self, mapper: AliasFn) -> Self:
+        def _get_mapper() -> AliasFn:
             match self.alias_name:
                 case Some(current):
                     return lambda name: mapper(current(name))
@@ -201,7 +201,7 @@ class MultiMeta(ExprMeta):
     def get_output_names(self, base_names: Cols, expr: Expr) -> Cols:
         match expr.inner, self.alias_name:
             case exp.Alias() as inner, Some(alias_fn):
-                return Iter.once(inner.output_name).map(alias_fn).collect()
+                return Seq((alias_fn(inner.output_name),))
             case exp.Alias() as inner, Null():
                 return Seq((inner.output_name,))
             case _, Some(alias_fn):
@@ -210,7 +210,7 @@ class MultiMeta(ExprMeta):
                 return base_names
 
     @override
-    def unalias(self) -> Self:
+    def reset(self) -> Self:
         return self.__class__(self.resolver, NONE)
 
 
@@ -274,7 +274,7 @@ class ResolvedExpr(Pipeable):
             def _window_agg(node: exp.Expr) -> exp.Expr:
                 match node:
                     case exp.AggFunc() | exp.List() if not _has_window_ancestor(node):
-                        return expr.__class__(node, expr.meta).window().inner
+                        return expr.__class__(node, expr.aliaser).window().inner
                     case _:
                         return node
 
@@ -318,8 +318,8 @@ class ExprPlan:
 
             match val:
                 case Expr():
-                    match val.meta:
-                        case MultiMeta() as meta:
+                    match val.aliaser:
+                        case MultiAliasMapper() as meta:
                             return meta.into_resolved(val, schema)
                         case _:
                             name = extract_root_name(val.inner)

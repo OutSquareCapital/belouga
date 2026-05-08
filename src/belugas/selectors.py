@@ -14,7 +14,7 @@ from . import (
 )
 from ._core import into_expr
 from ._expr import Expr
-from ._meta import MultiMeta
+from ._meta import MultiAliasMapper
 from .utils import TryIter, try_iter
 
 if TYPE_CHECKING:
@@ -44,8 +44,8 @@ class Resolver:
     def into_selector(self) -> Selector:
         return Selector(fn.all().inner, self.into_meta())
 
-    def into_meta(self) -> MultiMeta:
-        return MultiMeta(self)
+    def into_meta(self) -> MultiAliasMapper:
+        return MultiAliasMapper(self)
 
     @classmethod
     def all_columns(cls) -> Self:
@@ -142,16 +142,16 @@ class Resolver:
 class Selector(Expr):
     """Column selector based on dtype predicates."""
 
-    meta: MultiMeta  # pyright: ignore[reportIncompatibleVariableOverride]
+    aliaser: MultiAliasMapper  # pyright: ignore[reportIncompatibleVariableOverride]
     __slots__ = ()
 
     @override
     def _cls(self, value: exp.Expr) -> Expr:
-        return Expr(value, self.meta)
+        return Expr(value, self.aliaser)
 
     @property
     def _resolver(self) -> Resolver:
-        return self.meta.resolver
+        return self.aliaser.resolver
 
     @overload
     def union(self, other: Self) -> Self: ...
