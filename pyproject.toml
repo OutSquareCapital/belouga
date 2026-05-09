@@ -102,3 +102,5 @@
         unannotated-parameter        = "error"
         unannotated-return           = "error"
         unused-ignore                = "error"
+[tool.pytest.ini_options]
+    testpaths = ["tests"]
