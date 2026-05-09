@@ -39,6 +39,17 @@ _PIVOT_DATA: dict[str, list[int] | list[str]] = {
     "col": ["a", "b"],
     "val": [10, 20],
 }
+_EXPLODE_DATA = {
+    "id": tuple(range(N_GROUPS)),
+    **Iter(range(1, N_COLS))
+    .map(
+        lambda i: (
+            f"c{i}",
+            Iter.once(tuple(range(3))).cycle().take(N_GROUPS).collect(tuple),
+        )
+    )
+    .collect(Dict),
+}
 
 BASE = bl.LazyFrame(_DATA)
 PL_BASE = pl.DataFrame(_DATA)
@@ -52,6 +63,8 @@ ASOF_L_PL = pl.DataFrame(_ASOF_L_DATA)
 ASOF_R_PL = pl.DataFrame(_ASOF_R_DATA)
 PIVOT_BL = bl.LazyFrame(_PIVOT_DATA)
 PIVOT_PL = pl.DataFrame(_PIVOT_DATA)
+EXPLODE_BL = bl.LazyFrame(_EXPLODE_DATA)
+EXPLODE_PL = pl.DataFrame(_EXPLODE_DATA)
 
 AGG: Seq[bl.Expr] = (
     COLS
@@ -207,5 +220,10 @@ def _get_benchmarks() -> Seq[tuple[str, BenchFn[bl.LazyFrame], BenchFn[pl.DataFr
             "unpivot",
             lambda: BASE.unpivot(on=UNPIVOT_ON, index=["c0"]),
             lambda: PL_BASE.unpivot(on=UNPIVOT_ON, index=["c0"]),
+        ),
+        (
+            "explode",
+            lambda: EXPLODE_BL.explode(UNPIVOT_ON),
+            lambda: EXPLODE_PL.explode(UNPIVOT_ON),
         ),
     ))
