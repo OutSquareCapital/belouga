@@ -128,6 +128,18 @@ def check_sqlglot() -> None:
     console.print(f"Done with exit code {res}!", style="bold green")
 
 
+@app.command()
+def bench(
+    runs: Annotated[
+        int, typer.Option("--runs", "-r", help="Number of runs per benchmark")
+    ] = 250,
+) -> None:
+    """Run the benchmarks comparing belugas and polars implementations."""
+    from ._benchmark import run_benchmark
+
+    run_benchmark(runs)
+
+
 def _run_ruff(*, check_only: bool, dest: Path) -> None:
 
     import subprocess
