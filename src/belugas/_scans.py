@@ -11,7 +11,6 @@ from duckdb import DuckDBPyConnection, DuckDBPyRelation
 from pyochain import Dict, Iter, Seq
 from sqlglot import exp
 
-from ._funcs import unnest
 from .typing import (
     IntoArrowArray,
     IntoArrowStream,
@@ -533,4 +532,4 @@ def _to_expr(k: str, v: PythonLiteral) -> duckdb.Expression:
 
 
 def _unnest(k: str) -> duckdb.Expression:
-    return duckdb.SQLExpression(unnest(k).alias(k).inner.sql(dialect="duckdb"))
+    return duckdb.FunctionExpression("unnest", duckdb.ColumnExpression(k)).alias(k)
