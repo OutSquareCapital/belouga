@@ -103,10 +103,21 @@ class LazyGroupBy:
                 case None:
                     return key_glots
 
+        plan = self._schema.into(ExprPlan, aggs, more_aggs, named_aggs)
+        key_schema = (
+            self._keys
+            .iter()
+            .filter_map(_root_column_name)
+            .map(lambda name: (name, self._frame._schema.get_item(name).unwrap()))  # pyright: ignore[reportPrivateUsage]
+            .collect(Dict)
+        )
         return (
-            self._schema
-            .into(ExprPlan, aggs, more_aggs, named_aggs)
+            plan
             .agg_ctx(Iter(key_glots))
             .group_by(*_group_by_clause())
-            .pipe(self._frame._from_ast, src=self._frame)  # pyright: ignore[reportPrivateUsage]
+            .pipe(
+                self._frame._from_ast,  # pyright: ignore[reportPrivateUsage]
+                schema=Some(plan.agg_schema(key_schema)),
+                src=self._frame,
+            )
         )

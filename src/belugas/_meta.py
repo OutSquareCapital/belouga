@@ -368,6 +368,29 @@ class ExprPlan:
             .collect()
         )
 
+    def agg_schema(self, key_schema: Schema) -> Schema:
+        from ._frame import _lookup_type  # pyright: ignore[reportPrivateUsage]
+
+        def _proj_type(proj: ResolvedExpr) -> exp.DataType:
+            base = _lookup_type(proj.expr.inner, self.schema)
+            if proj.is_pure_reducer:
+                return base
+            return exp.DataType(
+                this=exp.DataType.Type.ARRAY,
+                expressions=[base],
+                nested=True,
+            )
+
+        return (
+            key_schema
+            .items()
+            .iter()
+            .chain(
+                self.projections.iter().map(lambda proj: (proj.name, _proj_type(proj)))
+            )
+            .collect(Dict)
+        )
+
     def select_ctx(self) -> Option[exp.Select]:
         def _non_empty_slct(source: exp.Expr) -> exp.Select:
             if self.projections.all(lambda resolved: resolved.has_projection_distinct):

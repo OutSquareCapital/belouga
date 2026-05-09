@@ -34,7 +34,7 @@ from ._core import CoreHandler, into_expr
 from ._expr import Expr
 from ._funcs import all, col, lit, row_number, unnest
 from ._joins import JoinBuilder, JoinKeys
-from ._meta import ExprPlan, Marker
+from ._meta import ExprPlan, Marker, ResolvedExpr
 from ._pivots import pivot, unpivot
 from ._scans import ScanSource
 from .utils import TryIter, TrySeq, try_iter, try_seq
@@ -220,7 +220,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         return plan.select_ctx().map_or_else(
             lambda: self.__class__(ScanSource.from_none().relation),
             lambda ast: self._from_ast(
-                ast, Some(_compute_input_schema(ast, self._schema)), src=self
+                ast, Some(_fast_select_schema(plan.projections, self._schema)), src=self
             ),
         )
 
@@ -243,7 +243,9 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         plan = self._schema.into(ExprPlan, exprs, more_exprs, named_exprs)
         ast = plan.with_columns_ctx()
         return self._from_ast(
-            ast, Some(_compute_input_schema(ast, self._schema)), src=self
+            ast,
+            Some(_fast_with_columns_schema(plan.projections, self._schema)),
+            src=self,
         )
 
     def filter(
@@ -898,7 +900,14 @@ class LazyFrame(CoreHandler[exp.Selectable]):
             .into(_select)
             .from_("lhs")
             .join("rhs", on=condition, join_type=join_type)
-            .pipe(self._from_ast, lhs=self, rhs=other)
+            .pipe(
+                self._from_ast,
+                schema=Some(
+                    builder.join_schema(self._schema, other._schema, join_keys, how)
+                ),
+                lhs=self,
+                rhs=other,
+            )
         )
 
     def join_cross(self, other: Self, *, suffix: str = "_right") -> Self:
@@ -911,13 +920,19 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame resulting from the cross join.
         """
-        return (
-            JoinBuilder(suffix, self.columns, other.columns)
+        builder = JoinBuilder(suffix, self.columns, other.columns)
+        ast = (
+            builder
             .get_join_cols_cross()
             .into(_select)
             .from_("lhs")
             .join("rhs", join_type="cross")
-            .pipe(self._from_ast, lhs=self, rhs=other)
+        )
+        return self._from_ast(
+            ast,
+            schema=Some(builder.join_schema_cross(self._schema, other._schema)),
+            lhs=self,
+            rhs=other,
         )
 
     def join_asof(  # noqa: PLR0913
@@ -1370,8 +1385,44 @@ def _select(exprs: Iterable[exp.Expr | str]) -> exp.Select:
     return exp.select(*exprs)
 
 
-def _compute_input_schema(ast: exp.Selectable, source_schema: Schema) -> Schema:
-    return _compute_schema(ast, Dict.from_ref({"src": source_schema}))
+def _fast_with_columns_schema(projections: Seq[ResolvedExpr], schema: Schema) -> Schema:
+    updates = _fast_select_schema(projections, schema)
+    return (
+        schema
+        .items()
+        .iter()
+        .map_star(lambda name, dtype: (name, updates.get_item(name).unwrap_or(dtype)))
+        .chain(updates.items().iter().filter_star(lambda name, _: name not in schema))
+        .collect(Dict)
+    )
+
+
+def _fast_select_schema(projections: Seq[ResolvedExpr], schema: Schema) -> Schema:
+    return (
+        projections
+        .iter()
+        .map(lambda proj: (proj.name, _lookup_type(proj.expr.inner, schema)))
+        .collect(Dict)
+    )
+
+
+def _lookup_type(inner: exp.Expr, schema: Schema) -> exp.DataType:
+    actual = inner.unalias() if isinstance(inner, exp.Alias) else inner
+    match actual:
+        case exp.Cast() | exp.TryCast():
+            to = actual.args.get("to")
+            if isinstance(to, exp.DataType):
+                return to
+        case _:
+            pass
+    col_node = actual.find(exp.Column)
+    if col_node is not None:
+        match schema.get_item(col_node.output_name):
+            case Some(dtype):
+                return dtype
+            case _:
+                pass
+    return exp.DataType(this=exp.DataType.Type.UNKNOWN)
 
 
 def _compute_schema(ast: exp.Selectable, tables: Dict[str, Schema]) -> Schema:

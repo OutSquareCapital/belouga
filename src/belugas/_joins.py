@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, NamedTuple
 
-from pyochain import NONE, Err, Iter, Null, Ok, Option, Result, Seq, Some
+from pyochain import NONE, Dict, Err, Iter, Null, Ok, Option, Result, Seq, Some
 
 from ._expr import Expr
 from ._funcs import col
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from sqlglot import exp
 
     from ._frame import LazyFrame
-    from .typing import JoinStrategy
+    from .typing import JoinStrategy, Schema
 type OptSeq = Option[Seq[str]]
 type JoinKeysRes[T: Seq[str] | str] = Result[JoinKeys[T], ValueError]
 
@@ -67,6 +67,77 @@ class JoinBuilder:
             .chain(self.right.iter().map(self.for_outer))
             .map(lambda c: c.inner)
         )
+
+    def join_schema(
+        self,
+        left_schema: Schema,
+        right_schema: Schema,
+        join_keys: JoinKeys[Seq[str]],
+        how: JoinStrategy,
+    ) -> Schema:
+        match how:
+            case "semi" | "anti":
+                return left_schema
+            case "inner" | "left":
+                right_pairs = (
+                    right_schema
+                    .items()
+                    .iter()
+                    .filter_star(lambda name, _: name not in self.left)
+                    .map_star(
+                        lambda name, dtype: (
+                            f"{name}{self.suffix}" if name in self.left else name,
+                            dtype,
+                        )
+                    )
+                )
+            case "outer":
+                right_pairs = (
+                    right_schema
+                    .items()
+                    .iter()
+                    .map_star(
+                        lambda name, dtype: (
+                            f"{name}{self.suffix}" if name in self.left else name,
+                            dtype,
+                        )
+                    )
+                )
+            case "right":
+                right_pairs = (
+                    right_schema
+                    .items()
+                    .iter()
+                    .map_star(
+                        lambda name, dtype: (
+                            f"{name}{self.suffix}"
+                            if name in self.left and name not in join_keys.right
+                            else name,
+                            dtype,
+                        )
+                    )
+                )
+        left_pairs = (
+            left_schema
+            .items()
+            .iter()
+            .filter_star(lambda name, _: how != "right" or name not in join_keys.left)
+        )
+        return left_pairs.chain(right_pairs).collect(Dict)
+
+    def join_schema_cross(self, left_schema: Schema, right_schema: Schema) -> Schema:
+        right_pairs = (
+            right_schema
+            .items()
+            .iter()
+            .map_star(
+                lambda name, dtype: (
+                    f"{name}{self.suffix}" if name in self.left else name,
+                    dtype,
+                )
+            )
+        )
+        return left_schema.items().iter().chain(right_pairs).collect(Dict)
 
     def get_join_cols(
         self, other: LazyFrame, join_keys: JoinKeys[Seq[str]], how: JoinStrategy
