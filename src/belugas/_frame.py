@@ -9,38 +9,15 @@ from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self, SupportsInt, overload, override
 
-from pyochain import (
-    Dict,
-    Err,
-    Iter,
-    Null,
-    Ok,
-    Option,
-    Result,
-    Seq,
-    Set,
-    SetMut,
-    Some,
-    Vec,
-)
+from pyochain import Dict, Iter, Option, Set, Vec
 from sqlglot import exp
 
-from . import datatypes as dt
+from . import _plan as planner, datatypes as dt
 from ._core import CoreHandler, into_expr
 from ._expr import Expr
-from ._funcs import all, col, lit, row_number, unnest
-from ._plan import (
-    ExprPlan,
-    JoinBuilder,
-    JoinKeys,
-    Marker,
-    Tables,
-    pivot,
-    resolve_unnest,
-    unpivot,
-)
+from ._funcs import all, col, row_number
 from ._scans import ScanSource
-from .utils import TryIter, TrySeq, select, try_iter, try_seq
+from .utils import TryIter, TrySeq, try_iter
 
 if TYPE_CHECKING:
     import polars as pl
@@ -73,8 +50,6 @@ if TYPE_CHECKING:
         Schema,
         UniqueKeepStrategy,
     )
-
-MAX_I64 = 9_223_372_036_854_775_807
 
 
 @dataclass(slots=True, init=False, repr=False)
@@ -154,8 +129,8 @@ class LazyFrame(CoreHandler[exp.Selectable]):
     def _into_pl(self, *, lazy: Literal[False]) -> pl.DataFrame: ...
     def _into_pl(self, *, lazy: bool) -> pl.LazyFrame | pl.DataFrame:
         df = self._materialize().pl(lazy=lazy)
-        if Marker.TEMP in self.columns:
-            return df.drop(Marker.TEMP)
+        if planner.Marker.TEMP in self.columns:
+            return df.drop(planner.Marker.TEMP)
         return df
 
     def lazy(self) -> pl.LazyFrame:
@@ -208,7 +183,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the selected columns.
         """
-        plan = self._schema.into(ExprPlan, exprs, more_exprs, named_exprs)
+        plan = self._schema.into(planner.ExprPlan, exprs, more_exprs, named_exprs)
         return plan.select_ctx().map_or_else(
             lambda: self.__class__(ScanSource.from_none().relation),
             lambda ast: self._from_ast(ast, plan.select_schema(self._schema), src=self),
@@ -230,7 +205,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the added or replaced columns.
         """
-        plan = self._schema.into(ExprPlan, exprs, more_exprs, named_exprs)
+        plan = self._schema.into(planner.ExprPlan, exprs, more_exprs, named_exprs)
         ast = plan.with_columns_ctx()
         return self._from_ast(ast, plan.with_columns_schema(self._schema), src=self)
 
@@ -265,7 +240,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         return (
             exp
             .select(exp.Star())
-            .from_(Tables.SRC, copy=False)
+            .from_(planner.Tables.SRC, copy=False)
             .where(condition, copy=False)
             .pipe(self._cls)
         )
@@ -319,7 +294,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the aggregated rows.
         """
-        plan = self._schema.into(ExprPlan, exprs, more_exprs, named_exprs)
+        plan = self._schema.into(planner.ExprPlan, exprs, more_exprs, named_exprs)
         return plan.group_by_all_ctx().pipe(
             self._from_ast,
             plan.agg_schema(Dict[str, exp.DataType].new()),
@@ -344,48 +319,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the sorted rows.
         """
-
-        def check_by_arg(
-            compared: Seq[Expr],
-            name: str,
-            arg: TrySeq[bool],
-        ) -> Result[Iter[bool], ValueError]:
-            length = compared.length()
-            match arg:
-                case Sequence():
-                    len_arg = len(arg)
-                    if len_arg == length:
-                        return Ok(try_iter(arg))
-                    msg = f"the length of `{name}` ({len_arg}) does not match the length of `by` ({length})"
-                    return Err(ValueError(msg))
-
-                case _:
-                    return Ok(try_iter(arg).cycle().take(length))
-
-        order_exprs = (
-            try_iter(by)
-            .chain(more_by)
-            .map(lambda v: Expr.new(v, as_col=True))
-            .collect()
-            .into(
-                lambda sort_exprs: sort_exprs.iter().zip(
-                    check_by_arg(sort_exprs, "descending", arg=descending).unwrap(),
-                    check_by_arg(sort_exprs, "nulls_last", arg=nulls_last).unwrap(),
-                )
-            )
-            .map_star(
-                lambda expr, desc, nls: (
-                    expr.order_by(descending=desc, nulls_last=nls).inner
-                )
-            )
-        )
-        return (
-            exp
-            .select(exp.Star())
-            .from_(Tables.SRC, copy=False)
-            .order_by(*order_exprs, copy=False)
-            .pipe(self._cls)
-        )
+        return planner.sort(by, more_by, descending, nulls_last).pipe(self._cls)
 
     def limit(self, n: int) -> Self:
         """Limit the number of rows.
@@ -399,7 +333,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         return (
             exp
             .select(exp.Star())
-            .from_(Tables.SRC, copy=False)
+            .from_(planner.Tables.SRC, copy=False)
             .limit(exp.convert(n), copy=False)
             .pipe(self._cls)
         )
@@ -425,77 +359,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the sliced rows.
         """
-
-        def _qry(lf_length: Option[int], offset: int) -> Result[exp.Select, ValueError]:
-            match (lf_length, offset):
-                case (Some(length), _) if length < 0:
-                    msg = f"negative slice lengths ({length}) are invalid for LazyFrame"
-                    return Err(ValueError(msg))
-                case (len_val, offset) if offset >= 0:
-                    return Ok(
-                        exp
-                        .select(exp.Star())
-                        .from_(Tables.SRC, copy=False)
-                        .limit(exp.convert(len_val.unwrap_or(MAX_I64)), copy=False)
-                        .offset(exp.convert(offset), copy=False)
-                    )
-                case (Some(0), _):
-                    return Ok(
-                        exp
-                        .select(exp.Star())
-                        .from_(Tables.SRC, copy=False)
-                        .limit(exp.convert(0), copy=False)
-                    )
-                case (Some(length), offset):
-                    slice_len_expr = col("slice_len")
-                    stats = exp.select(lit(1).count().alias("slice_len").inner).from_(
-                        Tables.SRC, copy=False
-                    )
-                    start_expr = slice_len_expr.add(offset).greatest(0).inner
-                    return Ok(
-                        exp
-                        .select(exp.Star())
-                        .from_(Tables.SRC, copy=False)
-                        .with_("stats", as_=stats, copy=False)
-                        .limit(
-                            exp
-                            .select(
-                                slice_len_expr
-                                .add(offset)
-                                .add(length)
-                                .least(slice_len_expr)
-                                .sub(start_expr)
-                                .greatest(0)
-                                .inner
-                            )
-                            .from_(Tables.STATS, copy=False)
-                            .subquery(copy=False)
-                        )
-                        .offset(
-                            exp
-                            .select(start_expr)
-                            .from_(Tables.STATS, copy=False)
-                            .subquery(copy=False)
-                        )
-                    )
-                case (_, offset):
-                    return Ok(
-                        exp
-                        .select(exp.Star())
-                        .from_(Tables.SRC, copy=False)
-                        .offset(
-                            exp
-                            .select(lit(1).count().inner)
-                            .from_(Tables.SRC, copy=False)
-                            .subquery(copy=False)
-                            .pipe(Expr)
-                            .add(offset)
-                            .greatest(0)
-                            .inner
-                        )
-                    )
-
-        return _qry(Option(length), offset).map(self._cls).unwrap()
+        return planner.slice(Option(length), offset).map(self._cls).unwrap()
 
     def tail(self, n: int = 5) -> Self:
         """Get the last n rows.
@@ -547,7 +411,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         return (
             exp
             .select(cols.into(all).inner)
-            .from_(Tables.SRC, copy=False)
+            .from_(planner.Tables.SRC, copy=False)
             .pipe(self._from_ast, schema, src=self)
         )
 
@@ -580,71 +444,22 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the exploded columns.
         """
-        to_explode_names = (
-            self._schema
-            .into(ExprPlan, columns, more_columns, {})
-            .projections.iter()
-            .map(lambda r: r.name)
-            .collect()
-        )
-        to_explode = to_explode_names.iter().map(col).collect()
-        target = (
-            to_explode.first()
-            if to_explode.length() == 1
-            else (to_explode.first().list.zip(*to_explode.iter().skip(1), lit(1).eq(1)))
-        )
-
-        zipped_index = (
-            to_explode_names
-            .iter()
-            .enumerate()
-            .map_star(lambda idx, name: (name, idx + 1))
-            .collect(Dict)
-        )
-        is_single_explode = to_explode.length() == 1
-
-        def _project_col(name: str, *, nested: bool, replace: Expr) -> Expr:
-            match (nested, name in to_explode_names):
-                case (True, True):
-                    if is_single_explode:
-                        return replace.alias(name)
-                    field = zipped_index.get_item(name).unwrap()
-                    return replace.struct.extract(field).alias(name)
-                case (False, True):
-                    return lit(None).alias(name)
-                case _:
-                    return col(name)
-
-        def _proj(*, nested: bool) -> Iter[exp.Expr]:
-            replace = unnest(target) if nested else lit(None)
-            return self.columns.iter().map(
-                lambda name: _project_col(name, nested=nested, replace=replace).inner
-            )
-
-        cond = target.is_not_null().and_(target.list.length().gt(0))
-
-        rhs = (
-            exp
-            .select(*_proj(nested=False))
-            .from_(Tables.EXPLODE_SRC, copy=False)
-            .where(cond.not_().inner, copy=False)
-        )
         return (
-            exp
-            .select(*_proj(nested=True))
-            .from_(Tables.EXPLODE_SRC, copy=False)
-            .where(cond.inner, copy=False)
-            .pipe(exp.union, rhs, copy=False)
+            planner
+            .explode(self._schema, columns, more_columns)
             .with_(
-                Tables.EXPLODE_SRC.name, as_=self._inner, materialized=False, copy=False
+                planner.Tables.EXPLODE_SRC.name,
+                as_=self._inner,
+                materialized=False,
+                copy=False,
             )
             .pipe(self._make, self._sources, self._schema)
         )
 
     def union(self, other: Self) -> Self:
         slct = exp.select(exp.Star()).from_
-        lhs = slct(Tables.LHS)
-        rhs = slct(Tables.RHS)
+        lhs = slct(planner.Tables.LHS)
+        rhs = slct(planner.Tables.RHS)
         return self._from_ast(exp.union(lhs, rhs), self._schema, lhs=self, rhs=other)
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
@@ -681,7 +496,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
     def unnest(
         self, columns: TryIter[IntoExprColumn], *more_columns: IntoExprColumn
     ) -> Self:
-        ast, schema = resolve_unnest(self._schema, columns, more_columns)
+        ast, schema = planner.unnest(self._schema, columns, more_columns)
         return self._from_ast(ast, schema, src=self)
 
     def first(self) -> Self:
@@ -846,12 +661,12 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with every nth row starting from offset.
         """
-        expr = Marker.TEMP.to_expr()
+        expr = planner.Marker.TEMP.to_expr()
         return (
             self
-            .with_row_index(name=Marker.TEMP, order_by=self.columns)
+            .with_row_index(name=planner.Marker.TEMP, order_by=self.columns)
             .filter(expr.ge(offset).and_(expr.sub(offset).mod(n).eq(0)))
-            .drop(Marker.TEMP)
+            .drop(planner.Marker.TEMP)
         )
 
     @property
@@ -914,25 +729,10 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame resulting from the join.
         """
-        join_keys = JoinKeys.from_how(
-            how, try_seq(on), try_seq(left_on), try_seq(right_on)
-        ).unwrap()
-        builder = JoinBuilder(suffix, self.columns, join_keys.right)
-        join_type = "full outer" if how == "outer" else how
-        condition = join_keys.get_join_condition(builder)
-        return (
-            builder
-            .get_join_cols(other, join_keys, how)
-            .into(select)
-            .from_(Tables.LHS, copy=False)
-            .join("rhs", on=condition, join_type=join_type)
-            .pipe(
-                self._from_ast,
-                schema=builder.join_schema(self._schema, other._schema, join_keys, how),
-                lhs=self,
-                rhs=other,
-            )
+        ast, schema = planner.join(
+            self._schema, other, on, how, left_on, right_on, suffix
         )
+        return self._from_ast(ast, schema=schema, lhs=self, rhs=other)
 
     def join_cross(self, other: Self, *, suffix: str = "_right") -> Self:
         """Join with another LazyFrame using a cross join.
@@ -944,20 +744,8 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame resulting from the cross join.
         """
-        builder = JoinBuilder(suffix, self.columns, other.columns)
-        ast = (
-            builder
-            .get_join_cols_cross()
-            .into(select)
-            .from_(Tables.LHS, copy=False)
-            .join("rhs", join_type="cross")
-        )
-        return self._from_ast(
-            ast,
-            schema=builder.join_schema_cross(self._schema, other._schema),
-            lhs=self,
-            rhs=other,
-        )
+        ast, new_schema = planner.join_cross(self._schema, other, suffix)
+        return self._from_ast(ast, schema=new_schema, lhs=self, rhs=other)
 
     def join_asof(  # noqa: PLR0913
         self,
@@ -988,61 +776,19 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame resulting from the asof join.
         """
-        on_opt = Option(on)
-        on_keys = JoinKeys.from_on(on_opt, Option(left_on), Option(right_on)).unwrap()
-        by_keys = JoinKeys.from_by(
-            try_seq(by), try_seq(by_left), try_seq(by_right)
-        ).unwrap()
-        drop_keys = SetMut(by_keys.right)
-        _ = on_opt.map(lambda _: drop_keys.add(on_keys.right))
-        builder = JoinBuilder(suffix, self.columns, drop_keys)
-
-        def _get_strategy(expr: Expr) -> Expr:
-            other = builder.rhs(on_keys.right)
-            match strategy:
-                case "backward":
-                    return expr.ge(other)
-                case "forward":
-                    return expr.le(other)
-
-        by_cond = (
-            by_keys.left
-            .iter()
-            .zip(by_keys.right)
-            .map_star(builder.equals)
-            .chain(builder.lhs(on_keys.left).pipe(_get_strategy).pipe(Iter.once))
-            .reduce(Expr.and_)
-            .inner
+        ast, new_schema = planner.join_asof(
+            self._schema,
+            other,
+            Option(left_on),
+            Option(right_on),
+            Option(on),
+            by_left,
+            by_right,
+            by,
+            strategy,
+            suffix,
         )
-        schema = (
-            self._schema
-            .items()
-            .iter()
-            .chain(
-                other._schema
-                .items()
-                .iter()
-                .filter_star(lambda name, _: name not in drop_keys)
-                .map_star(
-                    lambda name, dtype: (
-                        f"{name}{suffix}" if name in self.columns else name,
-                        dtype,
-                    )
-                )
-            )
-            .collect(Dict)
-        )
-        return (
-            builder.left
-            .iter()
-            .map(builder.lhs)
-            .chain(other.columns.iter().filter_map(builder.for_inner_left))
-            .map(lambda c: c.inner)
-            .into(select)
-            .from_(Tables.LHS, copy=False)
-            .join("rhs", on=by_cond, join_type="asof left")
-            .pipe(self._from_ast, schema=schema, lhs=self, rhs=other)
-        )
+        return self._from_ast(ast, schema=new_schema, lhs=self, rhs=other)
 
     def unique(
         self,
@@ -1061,104 +807,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with duplicates removed.
         """
-
-        def _query() -> Result[exp.Select, ValueError]:  # noqa: PLR0911
-            match (keep, try_seq(order_by), try_seq(subset)):
-                case ("none", _, Null()):
-                    return Ok(
-                        exp
-                        .select(exp.Star())
-                        .from_(Tables.SRC, copy=False)
-                        .group_by("ALL")
-                        .having(lit(1).count().eq(1).inner)
-                    )
-                case ("any", _, Null()):
-                    return Ok(
-                        exp.select(exp.Star()).from_(Tables.SRC, copy=False).distinct()
-                    )
-                case ("first" | "last", Some(_), Null()):
-                    return Ok(
-                        exp.select(exp.Star()).from_(Tables.SRC, copy=False).distinct()
-                    )
-                case ("none", _, Some(subset_names)):
-                    subset_exprs = subset_names.iter().map(exp.column).collect()
-                    rhs = (
-                        exp
-                        .select(*subset_exprs)
-                        .from_(Tables.SRC, copy=False)
-                        .group_by(*subset_exprs)
-                        .having(lit(1).count().eq(1).inner)
-                        .subquery(Tables.RHS.name, copy=False)
-                    )
-                    condition = (
-                        subset_names
-                        .iter()
-                        .map(
-                            lambda name: exp.NullSafeEQ(
-                                this=col(name, table=Tables.LHS.name).inner,
-                                expression=col(name, table=Tables.RHS.name).inner,
-                            )
-                        )
-                        .map(Expr)
-                        .reduce(Expr.and_)
-                        .inner
-                    )
-                    res = (
-                        exp
-                        .select("lhs.*")
-                        .from_("src AS lhs")
-                        .join(rhs, on=condition, join_type="semi")
-                    )
-                    return Ok(res)
-                case ("last", Some(order_cols), Some(subset_names)):
-                    return Ok(
-                        _distinct_on(
-                            subset_names, order_cols, descending=True, nulls_last=True
-                        )
-                    )
-                case ("any" | "first", order_cols, Some(subset_names)):
-                    return Ok(
-                        _distinct_on(
-                            subset_names,
-                            order_cols.unwrap_or_else(Seq[str].new),
-                            descending=False,
-                            nulls_last=False,
-                        )
-                    )
-                case _:
-                    msg = """`order_by` must be specified when `keep` is 'first' or 'last'
-                    because LazyFrame makes no assumptions about row order."""
-                    return Err(ValueError(msg))
-
-        def _distinct_on(
-            subset_names: Seq[str],
-            order_names: Seq[str],
-            *,
-            descending: bool,
-            nulls_last: bool,
-        ) -> exp.Select:
-            order_exprs = (
-                subset_names
-                .iter()
-                .map(col)
-                .chain(
-                    order_names.iter().map(
-                        lambda name: col(name).order_by(
-                            descending=descending, nulls_last=nulls_last
-                        )
-                    )
-                )
-                .map(lambda expr: expr.inner)
-            )
-            return (
-                exp
-                .select(exp.Star())
-                .from_(Tables.SRC, copy=False)
-                .distinct(*subset_names)
-                .order_by(*order_exprs)
-            )
-
-        return _query().unwrap().pipe(self._cls)
+        return planner.unique(subset, keep, order_by).unwrap().pipe(self._cls)
 
     def pivot(  # noqa: PLR0913
         self,
@@ -1185,7 +834,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the pivoted data.
         """
-        pivoted, multi, idx_cols, val_cols = pivot(
+        pivoted, multi, idx_cols, val_cols = planner.pivot(
             self.columns,
             on,
             on_columns,
@@ -1257,29 +906,10 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the unpivoted data.
         """
-        index_set = try_iter(index).collect(dict.fromkeys)
-        match on:
-            case None:
-                first_dtype = self.columns.iter().next()
-            case _:
-                first_dtype = try_iter(on).next()
-        value_dtype = first_dtype.and_then(self._schema.get_item).unwrap_or_else(
-            exp.DType.UNKNOWN.into_expr
+        ast, new_schema = planner.unpivot(
+            self._schema, on, index, variable_name, value_name, order_by
         )
-        unpivot_schema = (
-            self._schema
-            .items()
-            .iter()
-            .filter_star(lambda name, _: name in index_set)
-            .chain((
-                (variable_name, exp.DType.VARCHAR.into_expr()),
-                (value_name, value_dtype),
-            ))
-            .collect(Dict)
-        )
-        return self.columns.into(
-            unpivot, on, index, variable_name, value_name, order_by
-        ).pipe(self._from_ast, unpivot_schema, src=self)
+        return self._from_ast(ast, new_schema, src=self)
 
     def with_row_index(self, name: str, *, order_by: TryIter[str]) -> Self:
         """Insert row index based on order_by.
@@ -1299,7 +929,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
             .collect(Dict)
         )
         return self._from_ast(
-            exp.select(row_nb, exp.Star()).from_(Tables.SRC, copy=False),
+            exp.select(row_nb, exp.Star()).from_(planner.Tables.SRC, copy=False),
             schema,
             src=self,
         )
@@ -1429,9 +1059,9 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         """
         return (
             self
-            .with_row_index(name=Marker.TEMP, order_by=self.columns)
-            .sort(Marker.TEMP, descending=True)
-            .drop(Marker.TEMP)
+            .with_row_index(name=planner.Marker.TEMP, order_by=self.columns)
+            .sort(planner.Marker.TEMP, descending=True)
+            .drop(planner.Marker.TEMP)
         )
 
     def drop_nans(self, subset: TryIter[str] = None) -> Self:

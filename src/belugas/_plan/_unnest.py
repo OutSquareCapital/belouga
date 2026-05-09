@@ -9,12 +9,12 @@ from ..utils import TryIter, try_iter
 from ._meta import Tables
 
 
-def resolve_unnest(
+def unnest(
     schema: Schema,
     columns: TryIter[IntoExprColumn],
     more_columns: Iterable[IntoExprColumn],
 ) -> tuple[exp.Select, Schema]:
-    from .._funcs import col, unnest
+    from .._funcs import col, unnest as unnest_fn
 
     targets = try_iter(columns).chain(more_columns).collect(Set)
 
@@ -26,7 +26,7 @@ def resolve_unnest(
                     lambda f: col(name).struct.field(name=f).alias(f).inner
                 )
             case (True, dt.List() | dt.Array()):
-                return Iter.once(unnest(col(name)).alias(name).inner)
+                return Iter.once(unnest_fn(col(name)).alias(name).inner)
             case _:
                 return Iter.once(col(name).inner)
 

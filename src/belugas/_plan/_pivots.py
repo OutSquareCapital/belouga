@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Sequence
 from typing import TYPE_CHECKING
 
-from pyochain import NONE, Err, Iter, Null, Ok, Option, Result, Seq, Some
+from pyochain import NONE, Dict, Err, Iter, Null, Ok, Option, Result, Seq, Some
 from sqlglot import exp
 
 from ..utils import TryIter, try_iter, try_seq
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from pyochain.traits import PyoIterable
 
     from .._expr import Expr
-    from ..typing import PivotAgg, PythonLiteral
+    from ..typing import PivotAgg, PythonLiteral, Schema
 
 PIVOT_AGG: Option[dict[PivotAgg, Callable[[Expr], Expr]]] = NONE
 
@@ -180,19 +180,42 @@ def _select(exprs: Iterable[exp.Expr | str]) -> exp.Select:
 
 
 def unpivot(  # noqa: PLR0913, PLR0917
-    base_cols: PyoIterable[str],
+    schema: Schema,
     on: TryIter[str],
     index: TryIter[str],
     variable_name: str,
     value_name: str,
     order_by: TryIter[str],
-) -> exp.Select:
+) -> tuple[exp.Select, Schema]:
+    index_set = try_iter(index).collect(dict.fromkeys)
+    match on:
+        case None:
+            first_dtype = schema.keys().iter().next()
+        case _:
+            first_dtype = try_iter(on).next()
+    value_dtype = first_dtype.and_then(schema.get_item).unwrap_or_else(
+        exp.DType.UNKNOWN.into_expr
+    )
+    new_schema = (
+        schema
+        .items()
+        .iter()
+        .filter_star(lambda name, _: name in index_set)
+        .chain((
+            (variable_name, exp.DType.VARCHAR.into_expr()),
+            (value_name, value_dtype),
+        ))
+        .collect(Dict)
+    )
+
     index_cols = try_iter(index).collect(dict.fromkeys)
     unpivot_cols = (
         try_iter(on)
         .then_some()
         .unwrap_or_else(
-            lambda: base_cols.iter().filter(lambda name: name not in index_cols)
+            lambda: (
+                schema.keys().iter().iter().filter(lambda name: name not in index_cols)
+            )
         )
         .collect(list)
     )
@@ -207,5 +230,6 @@ def unpivot(  # noqa: PLR0913, PLR0917
     return (
         try_iter(order_by)
         .then(lambda cols: selected.order_by(*cols, copy=False))
-        .unwrap_or(selected)
+        .unwrap_or(selected),
+        new_schema,
     )

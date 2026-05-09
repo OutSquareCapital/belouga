@@ -1,16 +1,25 @@
-from ._joins import JoinBuilder, JoinKeys
+from ._explode import explode
+from ._joins import join, join_asof, join_cross
 from ._meta import ExprPlan, Marker, Tables, extract_root_name
 from ._pivots import pivot, unpivot
-from ._unnest import resolve_unnest
+from ._slice import slice
+from ._sort import sort
+from ._unique import unique
+from ._unnest import unnest
 
 __all__ = [
     "ExprPlan",
-    "JoinBuilder",
-    "JoinKeys",
     "Marker",
     "Tables",
+    "explode",
     "extract_root_name",
+    "join",
+    "join_asof",
+    "join_cross",
     "pivot",
-    "resolve_unnest",
+    "slice",
+    "sort",
+    "unique",
+    "unnest",
     "unpivot",
 ]

@@ -3,19 +3,130 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, NamedTuple
 
-from pyochain import NONE, Dict, Err, Iter, Null, Ok, Option, Result, Seq, Some
+from pyochain import NONE, Dict, Err, Iter, Null, Ok, Option, Result, Seq, SetMut, Some
+from sqlglot import exp
 
+from ..utils import TryIter, try_seq
 from ._meta import Tables
 
 if TYPE_CHECKING:
     from pyochain.traits import PyoCollection
-    from sqlglot import exp
 
     from .._expr import Expr
     from .._frame import LazyFrame
-    from ..typing import JoinStrategy, Schema
+    from ..typing import AsofJoinStrategy, JoinStrategy, Schema
 type OptSeq = Option[Seq[str]]
 type JoinKeysRes[T: Seq[str] | str] = Result[JoinKeys[T], ValueError]
+
+
+def join(  # noqa: PLR0913, PLR0917
+    schema: Schema,
+    other: LazyFrame,
+    on: TryIter[str],
+    how: JoinStrategy,
+    left_on: TryIter[str],
+    right_on: TryIter[str],
+    suffix: str,
+) -> tuple[exp.Select, Schema]:
+    join_keys = JoinKeys.from_how(
+        how, try_seq(on), try_seq(left_on), try_seq(right_on)
+    ).unwrap()
+    builder = JoinBuilder(suffix, schema.keys(), join_keys.right)
+    join_type = "full outer" if how == "outer" else how
+    condition = join_keys.get_join_condition(builder)
+    exprs = builder.get_join_cols(other, join_keys, how)
+    return (
+        exp
+        .select(*exprs)
+        .from_(Tables.LHS, copy=False)
+        .join("rhs", on=condition, join_type=join_type),
+        builder.join_schema(schema, other._schema, join_keys, how),  # pyright: ignore[reportPrivateUsage]
+    )
+
+
+def join_asof(  # noqa: PLR0913, PLR0917
+    schema: Schema,
+    other: LazyFrame,
+    left_on: Option[str],
+    right_on: Option[str],
+    on: Option[str],
+    by_left: TryIter[str],
+    by_right: TryIter[str],
+    by: TryIter[str],
+    strategy: AsofJoinStrategy,
+    suffix: str,
+) -> tuple[exp.Select, Schema]:
+    from .._expr import Expr
+
+    on_keys = JoinKeys.from_on(on, left_on, right_on).unwrap()
+    by_keys = JoinKeys.from_by(
+        try_seq(by), try_seq(by_left), try_seq(by_right)
+    ).unwrap()
+    drop_keys = SetMut(by_keys.right)
+    _ = on.map(lambda _: drop_keys.add(on_keys.right))
+    builder = JoinBuilder(suffix, schema.keys(), drop_keys)
+
+    def _get_strategy(expr: Expr) -> Expr:
+        other = builder.rhs(on_keys.right)
+        match strategy:
+            case "backward":
+                return expr.ge(other)
+            case "forward":
+                return expr.le(other)
+
+    by_cond = (
+        by_keys.left
+        .iter()
+        .zip(by_keys.right)
+        .map_star(builder.equals)
+        .chain(builder.lhs(on_keys.left).pipe(_get_strategy).pipe(Iter.once))
+        .reduce(Expr.and_)
+        .inner
+    )
+    new_schema = (
+        schema
+        .items()
+        .iter()
+        .chain(
+            other._schema  # pyright: ignore[reportPrivateUsage]
+            .items()
+            .iter()
+            .filter_star(lambda name, _: name not in drop_keys)
+            .map_star(
+                lambda name, dtype: (
+                    f"{name}{suffix}" if name in schema else name,
+                    dtype,
+                )
+            )
+        )
+        .collect(Dict)
+    )
+    exprs = (
+        builder.left
+        .iter()
+        .map(builder.lhs)
+        .chain(other.columns.iter().filter_map(builder.for_inner_left))
+        .map(lambda c: c.inner)
+    )
+    return (
+        exp
+        .select(*exprs)
+        .from_(Tables.LHS, copy=False)
+        .join("rhs", on=by_cond, join_type="asof left"),
+        new_schema,
+    )
+
+
+def join_cross(
+    schema: Schema, other: LazyFrame, suffix: str = "_right"
+) -> tuple[exp.Select, Schema]:
+    builder = JoinBuilder(suffix, schema.keys(), other.columns)
+    exprs = builder.get_join_cols_cross()
+    ast = (
+        exp.select(*exprs).from_(Tables.LHS, copy=False).join("rhs", join_type="cross")
+    )
+    new_schema = builder.join_schema_cross(schema, other._schema)  # pyright: ignore[reportPrivateUsage]
+    return ast, new_schema
 
 
 @dataclass(slots=True)
