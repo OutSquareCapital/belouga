@@ -125,6 +125,7 @@ PL_MUL: Seq[pl.Expr] = (
     .collect()
 )
 UNPIVOT_ON = COLS.iter().skip(1).collect()
+COLS_UNIQUE = COLS.iter().take(10).collect()
 
 
 def run_benchmark(runs: int) -> None:
@@ -225,5 +226,15 @@ def _get_benchmarks() -> Seq[tuple[str, BenchFn[bl.LazyFrame], BenchFn[pl.DataFr
             "explode",
             lambda: EXPLODE_BL.explode(UNPIVOT_ON),
             lambda: EXPLODE_PL.explode(UNPIVOT_ON),
+        ),
+        (
+            "unique",
+            lambda: BASE.unique(COLS_UNIQUE),
+            lambda: PL_BASE.unique(COLS_UNIQUE),
+        ),
+        (
+            "slice",
+            lambda: BASE.slice(1, 5),
+            lambda: PL_BASE.slice(1, 5),
         ),
     ))
