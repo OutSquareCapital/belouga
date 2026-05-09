@@ -5,16 +5,15 @@ from typing import TYPE_CHECKING, NamedTuple
 
 from pyochain import NONE, Dict, Err, Iter, Null, Ok, Option, Result, Seq, Some
 
-from ._expr import Expr
-from ._funcs import col
 from ._meta import Tables
 
 if TYPE_CHECKING:
     from pyochain.traits import PyoCollection
     from sqlglot import exp
 
-    from ._frame import LazyFrame
-    from .typing import JoinStrategy, Schema
+    from .._expr import Expr
+    from .._frame import LazyFrame
+    from ..typing import JoinStrategy, Schema
 type OptSeq = Option[Seq[str]]
 type JoinKeysRes[T: Seq[str] | str] = Result[JoinKeys[T], ValueError]
 
@@ -30,10 +29,15 @@ class JoinBuilder:
 
     @staticmethod
     def lhs(name: str) -> Expr:
+
+        from .._funcs import col
+
         return col(name, table=Tables.LHS.name)
 
     @staticmethod
     def rhs(name: str) -> Expr:
+        from .._funcs import col
+
         return col(name, table=Tables.RHS.name)
 
     def for_inner_left(self, name: str) -> Option[Expr]:
@@ -220,6 +224,8 @@ class JoinKeys[T: Seq[str] | str](NamedTuple):
                 return Err(ValueError(msg))
 
     def get_join_condition(self: JoinKeys[Seq[str]], builder: JoinBuilder) -> exp.Expr:
+        from .._expr import Expr
+
         return (
             self.left
             .iter()

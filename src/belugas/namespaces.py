@@ -26,11 +26,11 @@ from ._fns import (
     StructFns,
 )
 from ._funcs import element, lit
-from ._meta import ExprPlan, extract_root_name
+from ._plan import ExprPlan, extract_root_name
 from ._when import when
 
 if TYPE_CHECKING:
-    from ._meta import AliasFn
+    from ._expr import AliasFn
     from .typing import (
         EpochTimeUnit,
         IntoExpr,

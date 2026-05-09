@@ -8,7 +8,7 @@ from sqlglot import exp
 
 from ._expr import Expr
 from ._funcs import col, len
-from ._meta import ExprPlan
+from ._plan import ExprPlan
 
 if TYPE_CHECKING:
     from ._frame import LazyFrame

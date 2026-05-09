@@ -1,25 +1,21 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
-from dataclasses import dataclass, field
+from collections.abc import Iterable
+from dataclasses import dataclass
 from enum import StrEnum, auto
-from typing import TYPE_CHECKING, Self, override
+from typing import TYPE_CHECKING
 
-from pyochain import NONE, Dict, Iter, Null, Option, Seq, Set, Some
+from pyochain import Dict, Iter, Null, Option, Seq, Set, Some
 from pyochain.traits import Pipeable
 from sqlglot import exp
 
-from .utils import TryIter, try_iter
+from ..utils import TryIter, try_iter
 
 if TYPE_CHECKING:
     from pyochain.traits import PyoIterable
 
-    from ._expr import Expr
-    from .selectors import Cols, Resolver
-    from .typing import IntoExpr, Schema
-
-type AliasFn = Callable[[str], str]
-"""Alias function type, used for generating deferred column aliases."""
+    from .._expr import Cols, Expr
+    from ..typing import IntoExpr, Schema
 
 
 class Marker(StrEnum):
@@ -30,7 +26,7 @@ class Marker(StrEnum):
     TEMP = "__bl_temp__"
 
     def to_expr(self) -> Expr:
-        from ._funcs import col
+        from .._funcs import col
 
         return col(self.value)
 
@@ -44,7 +40,7 @@ class Tables:
 
 
 def _into_windowed(cols: PyoIterable[ResolvedExpr]) -> exp.Expr:
-    from ._funcs import row_number
+    from .._funcs import row_number
 
     def _is_windowed(p: ResolvedExpr) -> bool:
         return p.name != Marker.TEMP and p.expr.inner.pipe(_find_all, exp.Column).any(
@@ -96,34 +92,6 @@ def lookup_type(inner: exp.Expr, schema: Schema) -> exp.DataType:
                 .and_then(lambda c: schema.get_item(c.output_name))
                 .unwrap_or_else(exp.DType.UNKNOWN.into_expr)
             )
-
-
-@dataclass(slots=True)
-class AliasMapper:
-    """Metadata for expressions, used for tracking properties that affect query generation."""
-
-    def reset(self) -> Self:
-        return self
-
-
-@dataclass(slots=True)
-class MultiAliasMapper(AliasMapper):
-    resolver: Resolver
-    alias_name: Option[AliasFn] = field(default_factory=lambda: NONE)
-
-    def with_mapper(self, mapper: AliasFn) -> Self:
-        def _get_mapper() -> AliasFn:
-            match self.alias_name:
-                case Some(current):
-                    return lambda name: mapper(current(name))
-                case _:
-                    return mapper
-
-        return self.__class__(self.resolver, Some(_get_mapper()))
-
-    @override
-    def reset(self) -> Self:
-        return self.__class__(self.resolver, NONE)
 
 
 @dataclass(slots=True, init=False)
@@ -192,7 +160,7 @@ class ResolvedExpr(Pipeable):
 
 
 def _resolve(val: IntoExpr, schema: Schema) -> Iter[ResolvedExpr]:  # noqa: PLR0912
-    from ._expr import Expr
+    from .._expr import Expr, MultiAliasMapper
 
     def _get_inner_node(inner_node: exp.Star | list[exp.Expr]) -> Cols:
         match inner_node:
@@ -376,7 +344,7 @@ class ExprPlan:
     ) -> None:
 
         def _alias_named_expr(name: str, val: IntoExpr) -> IntoExpr:
-            from ._expr import Expr
+            from .._expr import Expr
 
             match val:
                 case Expr():

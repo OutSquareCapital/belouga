@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from functools import partial
 from typing import TYPE_CHECKING, Self, override
 
-from pyochain import NONE, Err, Iter, Null, Ok, Option, Result, Some
+from pyochain import NONE, Err, Iter, Null, Ok, Option, Result, Set, Some
+from pyochain.traits import PyoCollection
 from sqlglot import exp
 
+from . import datatypes as dt
 from ._core import func, into_expr, into_expr_list
 from ._fns import Fns
-from ._meta import AliasMapper, Marker
+from ._plan import Marker
 from ._window import (
     BoundsValues,
     FrameBound,
@@ -21,13 +23,13 @@ from ._window import (
     make_spec,
     rolling_agg,
 )
-from .datatypes import DataType
 from .utils import try_iter
 
 if TYPE_CHECKING:
     from decimal import Decimal
 
     from . import namespaces as nm
+    from .selectors import Selector
     from .typing import (
         ClosedInterval,
         FillNullStrategy,
@@ -37,6 +39,7 @@ if TYPE_CHECKING:
         IntoExprColumn,
         RankMethod,
         RoundMode,
+        Schema,
         WindowExclude,
     )
     from .utils import TryIter
@@ -50,6 +53,127 @@ _FILL_STRATEGY: dict[FillNullStrategy, Callable[[Expr], Expr]] = {
     "zero": lambda expr: expr.coalesce(0),
     "one": lambda expr: expr.coalesce(1),
 }
+
+type AliasFn = Callable[[str], str]
+"""Alias function type, used for generating deferred column aliases."""
+
+
+type Cols = PyoCollection[str]
+
+
+@dataclass(slots=True, repr=False)
+class Resolver:
+    _fn: Callable[[Schema], Cols]
+
+    @override
+    def __repr__(self) -> str:
+        fn = self._fn.__name__.replace("_", " ").title()
+        return f"{self.__class__.__name__}({fn})"
+
+    def __call__(self, schema: Schema) -> Cols:
+        return self._fn(schema)
+
+    def into_selector(self) -> Selector:
+        from ._funcs import all
+        from .selectors import Selector
+
+        return Selector(all().inner, self.into_meta())
+
+    def into_meta(self) -> MultiAliasMapper:
+        return MultiAliasMapper(self)
+
+    @classmethod
+    def all_columns(cls) -> Self:
+        def _all_columns(schema: Schema) -> Cols:
+            return schema.keys()
+
+        return cls(_all_columns)
+
+    @classmethod
+    def ordered_name(cls, names: Iterable[str]) -> Self:
+        def _ordered(schema: Schema) -> Cols:
+            return Iter(names).filter(lambda name: name in schema).collect()
+
+        return cls(_ordered)
+
+    @classmethod
+    def name(cls, predicate: Callable[[str], bool]) -> Self:
+        def _name(schema: Schema) -> Cols:
+            return schema.iter().filter(predicate).collect()
+
+        return cls(_name)
+
+    @classmethod
+    def dtype(cls, predicate: Callable[[dt.DataType], bool]) -> Self:
+        def _dtype(schema: Schema) -> Cols:
+            return (
+                schema
+                .items()
+                .iter()
+                .filter_star(
+                    lambda _name, dtype: predicate(dt.DataType.from_sql(dtype))
+                )
+                .map_star(lambda name, _dtype: name)
+                .collect()
+            )
+
+        return cls(_dtype)
+
+    def difference(self, right_fn: Self) -> Self:
+        def _difference(schema: Schema) -> Cols:
+            right = right_fn(schema)
+            return self(schema).iter().filter(lambda n: n not in right).collect()
+
+        return self.__class__(_difference)
+
+    def complement(self) -> Self:
+        def _complement(schema: Schema) -> Cols:
+            excluded = self(schema)
+            return schema.iter().filter(lambda n: n not in excluded).collect()
+
+        return self.__class__(_complement)
+
+    def intersection(self, right: Self) -> Self:
+        def _intersection(schema: Schema) -> Cols:
+            right_set = right(schema)
+            return self(schema).iter().filter(lambda n: n in right_set).collect()
+
+        return self.__class__(_intersection)
+
+    def union(self, right: Self) -> Self:
+        def _union(schema: Schema) -> Cols:
+            selected = self(schema).iter().chain(right(schema)).collect(Set)
+            return schema.iter().filter(lambda n: n in selected).collect()
+
+        return self.__class__(_union)
+
+
+@dataclass(slots=True)
+class AliasMapper:
+    """Metadata for expressions, used for tracking properties that affect query generation."""
+
+    def reset(self) -> Self:
+        return self
+
+
+@dataclass(slots=True)
+class MultiAliasMapper(AliasMapper):
+    resolver: Resolver
+    alias_name: Option[AliasFn] = field(default_factory=lambda: NONE)
+
+    def with_mapper(self, mapper: AliasFn) -> Self:
+        def _get_mapper() -> AliasFn:
+            match self.alias_name:
+                case Some(current):
+                    return lambda name: mapper(current(name))
+                case _:
+                    return mapper
+
+        return self.__class__(self.resolver, Some(_get_mapper()))
+
+    @override
+    def reset(self) -> Self:
+        return self.__class__(self.resolver, NONE)
 
 
 @dataclass(slots=True, repr=False)
@@ -83,7 +207,7 @@ class Expr(Fns):
         *,
         center: bool,
     ) -> Self:
-        from ._meta import Marker
+        from ._plan import Marker
         from ._when import when
 
         spec = BoundsValues.rolling(window_size, center=center)
@@ -392,7 +516,7 @@ class Expr(Fns):
 
     def cast(self, dtype: IntoDataType) -> Self:
         match dtype:
-            case DataType():
+            case dt.DataType():
                 dtype_expr = dtype.raw
             case exp.DataType():
                 dtype_expr = dtype

@@ -6,7 +6,7 @@ from pyochain import ResultUnwrapError
 from sqlglot import exp
 
 import belugas as bl
-import belugas._meta as m  # noqa: PLC2701
+import belugas._plan as m  # noqa: PLC2701
 import belugas.typing as t
 
 from ._utils import assert_lf_eq

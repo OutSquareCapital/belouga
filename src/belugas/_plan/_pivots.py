@@ -1,26 +1,38 @@
-from collections.abc import Callable, Iterable, Sequence
+from __future__ import annotations
 
-from pyochain import Err, Iter, Null, Ok, Result, Seq, Some
-from pyochain.traits import PyoIterable
+from collections.abc import Callable, Iterable, Sequence
+from typing import TYPE_CHECKING
+
+from pyochain import NONE, Err, Iter, Null, Ok, Option, Result, Seq, Some
 from sqlglot import exp
 
-from ._expr import Expr
-from ._funcs import col
+from ..utils import TryIter, try_iter, try_seq
 from ._meta import Tables
-from .typing import PivotAgg, PythonLiteral
-from .utils import TryIter, try_iter, try_seq
 
-PIVOT_AGG: dict[PivotAgg, Callable[[Expr], Expr]] = {
-    "min": Expr.min,
-    "max": Expr.max,
-    "first": Expr.first,
-    "last": Expr.last,
-    "sum": Expr.sum,
-    "mean": Expr.mean,
-    "median": Expr.median,
-    "len": Expr.count,
-    "count": Expr.count,
-}
+if TYPE_CHECKING:
+    from pyochain.traits import PyoIterable
+
+    from .._expr import Expr
+    from ..typing import PivotAgg, PythonLiteral
+
+PIVOT_AGG: Option[dict[PivotAgg, Callable[[Expr], Expr]]] = NONE
+
+
+def _get_pivot_agg() -> dict[PivotAgg, Callable[[Expr], Expr]]:
+
+    from .._expr import Expr
+
+    return {
+        "min": Expr.min,
+        "max": Expr.max,
+        "first": Expr.first,
+        "last": Expr.last,
+        "sum": Expr.sum,
+        "mean": Expr.mean,
+        "median": Expr.median,
+        "len": Expr.count,
+        "count": Expr.count,
+    }
 
 
 def pivot(  # noqa: ANN202, PLR0913, PLR0914, PLR0917
@@ -57,9 +69,12 @@ def pivot(  # noqa: ANN202, PLR0913, PLR0914, PLR0917
     idx_cols, val_cols = _get_idx_and_vals().unwrap()
 
     multi = val_cols.length() > 1
-    agg = PIVOT_AGG[aggregate_function]
+    agg = PIVOT_AGG.unwrap_or_else(_get_pivot_agg)[aggregate_function]
 
     def _aliased(name: str) -> Expr:
+
+        from .._funcs import col
+
         expr = col(name).pipe(agg)
         return expr.alias(name) if multi else expr
 

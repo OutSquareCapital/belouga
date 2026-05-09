@@ -54,3 +54,12 @@ def try_iter[T](val: TryIter[T]) -> Iter[T]:
             return Iter(val)  # pyright: ignore[reportUnknownArgumentType]
         case _:
             return Iter[T].once(val)
+
+
+def select(exprs: Iterable[exp.Expr | str]) -> exp.Select:
+    """Create a `SELECT` expression.
+
+    Returns:
+        exp.Select
+    """
+    return exp.select(*exprs)

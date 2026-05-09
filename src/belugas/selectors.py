@@ -3,112 +3,19 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Self, final, overload, override
 
-from pyochain import Iter, Seq, Set
+from pyochain import Seq
 
 from . import (
-    _funcs as fn,  # pyright: ignore[reportPrivateUsage]
     datatypes as dt,
 )
-from ._expr import Expr
-from ._meta import MultiAliasMapper
+from ._expr import Expr, MultiAliasMapper, Resolver
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
-
-    from pyochain.traits import PyoCollection
     from sqlglot import exp
 
-    from .typing import IntoExpr, Schema
-
-
-type Cols = PyoCollection[str]
-
-
-@dataclass(slots=True, repr=False)
-class Resolver:
-    _fn: Callable[[Schema], Cols]
-
-    @override
-    def __repr__(self) -> str:
-        fn = self._fn.__name__.replace("_", " ").title()
-        return f"{self.__class__.__name__}({fn})"
-
-    def __call__(self, schema: Schema) -> Cols:
-        return self._fn(schema)
-
-    def into_selector(self) -> Selector:
-        return Selector(fn.all().inner, self.into_meta())
-
-    def into_meta(self) -> MultiAliasMapper:
-        return MultiAliasMapper(self)
-
-    @classmethod
-    def all_columns(cls) -> Self:
-        def _all_columns(schema: Schema) -> Cols:
-            return schema.keys()
-
-        return cls(_all_columns)
-
-    @classmethod
-    def ordered_name(cls, names: Iterable[str]) -> Self:
-        def _ordered(schema: Schema) -> Cols:
-            return Iter(names).filter(lambda name: name in schema).collect()
-
-        return cls(_ordered)
-
-    @classmethod
-    def name(cls, predicate: Callable[[str], bool]) -> Self:
-        def _name(schema: Schema) -> Cols:
-            return schema.iter().filter(predicate).collect()
-
-        return cls(_name)
-
-    @classmethod
-    def dtype(cls, predicate: Callable[[dt.DataType], bool]) -> Self:
-        def _dtype(schema: Schema) -> Cols:
-            return (
-                schema
-                .items()
-                .iter()
-                .filter_star(
-                    lambda _name, dtype: predicate(dt.DataType.from_sql(dtype))
-                )
-                .map_star(lambda name, _dtype: name)
-                .collect()
-            )
-
-        return cls(_dtype)
-
-    def difference(self, right_fn: Self) -> Self:
-        def _difference(schema: Schema) -> Cols:
-            right = right_fn(schema)
-            return self(schema).iter().filter(lambda n: n not in right).collect()
-
-        return self.__class__(_difference)
-
-    def complement(self) -> Self:
-        def _complement(schema: Schema) -> Cols:
-            excluded = self(schema)
-            return schema.iter().filter(lambda n: n not in excluded).collect()
-
-        return self.__class__(_complement)
-
-    def intersection(self, right: Self) -> Self:
-        def _intersection(schema: Schema) -> Cols:
-            right_set = right(schema)
-            return self(schema).iter().filter(lambda n: n in right_set).collect()
-
-        return self.__class__(_intersection)
-
-    def union(self, right: Self) -> Self:
-        def _union(schema: Schema) -> Cols:
-            selected = self(schema).iter().chain(right(schema)).collect(Set)
-            return schema.iter().filter(lambda n: n in selected).collect()
-
-        return self.__class__(_union)
+    from .typing import IntoExpr
 
 
 @final

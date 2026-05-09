@@ -362,7 +362,7 @@ class ScanSource:
 
     @classmethod
     def from_none(cls) -> Self:
-        from ._meta import Marker
+        from ._plan import Marker
 
         return cls.from_dict({Marker.TEMP: ()})
 

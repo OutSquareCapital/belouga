@@ -146,7 +146,7 @@ def len() -> Expr:
     Returns:
         Expr
     """
-    from ._meta import Marker
+    from ._plan import Marker
 
     return lit(1).count().alias(Marker.LEN)
 
