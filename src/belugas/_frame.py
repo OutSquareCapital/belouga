@@ -9,13 +9,13 @@ from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self, SupportsInt, overload, override
 
-from pyochain import Dict, Iter, Option, Set, Vec
+from pyochain import Dict, Iter, Option, Vec
 from sqlglot import exp
 
 from . import _plan as planner, datatypes as dt
-from ._core import CoreHandler, into_expr
+from ._core import CoreHandler
 from ._expr import Expr
-from ._funcs import all, col, row_number
+from ._funcs import col, row_number
 from ._scans import ScanSource
 from .utils import TryIter, TrySeq, try_iter
 
@@ -225,24 +225,8 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the filtered rows.
         """
-
-        def _constraint(k: str, val: IntoExpr) -> Expr:
-            return col(k).eq(into_expr(val, as_col=False))
-
-        condition = (
-            try_iter(predicates)
-            .chain(more_predicates)
-            .map(lambda value: Expr.new(value, as_col=True))
-            .chain(Iter(constraints.items()).map_star(_constraint))
-            .reduce(Expr.and_)
-            .inner
-        )
-        return (
-            exp
-            .select(exp.Star())
-            .from_(planner.Tables.SRC, copy=False)
-            .where(condition, copy=False)
-            .pipe(self._cls)
+        return planner.filter(predicates, *more_predicates, **constraints).pipe(
+            self._cls
         )
 
     def group_by(
@@ -394,26 +378,8 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the specified columns dropped.
         """
-        cols = (
-            try_iter(columns)
-            .chain(more_columns)
-            .map(lambda e: Expr.new(e, as_col=True))
-            .collect()
-        )
-        to_drop = cols.iter().map(lambda e: e.inner.output_name).collect(Set)
-        schema = (
-            self._schema
-            .items()
-            .iter()
-            .filter_star(lambda name, _: name not in to_drop)
-            .collect(Dict)
-        )
-        return (
-            exp
-            .select(cols.into(all).inner)
-            .from_(planner.Tables.SRC, copy=False)
-            .pipe(self._from_ast, schema, src=self)
-        )
+        ast, new_schema = planner.drop(self._schema, columns, more_columns)
+        return self._from_ast(ast, new_schema, src=self)
 
     def drop_nulls(self, subset: TryIter[str] = None) -> Self:
         """Drop rows that contain null values.
@@ -424,13 +390,18 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with rows containing null values dropped.
         """
-        return (
-            Option(subset)
-            .map(try_iter)
-            .unwrap_or_else(self.columns.iter)
-            .map(lambda name: col(name).is_not_null())
-            .into(self.filter)
-        )
+        return planner.drop_rows(self._schema, subset, Expr.is_not_null).pipe(self._cls)
+
+    def drop_nans(self, subset: TryIter[str] = None) -> Self:
+        """Drop rows that contain NaN values.
+
+        Args:
+            subset (TryIter[str] | None): Columns to consider for NaN values. If None, all columns are considered.
+
+        Returns:
+            Self: A new LazyFrame with rows containing NaN values dropped.
+        """
+        return planner.drop_rows(self._schema, subset, Expr.is_not_nan).pipe(self._cls)
 
     def explode(
         self, columns: TryIter[IntoExprColumn], *more_columns: IntoExprColumn
@@ -1062,23 +1033,6 @@ class LazyFrame(CoreHandler[exp.Selectable]):
             .with_row_index(name=planner.Marker.TEMP, order_by=self.columns)
             .sort(planner.Marker.TEMP, descending=True)
             .drop(planner.Marker.TEMP)
-        )
-
-    def drop_nans(self, subset: TryIter[str] = None) -> Self:
-        """Drop rows that contain NaN values.
-
-        Args:
-            subset (TryIter[str] | None): Columns to consider for NaN values. If None, all columns are considered.
-
-        Returns:
-            Self: A new LazyFrame with rows containing NaN values dropped.
-        """
-        return (
-            Option(subset)
-            .map(try_iter)
-            .unwrap_or_else(self.columns.iter)
-            .map(lambda name: col(name).is_nan().not_())
-            .into(self.filter)
         )
 
     def fetch_all(self) -> Vec[tuple[Any, ...]]:  # pyright: ignore[reportExplicitAny]

@@ -80,13 +80,9 @@ class Drop(Node):
 
 
 @dataclass(slots=True)
-class DropNulls(Node):
+class DropRows(Node):
     subset: TryIter[str]
-
-
-@dataclass(slots=True)
-class DropNans(Node):
-    subset: TryIter[str]
+    fn: Callable[[Expr], Expr]
 
 
 @dataclass(slots=True)
@@ -179,8 +175,7 @@ type PlanNode = (
     | Limit
     | Slice
     | Drop
-    | DropNulls
-    | DropNans
+    | DropRows
     | Explode
     | Unnest
     | Rename
