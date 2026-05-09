@@ -253,7 +253,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
             .reduce(Expr.and_)
             .inner
         )
-        return _slct_all().from_("src").where(condition).pipe(self._cls)
+        return _slct_all().from_(_SRC, copy=False).where(condition).pipe(self._cls)
 
     def group_by(
         self,
@@ -364,7 +364,9 @@ class LazyFrame(CoreHandler[exp.Selectable]):
                 )
             )
         )
-        return _slct_all().from_("src").order_by(*order_exprs).pipe(self._cls)
+        return (
+            _slct_all().from_(_SRC, copy=False).order_by(*order_exprs).pipe(self._cls)
+        )
 
     def limit(self, n: int) -> Self:
         """Limit the number of rows.
@@ -375,7 +377,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the limited rows.
         """
-        return _slct_all().from_("src").limit(n).pipe(self._cls)
+        return _slct_all().from_(_SRC, copy=False).limit(n).pipe(self._cls)
 
     def head(self, n: int = 5) -> Self:
         """Get the first n rows.
@@ -407,12 +409,12 @@ class LazyFrame(CoreHandler[exp.Selectable]):
                 case (len_val, offset) if offset >= 0:
                     return Ok(
                         _slct_all()
-                        .from_("src")
+                        .from_(_SRC, copy=False)
                         .limit(len_val.unwrap_or(MAX_I64))
                         .offset(offset)
                     )
                 case (Some(0), _):
-                    return Ok(_slct_all().from_("src").limit(0))
+                    return Ok(_slct_all().from_(_SRC, copy=False).limit(0))
                 case (Some(length), offset):
                     slice_len_expr = col("slice_len")
                     stats = exp.select(lit(1).count().alias("slice_len").inner).from_(
@@ -421,7 +423,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
                     start_expr = slice_len_expr.add(offset).greatest(0).inner
                     return Ok(
                         _slct_all()
-                        .from_("src")
+                        .from_(_SRC, copy=False)
                         .with_("stats", as_=stats)
                         .limit(
                             exp
@@ -442,11 +444,11 @@ class LazyFrame(CoreHandler[exp.Selectable]):
                 case (_, offset):
                     return Ok(
                         _slct_all()
-                        .from_("src")
+                        .from_(_SRC, copy=False)
                         .offset(
                             exp
                             .select(lit(1).count().inner)
-                            .from_("src")
+                            .from_(_SRC, copy=False)
                             .subquery()
                             .pipe(Expr)
                             .add(offset)
@@ -507,7 +509,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         return (
             exp
             .select(cols.into(all).inner)
-            .from_("src")
+            .from_(_SRC, copy=False)
             .pipe(self._from_ast, schema, src=self)
         )
 
@@ -666,7 +668,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         schema = (
             self._schema.items().iter().map_star(_schema_proj).flatten().collect(Dict)
         )
-        ast = self._schema.iter().flat_map(_proj).into(_select).from_("src")
+        ast = self._schema.iter().flat_map(_proj).into(_select).from_(_SRC, copy=False)
         return self._from_ast(ast, schema, src=self)
 
     def first(self) -> Self:
@@ -909,7 +911,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
             builder
             .get_join_cols(other, join_keys, how)
             .into(_select)
-            .from_("lhs")
+            .from_(_LHS, copy=False)
             .join("rhs", on=condition, join_type=join_type)
             .pipe(
                 self._from_ast,
@@ -934,7 +936,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
             builder
             .get_join_cols_cross()
             .into(_select)
-            .from_("lhs")
+            .from_(_LHS, copy=False)
             .join("rhs", join_type="cross")
         )
         return self._from_ast(
@@ -1024,7 +1026,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
             .chain(other.columns.iter().filter_map(builder.for_inner_left))
             .map(lambda c: c.inner)
             .into(_select)
-            .from_("lhs")
+            .from_(_LHS, copy=False)
             .join("rhs", on=by_cond, join_type="asof left")
             .pipe(self._from_ast, schema=schema, lhs=self, rhs=other)
         )
@@ -1052,20 +1054,20 @@ class LazyFrame(CoreHandler[exp.Selectable]):
                 case ("none", _, Null()):
                     return Ok(
                         _slct_all()
-                        .from_("src")
+                        .from_(_SRC, copy=False)
                         .group_by("ALL")
                         .having(lit(1).count().eq(1).inner)
                     )
                 case ("any", _, Null()):
-                    return Ok(_slct_all().from_("src").distinct())
+                    return Ok(_slct_all().from_(_SRC, copy=False).distinct())
                 case ("first" | "last", Some(_), Null()):
-                    return Ok(_slct_all().from_("src").distinct())
+                    return Ok(_slct_all().from_(_SRC, copy=False).distinct())
                 case ("none", _, Some(subset_names)):
                     subset_exprs = subset_names.iter().map(exp.column).collect()
                     rhs = (
                         exp
                         .select(*subset_exprs)
-                        .from_("src")
+                        .from_(_SRC, copy=False)
                         .group_by(*subset_exprs)
                         .having(lit(1).count().eq(1).inner)
                         .subquery("rhs")
@@ -1131,7 +1133,10 @@ class LazyFrame(CoreHandler[exp.Selectable]):
                 .map(lambda expr: expr.inner)
             )
             return (
-                _slct_all().from_("src").distinct(*subset_names).order_by(*order_exprs)
+                _slct_all()
+                .from_(_SRC, copy=False)
+                .distinct(*subset_names)
+                .order_by(*order_exprs)
             )
 
         return _query().unwrap().pipe(self._cls)
@@ -1275,7 +1280,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
             .collect(Dict)
         )
         return self._from_ast(
-            exp.select(row_nb, exp.Star()).from_("src"), schema, src=self
+            exp.select(row_nb, exp.Star()).from_(_SRC, copy=False), schema, src=self
         )
 
     def top_k(
@@ -1447,6 +1452,11 @@ class LazyFrame(CoreHandler[exp.Selectable]):
     @property
     def shape(self) -> tuple[int, int]:
         return self._materialize().shape
+
+
+_SRC = exp.to_table("src")
+_LHS = exp.to_table("lhs")
+_RHS = exp.to_table("rhs")
 
 
 def _slct_all() -> exp.Select:
