@@ -56,6 +56,15 @@ def drop_rows(
     )
 
 
+def limit(n: int) -> exp.Select:
+    return (
+        exp
+        .select(exp.Star())
+        .from_(Tables.SRC, copy=False)
+        .limit(exp.convert(n), copy=False)
+    )
+
+
 def drop(
     schema: Schema,
     columns: TryIter[IntoExprColumn],

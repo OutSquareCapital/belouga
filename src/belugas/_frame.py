@@ -112,7 +112,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
     def _cls(self, value: exp.Selectable) -> Self:
         return self._from_ast(value, src=self, schema=self._schema)
 
-    def _materialize(self) -> DuckDBPyRelation:
+    def _collect(self) -> DuckDBPyRelation:
         return self._inner.pipe(ScanSource.from_query, **self._sources).relation
 
     def _iter_slct(self, func: Callable[[Expr], Expr]) -> Self:
@@ -128,7 +128,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
     @overload
     def _into_pl(self, *, lazy: Literal[False]) -> pl.DataFrame: ...
     def _into_pl(self, *, lazy: bool) -> pl.LazyFrame | pl.DataFrame:
-        df = self._materialize().pl(lazy=lazy)
+        df = self._collect().pl(lazy=lazy)
         if planner.Marker.TEMP in self.columns:
             return df.drop(planner.Marker.TEMP)
         return df
@@ -314,13 +314,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the limited rows.
         """
-        return (
-            exp
-            .select(exp.Star())
-            .from_(planner.Tables.SRC, copy=False)
-            .limit(exp.convert(n), copy=False)
-            .pipe(self._cls)
-        )
+        return planner.limit(n).pipe(self._cls)
 
     def head(self, n: int = 5) -> Self:
         """Get the first n rows.
@@ -462,7 +456,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         return ParsedQuery(self._inner)
 
     def explain(self, kind: ExplainType | ExplainTypeLiteral = "standard") -> str:
-        return self._materialize().explain(kind)
+        return self._collect().explain(kind)
 
     def unnest(
         self, columns: TryIter[IntoExprColumn], *more_columns: IntoExprColumn
@@ -492,7 +486,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
 
     def describe(self) -> Self:
         """Return descriptive statistics."""
-        return self.__class__(self._materialize().describe())
+        return self.__class__(self._collect().describe())
 
     def sum(self) -> Self:
         """Aggregate the sum of each column.
@@ -966,7 +960,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         file_size_bytes: str | int | None = None,
     ) -> None:
         """Write to Parquet file."""
-        self._materialize().write_parquet(
+        self._collect().write_parquet(
             str(path),
             compression=compression,
             field_ids=field_ids,
@@ -1003,7 +997,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         write_partition_columns: bool | None = None,
     ) -> None:
         """Write to CSV file."""
-        self._materialize().write_csv(
+        self._collect().write_csv(
             str(path),
             sep=separator,
             header=include_header,
@@ -1036,7 +1030,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         )
 
     def fetch_all(self) -> Vec[tuple[Any, ...]]:  # pyright: ignore[reportExplicitAny]
-        return Vec.from_ref(self._materialize().fetchall())
+        return Vec.from_ref(self._collect().fetchall())
 
     def show(
         self,
@@ -1046,7 +1040,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         null_value: str | None = None,
         render_mode: RenderModeLiteral | None = None,
     ) -> None:
-        return self._materialize().show(
+        return self._collect().show(
             max_width=max_width,
             max_rows=max_rows,
             max_col_width=max_col_width,
@@ -1056,4 +1050,4 @@ class LazyFrame(CoreHandler[exp.Selectable]):
 
     @property
     def shape(self) -> tuple[int, int]:
-        return self._materialize().shape
+        return self._collect().shape
