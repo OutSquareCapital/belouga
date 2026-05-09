@@ -342,3 +342,47 @@ def test_complex_selector() -> None:
         .agg(bl_slctor)
         .sort("a"),
     )
+
+
+def test_selector_after_drop() -> None:
+    data = {"x": [1], "s": ["a"], "f": [1.0]}
+    bl_lf = bl.LazyFrame(data).drop("s").select(cs.integer())
+    pl_lf = pl.LazyFrame(data).drop("s").select(cs_pl.integer())
+    assert_lf_eq(pl_lf, bl_lf)
+
+
+def test_selector_after_join() -> None:
+    data_l = {"k": [1], "x": [10]}
+    data_r = {"k": [1], "s": ["a"]}
+    bl_l = bl.LazyFrame(data_l)
+    bl_r = bl.LazyFrame(data_r)
+    pl_l = pl.LazyFrame(data_l)
+    pl_r = pl.LazyFrame(data_r)
+    assert_lf_eq(
+        pl_l.join(pl_r, on="k", how="left").select(cs_pl.integer()),
+        bl_l.join(bl_r, on="k", how="left").select(cs.integer()),
+    )
+
+
+def test_selector_after_agg() -> None:
+    data = {"k": ["a", "b"], "x": [1, 2], "f": [1.0, 2.0]}
+    bl_lf = bl.LazyFrame(data).group_by("k").agg(bl.col("x").sum(), bl.col("f").sum())
+    pl_lf = pl.LazyFrame(data).group_by("k").agg(pl.col("x").sum(), pl.col("f").sum())
+    assert_lf_eq(pl_lf.sort("k"), bl_lf.sort("k"))
+    assert bl_lf.select(cs.integer()).columns.into(list) == ["x"]
+
+
+def test_selector_after_unpivot() -> None:
+    data = {"id": ["a"], "x": [1], "y": [2]}
+    bl_lf = bl.LazyFrame(data).unpivot(on=["x", "y"], index=["id"]).select(cs.string())
+    pl_lf = (
+        pl.LazyFrame(data).unpivot(on=["x", "y"], index=["id"]).select(cs_pl.string())
+    )
+    assert_lf_eq(pl_lf, bl_lf)
+
+
+def test_selector_after_unnest() -> None:
+    data = {"s": [{"x": 1, "y": 2}], "k": ["a"]}
+    bl_lf = bl.LazyFrame(data).unnest("s").select(cs.integer())
+    pl_lf = pl.LazyFrame(data).unnest("s").select(cs_pl.integer())
+    assert_lf_eq(pl_lf, bl_lf)
