@@ -577,19 +577,28 @@ class LazyFrame(CoreHandler[exp.Selectable]):
                 case _:
                     return col(name)
 
-        def _proj(*, nested: bool) -> Iter[Expr]:
+        def _proj(*, nested: bool) -> Iter[exp.Expr]:
             replace = unnest(target) if nested else lit(None)
             return self.columns.iter().map(
-                lambda name: _project_col(name, nested=nested, replace=replace)
+                lambda name: _project_col(name, nested=nested, replace=replace).inner
             )
 
         cond = target.is_not_null().and_(target.list.length().gt(0))
 
+        rhs = (
+            exp
+            .select(*_proj(nested=False))
+            .from_(_EXPLODE_SRC, copy=False)
+            .where(cond.not_().inner, copy=False)
+        )
         return (
-            self
-            .filter(cond)
-            .select(_proj(nested=True))
-            .union(self.filter(cond.not_()).select(_proj(nested=False)))
+            exp
+            .select(*_proj(nested=True))
+            .from_(_EXPLODE_SRC, copy=False)
+            .where(cond.inner, copy=False)
+            .pipe(exp.union, rhs, copy=False)
+            .with_(_EXPLODE_SRC.name, as_=self._inner, materialized=False, copy=False)
+            .pipe(self._make, self._sources, self._schema)
         )
 
     def union(self, other: Self) -> Self:
@@ -1457,6 +1466,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
 _SRC = exp.to_table("src")
 _LHS = exp.to_table("lhs")
 _RHS = exp.to_table("rhs")
+_EXPLODE_SRC = exp.to_table("_explode_src")
 
 
 def _slct_all() -> exp.Select:
