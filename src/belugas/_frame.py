@@ -254,7 +254,10 @@ class LazyFrame(CoreHandler[exp.Selectable]):
             .inner
         )
         return (
-            _slct_all().from_(Tables.SRC, copy=False).where(condition).pipe(self._cls)
+            _slct_all()
+            .from_(Tables.SRC, copy=False)
+            .where(condition, copy=False)
+            .pipe(self._cls)
         )
 
     def group_by(
@@ -369,7 +372,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         return (
             _slct_all()
             .from_(Tables.SRC, copy=False)
-            .order_by(*order_exprs)
+            .order_by(*order_exprs, copy=False)
             .pipe(self._cls)
         )
 
@@ -432,13 +435,13 @@ class LazyFrame(CoreHandler[exp.Selectable]):
                 case (Some(length), offset):
                     slice_len_expr = col("slice_len")
                     stats = exp.select(lit(1).count().alias("slice_len").inner).from_(
-                        Tables.SRC
+                        Tables.SRC, copy=False
                     )
                     start_expr = slice_len_expr.add(offset).greatest(0).inner
                     return Ok(
                         _slct_all()
                         .from_(Tables.SRC, copy=False)
-                        .with_("stats", as_=stats)
+                        .with_("stats", as_=stats, copy=False)
                         .limit(
                             exp
                             .select(
@@ -1106,7 +1109,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
                         .from_(Tables.SRC, copy=False)
                         .group_by(*subset_exprs)
                         .having(lit(1).count().eq(1).inner)
-                        .subquery(Tables.RHS.name)
+                        .subquery(Tables.RHS.name, copy=False)
                     )
                     condition = (
                         subset_names

@@ -107,7 +107,9 @@ def pivot(  # noqa: ANN202, PLR0913, PLR0914, PLR0917
         (
             try_iter(idx_cols if maintain_order else None)
             .collect()
-            .then(lambda cols: selected.order_by(*cols.iter().map(exp.column)))
+            .then(
+                lambda cols: selected.order_by(*cols.iter().map(exp.column), copy=False)
+            )
             .unwrap_or(selected)
         ),
         multi,
@@ -189,6 +191,6 @@ def unpivot(  # noqa: PLR0913, PLR0917
     )
     return (
         try_iter(order_by)
-        .then(lambda cols: selected.order_by(*cols))
+        .then(lambda cols: selected.order_by(*cols, copy=False))
         .unwrap_or(selected)
     )
