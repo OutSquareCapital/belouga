@@ -255,12 +255,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
             .map(lambda key: Expr.new(key, as_col=True))
             .collect()
         )
-        grouped_frame = (
-            key_exprs.iter().map(lambda key: key.is_not_null()).into(self.filter)
-            if drop_null_keys
-            else self
-        )
-        return LazyGroupBy(grouped_frame, key_exprs, strategy)
+        return LazyGroupBy(self, key_exprs, strategy, drop_null_keys)
 
     def group_by_all(
         self,
@@ -278,12 +273,8 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the aggregated rows.
         """
-        plan = self._schema.into(planner.ExprPlan, exprs, more_exprs, named_exprs)
-        return plan.group_by_all_ctx().pipe(
-            self._from_ast,
-            plan.agg_schema(Dict[str, exp.DataType].new()),
-            src=self,
-        )
+        ast, schema = planner.group_by_all(self._schema, exprs, more_exprs, named_exprs)
+        return self._from_ast(ast, schema, src=self)
 
     def sort(
         self,

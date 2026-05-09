@@ -1,5 +1,6 @@
 from ._explode import explode
 from ._filters import drop, drop_rows, filter, limit
+from ._group_by import agg, group_by_all
 from ._joins import join, join_asof, join_cross
 from ._meta import ExprPlan, Marker, Tables, extract_root_name
 from ._pivots import pivot, unpivot
@@ -12,11 +13,13 @@ __all__ = [
     "ExprPlan",
     "Marker",
     "Tables",
+    "agg",
     "drop",
     "drop_rows",
     "explode",
     "extract_root_name",
     "filter",
+    "group_by_all",
     "join",
     "join_asof",
     "join_cross",

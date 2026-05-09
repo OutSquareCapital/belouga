@@ -75,12 +75,6 @@ def _has_window_ancestor(node: exp.Expr) -> bool:
     return _ancestor_is_window(node.parent)
 
 
-def _resolve_exploded(expr: Expr, *, is_distinct: bool) -> Expr:
-    if is_distinct:
-        return expr.implode().list.distinct()
-    return expr.implode()
-
-
 def lookup_type(inner: exp.Expr, schema: Schema) -> exp.DataType:
     node = inner.unalias()
     match node, node.args.get("to"):
@@ -157,6 +151,31 @@ class ResolvedExpr(Pipeable):
         return self.expr.pipe(
             lambda e: _broadcast_reducers(e) if broadcast_agg else e
         ).alias(self.name)
+
+
+def resolve_all(
+    schema: Schema,
+    exprs: TryIter[IntoExpr],
+    more_exprs: Iterable[IntoExpr],
+    named_exprs: dict[str, IntoExpr],
+) -> Seq[ResolvedExpr]:
+
+    def _alias_named_expr(name: str, val: IntoExpr) -> IntoExpr:
+        from .._expr import Expr
+
+        match val:
+            case Expr():
+                return val.alias(name)
+            case _:
+                return Expr.new(val, as_col=True).alias(name)
+
+    return (
+        try_iter(exprs)
+        .chain(more_exprs)
+        .chain(Iter(named_exprs.items()).map_star(_alias_named_expr))
+        .flat_map(lambda val: _resolve(val, schema))
+        .collect()
+    )
 
 
 def _resolve(val: IntoExpr, schema: Schema) -> Iter[ResolvedExpr]:  # noqa: PLR0912
@@ -342,45 +361,8 @@ class ExprPlan:
         more_exprs: Iterable[IntoExpr],
         named_exprs: dict[str, IntoExpr],
     ) -> None:
-
-        def _alias_named_expr(name: str, val: IntoExpr) -> IntoExpr:
-            from .._expr import Expr
-
-            match val:
-                case Expr():
-                    return val.alias(name)
-                case _:
-                    return Expr.new(val, as_col=True).alias(name)
-
         self.schema = schema
-        self.projections = (
-            try_iter(exprs)
-            .chain(more_exprs)
-            .chain(Iter(named_exprs.items()).map_star(_alias_named_expr))
-            .flat_map(lambda val: _resolve(val, schema))
-            .collect()
-        )
-
-    def agg_schema(self, key_schema: Schema) -> Schema:
-        def _proj_type(proj: ResolvedExpr) -> exp.DataType:
-            base = lookup_type(proj.expr.inner, self.schema)
-            if proj.is_pure_reducer:
-                return base
-            return exp.DataType(
-                this=exp.DataType.Type.ARRAY,
-                expressions=[base],
-                nested=True,
-            )
-
-        return (
-            key_schema
-            .items()
-            .iter()
-            .chain(
-                self.projections.iter().map(lambda proj: (proj.name, _proj_type(proj)))
-            )
-            .collect(Dict)
-        )
+        self.projections = resolve_all(schema, exprs, more_exprs, named_exprs)
 
     def with_columns_schema(self, schema: Schema) -> Schema:
         updates = self.select_schema(schema)
@@ -406,10 +388,17 @@ class ExprPlan:
         )
 
     def select_ctx(self) -> Option[exp.Select]:
+
+        def aliased(*, broadcast_agg: bool) -> exp.Select:
+            def _into_expr(resolved: ResolvedExpr) -> exp.Expr:
+                return resolved.as_aliased(broadcast_agg=broadcast_agg).inner
+
+            return exp.select(*self.projections.iter().map(_into_expr))
+
         def _non_empty_slct(source: exp.Expr) -> exp.Select:
             if self.projections.all(lambda resolved: resolved.has_projection_distinct):
-                return self.aliased_sql(broadcast_agg=False).from_(source).distinct()
-            return self.aliased_sql(
+                return aliased(broadcast_agg=False).from_(source).distinct()
+            return aliased(
                 broadcast_agg=self._should_broadcast_agg(include_source_cols=False)
             ).from_(source)
 
@@ -467,43 +456,3 @@ class ExprPlan:
             .map(lambda proj: proj.as_aliased(broadcast_agg=False))
             .into(lambda args: expr.struct.insert(*args))
         )
-
-    def group_by_all_ctx(self) -> exp.Select:
-        return (
-            self
-            .aliased_sql(broadcast_agg=False)
-            .from_(Tables.SRC, copy=False)
-            .group_by("ALL")
-        )
-
-    def aliased_sql(self, *, broadcast_agg: bool) -> exp.Select:
-        def _into_expr(resolved: ResolvedExpr) -> exp.Expr:
-            return resolved.as_aliased(broadcast_agg=broadcast_agg).inner
-
-        return exp.select(*self.projections.iter().map(_into_expr))
-
-    def agg_ctx(self, keys: PyoIterable[exp.Expr]) -> exp.Select:
-        def _lower_projection(proj: ResolvedExpr) -> Iter[exp.Expr]:
-            match proj.expr.inner:
-                case exp.Explode(this=exp.Expr() as inner):
-                    return (
-                        proj.expr
-                        .__class__(inner)
-                        .pipe(
-                            _resolve_exploded, is_distinct=proj.has_projection_distinct
-                        )
-                        .list.flatten()
-                        .alias(proj.name)
-                        .inner.pipe(Iter.once)
-                    )
-                case _:
-                    if proj.is_pure_reducer:
-                        expr = proj.expr
-                    else:
-                        expr = proj.expr.pipe(
-                            _resolve_exploded, is_distinct=proj.has_projection_distinct
-                        )
-                    return expr.alias(proj.name).inner.pipe(Iter.once)
-
-        exprs = keys.iter().chain(self.projections.iter().flat_map(_lower_projection))
-        return exp.select(*exprs).from_(Tables.SRC, copy=False)
