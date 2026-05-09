@@ -141,15 +141,6 @@ class ResolvedExpr(Pipeable):
         else:
             self.expr = expr
 
-    def implode_or_scalar(self) -> Expr:
-        if self.is_pure_reducer:
-            expr = self.expr
-        else:
-            expr = self.expr.pipe(
-                _resolve_exploded, is_distinct=self.has_projection_distinct
-            )
-        return expr.alias(self.name)
-
     def as_aliased(self, *, broadcast_agg: bool) -> Expr:
         def _broadcast_reducers(expr: Expr) -> Expr:
             def _window_agg(node: exp.Expr) -> exp.Expr:
@@ -455,7 +446,13 @@ class ExprPlan:
                         .inner.pipe(Iter.once)
                     )
                 case _:
-                    return proj.implode_or_scalar().inner.pipe(Iter.once)
+                    if proj.is_pure_reducer:
+                        expr = proj.expr
+                    else:
+                        expr = proj.expr.pipe(
+                            _resolve_exploded, is_distinct=proj.has_projection_distinct
+                        )
+                    return expr.alias(proj.name).inner.pipe(Iter.once)
 
         exprs = keys.iter().chain(self.projections.iter().flat_map(_lower_projection))
         return exp.select(*exprs).from_("src")
