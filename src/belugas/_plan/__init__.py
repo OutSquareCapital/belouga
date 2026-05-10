@@ -2,7 +2,7 @@ from ._explode import explode
 from ._filters import drop, drop_rows, filter, limit
 from ._group_by import agg, agg_columns, group_by_all
 from ._joins import join, join_asof, join_cross
-from ._meta import Marker, Tables, extract_root_name, resolve_all
+from ._meta import Tables, extract_root_name, resolve_all
 from ._pivots import pivot, unpivot
 from ._selects import (
     cast,
@@ -19,7 +19,6 @@ from ._unique import unique
 from ._unnest import unnest
 
 __all__ = [
-    "Marker",
     "Tables",
     "agg",
     "agg_columns",

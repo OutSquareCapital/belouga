@@ -2,31 +2,18 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
-from enum import StrEnum, auto
 from typing import TYPE_CHECKING
 
 from pyochain import Iter, Null, Option, Seq, Set, Some
 from pyochain.traits import Pipeable
 from sqlglot import exp
 
+from .._core import Marker
 from ..utils import TryIter, try_iter
 
 if TYPE_CHECKING:
     from .._expr import Cols, Expr
     from ..typing import IntoExpr, Schema
-
-
-class Marker(StrEnum):
-    """Column name markers for special expression types."""
-
-    LITERAL = auto()
-    LEN = auto()
-    TEMP = "__bl_temp__"
-
-    def to_expr(self) -> Expr:
-        from .._funcs import col
-
-        return col(self.value)
 
 
 class Tables:

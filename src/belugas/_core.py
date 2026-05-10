@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from enum import StrEnum, auto
 from typing import TYPE_CHECKING, Concatenate, Self, override
 
 from pyochain import Iter, Option
@@ -11,6 +12,17 @@ from ._sqlglot_patch import DUCKDB_FUNCTIONS
 
 if TYPE_CHECKING:
     from .typing import IntoExpr
+
+
+class Marker(StrEnum):
+    """Column name markers for special expression types."""
+
+    LITERAL = auto()
+    LEN = auto()
+    """Default column name for the `len` expression.
+
+    Used in `LazyGroupBy.len` and the corresponding module-level function when no name is provided."""
+    TEMP = "__bl_temp__"
 
 
 @dataclass(slots=True, repr=False)

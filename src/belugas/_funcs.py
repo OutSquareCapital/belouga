@@ -4,7 +4,7 @@ from typing import final
 from pyochain import Iter, Option
 from sqlglot import exp
 
-from ._core import into_expr, into_expr_list
+from ._core import Marker, into_expr, into_expr_list
 from ._expr import Expr
 from .typing import IntoExpr, IntoExprColumn, PythonLiteral
 from .utils import TryIter, try_iter
@@ -146,8 +146,6 @@ def len() -> Expr:
     Returns:
         Expr
     """
-    from ._plan import Marker
-
     return lit(1).count().alias(Marker.LEN)
 
 

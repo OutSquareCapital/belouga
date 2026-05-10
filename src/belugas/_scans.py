@@ -11,6 +11,7 @@ from duckdb import DuckDBPyConnection, DuckDBPyRelation
 from pyochain import Dict, Iter, Seq
 from sqlglot import exp
 
+from ._core import Marker
 from .typing import (
     IntoArrowArray,
     IntoArrowStream,
@@ -366,7 +367,6 @@ class ScanSource:
 
     @classmethod
     def from_none(cls) -> Self:
-        from ._plan import Marker
 
         return cls.from_dict({Marker.TEMP: ()})
 

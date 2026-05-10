@@ -11,9 +11,8 @@ from pyochain.traits import PyoCollection
 from sqlglot import exp
 
 from . import datatypes as dt
-from ._core import func, into_expr, into_expr_list
+from ._core import Marker, func, into_expr, into_expr_list
 from ._fns import Fns
-from ._plan import Marker
 from ._window import (
     BoundsValues,
     FrameBound,
@@ -207,7 +206,6 @@ class Expr(Fns):
         *,
         center: bool,
     ) -> Self:
-        from ._plan import Marker
         from ._when import when
 
         spec = BoundsValues.rolling(window_size, center=center)
@@ -913,8 +911,7 @@ class Expr(Fns):
         Returns:
             Self: A boolean expression indicating whether the value is the last occurrence.
         """
-        row_idx = Marker.TEMP.to_expr()
-        return self.row_number().window(self, row_idx, descending=True).eq(1)
+        return self.row_number().window(self, Marker.TEMP, descending=True).eq(1)
 
     def is_duplicated(self) -> Self:
         """Check if value is duplicated.
@@ -934,7 +931,7 @@ class Expr(Fns):
 
     def arg_sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """Return indices that would sort the expression."""
-        row_idx = Marker.TEMP.to_expr()
+        row_idx = self.__class__(exp.column(Marker.TEMP))
         return self._cls(
             row_idx
             .nth_value(row_idx.add(1))

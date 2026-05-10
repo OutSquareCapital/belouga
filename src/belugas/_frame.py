@@ -13,8 +13,9 @@ from pyochain import Dict, Iter, Option, Vec
 from sqlglot import exp
 
 from . import _plan as planner, datatypes as dt
-from ._core import CoreHandler
+from ._core import CoreHandler, Marker
 from ._expr import Expr
+from ._funcs import col
 from ._scans import ScanSource
 from .utils import TryIter, TrySeq, try_iter
 
@@ -124,8 +125,8 @@ class LazyFrame(CoreHandler[exp.Selectable]):
     def _into_pl(self, *, lazy: Literal[False]) -> pl.DataFrame: ...
     def _into_pl(self, *, lazy: bool) -> pl.LazyFrame | pl.DataFrame:
         df = self._collect().pl(lazy=lazy)
-        if planner.Marker.TEMP in self.columns:
-            return df.drop(planner.Marker.TEMP)
+        if Marker.TEMP in self.columns:
+            return df.drop(Marker.TEMP)
         return df
 
     def lazy(self) -> pl.LazyFrame:
@@ -601,12 +602,12 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with every nth row starting from offset.
         """
-        expr = planner.Marker.TEMP.to_expr()
+        expr = col(Marker.TEMP)
         return (
             self
-            .with_row_index(name=planner.Marker.TEMP, order_by=self.columns)
+            .with_row_index(name=Marker.TEMP, order_by=self.columns)
             .filter(expr.ge(offset).and_(expr.sub(offset).mod(n).eq(0)))
-            .drop(planner.Marker.TEMP)
+            .drop(Marker.TEMP)
         )
 
     @property
@@ -938,9 +939,9 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         """
         return (
             self
-            .with_row_index(name=planner.Marker.TEMP, order_by=self.columns)
-            .sort(planner.Marker.TEMP, descending=True)
-            .drop(planner.Marker.TEMP)
+            .with_row_index(name=Marker.TEMP, order_by=self.columns)
+            .sort(Marker.TEMP, descending=True)
+            .drop(Marker.TEMP)
         )
 
     def fetch_all(self) -> Vec[tuple[Any, ...]]:  # pyright: ignore[reportExplicitAny]
