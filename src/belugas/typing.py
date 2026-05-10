@@ -191,7 +191,7 @@ TimeUnit = Literal["ms", "us", "ns"]
 EpochTimeUnit = Literal["ms", "us", "ns", "s", "d"]
 FillNullStrategy = Literal["forward", "backward", "min", "max", "mean", "zero", "one"]
 RankMethod = Literal["average", "min", "max", "dense", "ordinal"]
-type IntoDataType = exp.DataType | DataType
+type IntoDataType = exp.DataType | DataType | type[DataType]
 """Types that can be converted into a `DataType` instance."""
 type TransferEncoding = Literal["hex", "base64"]
 JoinStrategy = Literal["inner", "left", "right", "outer", "semi", "anti"]

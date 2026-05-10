@@ -520,6 +520,8 @@ class Expr(Fns):
                 dtype_expr = dtype.raw
             case exp.DataType():
                 dtype_expr = dtype
+            case type():
+                dtype_expr = dtype().raw
 
         return self._cls(exp.Cast(this=self.inner, to=dtype_expr))
 
