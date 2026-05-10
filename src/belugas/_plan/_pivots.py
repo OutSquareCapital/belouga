@@ -10,8 +10,6 @@ from ..utils import TryIter, try_iter, try_seq
 from ._meta import Tables
 
 if TYPE_CHECKING:
-    from pyochain.traits import PyoIterable
-
     from .._expr import Expr
     from ..typing import PivotAgg, PythonLiteral, Schema
 
@@ -35,8 +33,8 @@ def _get_pivot_agg() -> dict[PivotAgg, Callable[[Expr], Expr]]:
     }
 
 
-def pivot(  # noqa: ANN202, PLR0913, PLR0914, PLR0917
-    base_columns: PyoIterable[str],
+def pivot(  # noqa: PLR0913, PLR0914, PLR0917
+    schema: Schema,
     on: TryIter[str],
     on_columns: Sequence[PythonLiteral],
     index: TryIter[str],
@@ -44,10 +42,12 @@ def pivot(  # noqa: ANN202, PLR0913, PLR0914, PLR0917
     aggregate_function: PivotAgg,
     *,
     maintain_order: bool,
-):
+    separator: str,
+) -> tuple[exp.Selectable, Schema]:
     def _cols_not_in(cols: Iterable[str]) -> Seq[str]:
         return (
-            base_columns
+            schema
+            .keys()
             .iter()
             .filter(lambda c: c not in on_cols and c not in cols)
             .collect()
@@ -67,6 +67,7 @@ def pivot(  # noqa: ANN202, PLR0913, PLR0914, PLR0917
 
     on_cols = try_iter(on).collect()
     idx_cols, val_cols = _get_idx_and_vals().unwrap()
+    on_values = Iter(on_columns).map(str).collect()
 
     multi = val_cols.length() > 1
     agg = PIVOT_AGG.unwrap_or_else(_get_pivot_agg)[aggregate_function]
@@ -78,12 +79,11 @@ def pivot(  # noqa: ANN202, PLR0913, PLR0914, PLR0917
         expr = col(name).pipe(agg)
         return expr.alias(name) if multi else expr
 
-    on_strs = Iter(on_columns).map(str)
     tail = (
-        on_strs
+        on_values.iter()
         if not multi
         else val_cols.iter().flat_map(
-            lambda vc: Iter(on_columns).map(lambda ov: f"{ov}_{vc}")
+            lambda vc: on_values.iter().map(lambda ov: f"{ov}_{vc}")
         )
     )
     pivoted_cols = idx_cols.iter().chain(tail).collect()
@@ -118,18 +118,60 @@ def pivot(  # noqa: ANN202, PLR0913, PLR0914, PLR0917
         .from_(table, copy=False)
     )
 
-    return (
-        (
-            try_iter(idx_cols if maintain_order else None)
-            .collect()
-            .then(
-                lambda cols: selected.order_by(*cols.iter().map(exp.column), copy=False)
+    ordered = (
+        try_iter(idx_cols if maintain_order else None)
+        .collect()
+        .then(lambda cols: selected.order_by(*cols.iter().map(exp.column), copy=False))
+        .unwrap_or(selected)
+    )
+
+    unknown = exp.DType.UNKNOWN.into_expr()
+
+    if multi:
+        subq = exp.Subquery(
+            this=ordered,
+            alias=exp.TableAlias(this=exp.to_identifier("_pivot")),
+        )
+
+        def _idx_expr(name: str) -> exp.Expr:
+            return exp.column(name)
+
+        def _rename(vc: str) -> Iter[exp.Expr]:
+            def _renamed(ov: str) -> exp.Expr:
+                return exp.column(_case_sensitive_id(f"{ov}_{vc}")).as_(
+                    f"{vc}{separator}{ov}", quoted=True
+                )
+
+            return on_values.iter().map(_renamed)
+
+        rename_exprs = (
+            idx_cols
+            .iter()
+            .map(_idx_expr)
+            .chain(val_cols.iter().flat_map(_rename))
+            .collect(list)
+        )
+        final_schema: Schema = (
+            idx_cols
+            .iter()
+            .map(lambda name: (name, schema.get_item(name).unwrap()))
+            .chain(
+                val_cols.iter().flat_map(
+                    lambda vc: on_values.iter().map(
+                        lambda ov: (f"{vc}{separator}{ov}", unknown)
+                    )
+                )
             )
-            .unwrap_or(selected)
-        ),
-        multi,
-        idx_cols,
-        val_cols,
+            .collect(Dict)
+        )
+        return exp.select(*rename_exprs).from_(subq, copy=False), final_schema
+
+    return ordered, (
+        idx_cols
+        .iter()
+        .map(lambda name: (name, schema.get_item(name).unwrap()))
+        .chain(on_values.iter().map(lambda ov: (ov, unknown)))
+        .collect(Dict)
     )
 
 

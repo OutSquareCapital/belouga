@@ -15,7 +15,6 @@ from sqlglot import exp
 from . import _plan as planner, datatypes as dt
 from ._core import CoreHandler
 from ._expr import Expr
-from ._funcs import col
 from ._scans import ScanSource
 from .utils import TryIter, TrySeq, try_iter
 
@@ -775,54 +774,17 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the pivoted data.
         """
-        pivoted, multi, idx_cols, val_cols = planner.pivot(
-            self.columns,
+        ast, schema = planner.pivot(
+            self._schema,
             on,
             on_columns,
             index,
             values,
             aggregate_function,
             maintain_order=maintain_order,
+            separator=separator,
         )
-        unknown = exp.DType.UNKNOWN.into_expr()
-        on_values = Iter(on_columns).map(str).collect()
-        pivot_schema = (
-            idx_cols
-            .iter()
-            .map(lambda name: (name, self._schema.get_item(name).unwrap()))
-            .chain(
-                on_values.iter().flat_map(
-                    lambda ov: (
-                        Iter.once((ov, unknown))
-                        if not multi
-                        else val_cols.iter().map(
-                            lambda vc: (f"{vc}{separator}{ov}", unknown)
-                        )
-                    )
-                )
-            )
-            .collect(Dict)
-        )
-
-        if multi:
-            on_values = Iter(on_columns).map(str).collect()
-
-            def _rename_col(val_col: str) -> Iter[Expr]:
-                def _swap(on_val: str) -> Expr:
-                    in_ = f"{on_val}_{val_col}"
-                    out = f"{val_col}{separator}{on_val}"
-                    return col(in_).alias(out)
-
-                return on_values.iter().map(_swap)
-
-            return (
-                idx_cols
-                .iter()
-                .map(col)
-                .chain(val_cols.iter().flat_map(_rename_col))
-                .into(pivoted.pipe(self._from_ast, pivot_schema, src=self).select)
-            )
-        return pivoted.pipe(self._from_ast, pivot_schema, src=self)
+        return self._from_ast(ast, schema, src=self)
 
     def unpivot(
         self,
