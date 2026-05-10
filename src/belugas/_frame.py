@@ -183,11 +183,8 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the selected columns.
         """
-        plan = self._schema.into(planner.ExprPlan, exprs, more_exprs, named_exprs)
-        return plan.select_ctx().map_or_else(
-            lambda: self.__class__(ScanSource.from_none().relation),
-            lambda ast: self._from_ast(ast, plan.select_schema(self._schema), src=self),
-        )
+        ast, schema = planner.select(self._schema, exprs, more_exprs, named_exprs)
+        return self._from_ast(ast, schema, src=self)
 
     def with_columns(
         self,
@@ -205,9 +202,8 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the added or replaced columns.
         """
-        plan = self._schema.into(planner.ExprPlan, exprs, more_exprs, named_exprs)
-        ast = plan.with_columns_ctx()
-        return self._from_ast(ast, plan.with_columns_schema(self._schema), src=self)
+        ast, schema = planner.with_columns(self._schema, exprs, more_exprs, named_exprs)
+        return self._from_ast(ast, schema, src=self)
 
     def filter(
         self,

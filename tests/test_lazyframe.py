@@ -298,7 +298,8 @@ def test_with_columns_star_exprs(lf: bl.LazyFrame) -> None:
     cols = lf._schema  # pyright: ignore[reportPrivateUsage]
 
     def _plan(expr: bl.Expr) -> exp.Star | None:
-        return m.ExprPlan(cols, expr, (), {}).with_columns_ctx().find(exp.Star)
+        ast, _ = m.with_columns(cols, expr, (), {})
+        return ast.find(exp.Star)
 
     assert _plan(bl_age) is None
     assert _plan(bl_age.alias("age2")) is not None

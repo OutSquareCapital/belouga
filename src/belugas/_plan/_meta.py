@@ -5,15 +5,13 @@ from dataclasses import dataclass
 from enum import StrEnum, auto
 from typing import TYPE_CHECKING
 
-from pyochain import Dict, Iter, Null, Option, Seq, Set, Some
+from pyochain import Iter, Null, Option, Seq, Set, Some
 from pyochain.traits import Pipeable
 from sqlglot import exp
 
 from ..utils import TryIter, try_iter
 
 if TYPE_CHECKING:
-    from pyochain.traits import PyoIterable
-
     from .._expr import Cols, Expr
     from ..typing import IntoExpr, Schema
 
@@ -37,25 +35,6 @@ class Tables:
     RHS: exp.Table = exp.to_table("rhs")
     STATS: exp.Table = exp.to_table("stats")
     EXPLODE_SRC: exp.Table = exp.to_table("_explode_src")
-
-
-def _into_windowed(cols: PyoIterable[ResolvedExpr]) -> exp.Expr:
-    from .._funcs import row_number
-
-    def _is_windowed(p: ResolvedExpr) -> bool:
-        return p.name != Marker.TEMP and p.expr.inner.pipe(_find_all, exp.Column).any(
-            lambda col: col.parts[-1].name == Marker.TEMP
-        )
-
-    if cols.any(_is_windowed):
-        row_nb = row_number().window().sub(1).alias(Marker.TEMP).inner
-        return (
-            exp
-            .select(row_nb, exp.Star())
-            .from_(Tables.SRC)
-            .subquery(Tables.SRC.name, copy=False)
-        )
-    return Tables.SRC
 
 
 def _has_window_ancestor(node: exp.Expr) -> bool:
@@ -336,115 +315,12 @@ def _window_root_name(node: exp.Window) -> str:
 
 def _root_col_name(node: exp.Expr) -> str:
     return (
-        _find_all(node, exp.Column)
+        find_all(node, exp.Column)
         .map(lambda c: c.output_name)
         .find(lambda name: name != Marker.TEMP)
         .unwrap_or(Marker.LITERAL)
     )
 
 
-def _find_all[T: exp.Expr](
-    expr: exp.Expr, *exprs: type[T], bfs: bool = True
-) -> Iter[T]:
+def find_all[T: exp.Expr](expr: exp.Expr, *exprs: type[T], bfs: bool = True) -> Iter[T]:
     return Iter(expr.find_all(*exprs, bfs=bfs))
-
-
-@dataclass(slots=True, init=False)
-class ExprPlan:
-    schema: Schema
-    projections: Seq[ResolvedExpr]
-
-    def __init__(
-        self,
-        schema: Schema,
-        exprs: TryIter[IntoExpr],
-        more_exprs: Iterable[IntoExpr],
-        named_exprs: dict[str, IntoExpr],
-    ) -> None:
-        self.schema = schema
-        self.projections = resolve_all(schema, exprs, more_exprs, named_exprs)
-
-    def with_columns_schema(self, schema: Schema) -> Schema:
-        updates = self.select_schema(schema)
-        return (
-            schema
-            .items()
-            .iter()
-            .map_star(
-                lambda name, dtype: (name, updates.get_item(name).unwrap_or(dtype))
-            )
-            .chain(
-                updates.items().iter().filter_star(lambda name, _: name not in schema)
-            )
-            .collect(Dict)
-        )
-
-    def select_schema(self, schema: Schema) -> Schema:
-        return (
-            self.projections
-            .iter()
-            .map(lambda proj: (proj.name, lookup_type(proj.expr.inner, schema)))
-            .collect(Dict)
-        )
-
-    def select_ctx(self) -> Option[exp.Select]:
-
-        def aliased(*, broadcast_agg: bool) -> exp.Select:
-            def _into_expr(resolved: ResolvedExpr) -> exp.Expr:
-                return resolved.as_aliased(broadcast_agg=broadcast_agg).inner
-
-            return exp.select(*self.projections.iter().map(_into_expr))
-
-        def _non_empty_slct(source: exp.Expr) -> exp.Select:
-            if self.projections.all(lambda resolved: resolved.has_projection_distinct):
-                return aliased(broadcast_agg=False).from_(source).distinct()
-            return aliased(
-                broadcast_agg=self._should_broadcast_agg(include_source_cols=False)
-            ).from_(source)
-
-        return self.projections.then(
-            lambda _projs: _projs.into(_into_windowed).pipe(_non_empty_slct)
-        )
-
-    def with_columns_ctx(self) -> exp.Select:
-        def _resolved(updates: Dict[str, Expr]) -> Iter[exp.Expr]:
-            update_iter = updates.items().iter()
-            if not updates.any(lambda name: name in self.schema):
-                return update_iter.map_star(lambda _name, expr: expr.inner).insert(
-                    exp.Star()
-                )
-            return (
-                self.schema
-                .iter()
-                .map(
-                    lambda name: updates.get_item(name).map_or(
-                        exp.column(name), lambda expr: expr.inner
-                    )
-                )
-                .chain(
-                    update_iter.filter_star(
-                        lambda name, _expr: name not in self.schema
-                    ).map_star(lambda _name, expr: expr.inner)
-                )
-            )
-
-        broadcast_agg = self._should_broadcast_agg(include_source_cols=True)
-        updates = (
-            self.projections
-            .iter()
-            .map(
-                lambda proj: (
-                    proj.name,
-                    proj.as_aliased(broadcast_agg=broadcast_agg),
-                )
-            )
-            .collect(Dict)
-        )
-        return exp.select(*updates.into(_resolved)).from_(
-            self.projections.into(_into_windowed), copy=False
-        )
-
-    def _should_broadcast_agg(self, *, include_source_cols: bool) -> bool:
-        return include_source_cols or not self.projections.all(
-            lambda resolved: resolved.is_pure_reducer
-        )

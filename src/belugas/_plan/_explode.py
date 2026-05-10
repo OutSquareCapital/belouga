@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from pyochain import Dict, Iter, Seq
 from sqlglot import exp
 
-from ._meta import ExprPlan, Tables
+from ._meta import Tables, resolve_all
 
 if TYPE_CHECKING:
     from pyochain.traits import PyoIterable
@@ -24,9 +24,8 @@ def explode(
     from .._funcs import col, lit
 
     to_explode_names = (
-        schema
-        .into(ExprPlan, columns, more_columns, {})
-        .projections.iter()
+        resolve_all(schema, columns, more_columns, {})
+        .iter()
         .map(lambda r: r.name)
         .collect()
     )
