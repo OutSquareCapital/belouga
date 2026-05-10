@@ -36,7 +36,7 @@ class Node:
 
 
 @dataclass(slots=True)
-class _Expressions:
+class _Expressions(Node):
     exprs: TryIter[IntoExpr]
     more_exprs: Iterable[IntoExpr]
     named: dict[str, IntoExpr]
@@ -48,7 +48,7 @@ class Scan(Node):
 
 
 @dataclass(slots=True)
-class Select(_Expressions, Node):
+class Select(_Expressions):
     """Node representing a select operation."""
 
 
@@ -58,7 +58,7 @@ class SelectAll(Node):
 
 
 @dataclass(slots=True)
-class WithColumns(_Expressions, Node):
+class WithColumns(_Expressions):
     """Node representing a with_columns operation."""
 
 
@@ -82,7 +82,7 @@ class GroupBy(_GroupByBase):
 
 
 @dataclass(slots=True)
-class Agg(_Expressions, _GroupByBase):
+class Agg(_GroupByBase, _Expressions):
     """Node representing an aggregation operation."""
 
 
@@ -94,7 +94,7 @@ class AggColumns(_GroupByBase):
 
 
 @dataclass(slots=True)
-class GroupByAll(_Expressions, Node):
+class GroupByAll(_Expressions):
     """Node representing a group_by_all operation."""
 
 
@@ -147,26 +147,26 @@ class Union(Node):
 
 
 @dataclass(slots=True)
-class _JoinBase(Node):
+class Join(Node):
+    other: LazyFrame
+    on: TryIter[str]
+    how: JoinStrategy
+    left_on: TryIter[str]
+    right_on: TryIter[str]
+    suffix: str
+
+
+@dataclass(slots=True)
+class JoinCross(Node):
+    """Node representing a cross join operation."""
+
     other: LazyFrame
     suffix: str
 
 
 @dataclass(slots=True)
-class Join(_JoinBase):
-    on: TryIter[str]
-    how: JoinStrategy
-    left_on: TryIter[str]
-    right_on: TryIter[str]
-
-
-@dataclass(slots=True)
-class JoinCross(_JoinBase):
-    """Node representing a cross join operation."""
-
-
-@dataclass(slots=True)
-class JoinAsof(_JoinBase):
+class JoinAsof(Node):
+    other: LazyFrame
     left_on: Option[str]
     right_on: Option[str]
     on: Option[str]
@@ -174,6 +174,7 @@ class JoinAsof(_JoinBase):
     by_right: TryIter[str]
     by: TryIter[str]
     strategy: AsofJoinStrategy
+    suffix: str
 
 
 @dataclass(slots=True)

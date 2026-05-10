@@ -70,19 +70,27 @@ RIGHT_ERR = pl.DataFrame({"u": [0, 3, 8], "b": [100, 200, 300]})
 
 def test_join_asof_error_on_and_left_on() -> None:
     with pytest.raises(ValueError, match="If `on` is specified"):
-        _ = bl.LazyFrame(LEFT_ERR).join_asof(
-            bl.LazyFrame(RIGHT_ERR), on="t", left_on="t", right_on="u"
+        _ = (
+            bl
+            .LazyFrame(LEFT_ERR)
+            .join_asof(bl.LazyFrame(RIGHT_ERR), on="t", left_on="t", right_on="u")
+            .collect()
         )
 
 
 def test_join_asof_error_no_keys() -> None:
     with pytest.raises(ValueError, match="Either"):
-        _ = bl.LazyFrame(LEFT_ERR).join_asof(bl.LazyFrame(RIGHT_ERR))
+        _ = bl.LazyFrame(LEFT_ERR).join_asof(bl.LazyFrame(RIGHT_ERR)).collect()
 
 
 def test_join_asof_error_left_on_without_right_on() -> None:
     with pytest.raises(ValueError, match="Either"):
-        _ = bl.LazyFrame(LEFT_ERR).join_asof(bl.LazyFrame(RIGHT_ERR), left_on="t")
+        _ = (
+            bl
+            .LazyFrame(LEFT_ERR)
+            .join_asof(bl.LazyFrame(RIGHT_ERR), left_on="t")
+            .collect()
+        )
 
 
 left_asof_error = bl.LazyFrame({"t": [1, 4, 9], "g": ["x", "x", "y"], "a": [1, 2, 3]})
@@ -97,14 +105,14 @@ def test_join_asof_error_by_and_by_left() -> None:
     with pytest.raises(ValueError, match="If `by` is specified"):
         _ = left_asof_error.join_asof(
             right_asof_error, left_on="t", right_on="u", by="g", by_left="g"
-        )
+        ).collect()
 
 
 def test_join_asof_error_by_left_without_by_right() -> None:
     with pytest.raises(ValueError, match="Can not specify only"):
         _ = left_asof_error.join_asof(
             right_asof_error, left_on="t", right_on="u", by_left="g"
-        )
+        ).collect()
 
 
 def test_join_asof_error_unequal_by_lengths() -> None:
@@ -115,15 +123,18 @@ def test_join_asof_error_unequal_by_lengths() -> None:
             right_on="u",
             by_left="g",
             by_right=["g2", "b"],
-        )
+        ).collect()
 
 
 def test_join_left_on_right_on_length_mismatch() -> None:
     left = pl.DataFrame({"id1": [1, 2], "id2": ["a", "b"], "a": [10, 20]})
     right = pl.DataFrame({"id1": [1, 2], "b": [100, 200]})
     with pytest.raises(ValueError, match="same length"):
-        _ = bl.LazyFrame(left).join(
-            bl.LazyFrame(right), left_on=["id1", "id2"], right_on="id1"
+        _ = (
+            bl
+            .LazyFrame(left)
+            .join(bl.LazyFrame(right), left_on=["id1", "id2"], right_on="id1")
+            .collect()
         )
 
 
@@ -159,19 +170,24 @@ def test_join_without_keys_error() -> None:
     left = pl.DataFrame({"id": [1, 2], "a": [10, 20]})
     right = pl.DataFrame({"id": [1, 2], "b": [100, 200]})
     with pytest.raises(ValueError, match="Either"):
-        _ = bl.LazyFrame(left).join(bl.LazyFrame(right), how="inner")
+        _ = bl.LazyFrame(left).join(bl.LazyFrame(right), how="inner").collect()
 
 
 def test_join_on_and_left_right_on_error() -> None:
     left = pl.DataFrame({"id": [1, 2], "a": [10, 20]})
     right = pl.DataFrame({"id": [1, 2], "b": [100, 200]})
     with pytest.raises(ValueError, match="If `on` is specified"):
-        _ = bl.LazyFrame(left).join(
-            bl.LazyFrame(right),
-            on="id",
-            left_on="id",
-            right_on="id",
-            how="inner",
+        _ = (
+            bl
+            .LazyFrame(left)
+            .join(
+                bl.LazyFrame(right),
+                on="id",
+                left_on="id",
+                right_on="id",
+                how="inner",
+            )
+            .collect()
         )
 
 

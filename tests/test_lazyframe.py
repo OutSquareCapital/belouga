@@ -42,7 +42,7 @@ def lf() -> bl.LazyFrame:
 
 def test_properties(lf: bl.LazyFrame) -> None:
     df = lf.collect()
-    schema = lf._schema  # pyright: ignore[reportPrivateUsage]
+    schema = lf.collect_schema()
     assert lf.width == df.width
     assert lf.columns.into(list) == df.columns
     assert set(schema.keys()) == set(df.columns)
@@ -94,7 +94,6 @@ def test_clone(lf: bl.LazyFrame) -> None:
 def test_sql_query(lf: bl.LazyFrame) -> None:
     query = lf.filter(bl_age.gt(25)).select("name", "age")
     parsed = query.sql_query()
-    assert parsed.sql() == query.inner.sql(dialect="duckdb")
     assert parsed.sql() != parsed.sql(pretty=True)
     assert parsed.tokenize() != parsed.sql(pretty=True)
     assert "SELECT" in parsed.sql()
@@ -170,10 +169,10 @@ def test_sort_multiple_cols(
 
 def test_sort_errors(lf: bl.LazyFrame) -> None:
     with pytest.raises(ValueError, match="length of `descending`"):
-        _ = lf.sort("age", "salary", descending=[True])
+        _ = lf.sort("age", "salary", descending=[True]).collect()
 
     with pytest.raises(ValueError, match="length of `nulls_last`"):
-        _ = lf.sort("age", "salary", nulls_last=[True, False, True])
+        _ = lf.sort("age", "salary", nulls_last=[True, False, True]).collect()
 
 
 def test_limit(lf: bl.LazyFrame) -> None:
@@ -192,7 +191,7 @@ def test_slice(lf: bl.LazyFrame, offset: int, length: int | None) -> None:
 
 def test_slice_errors(lf: bl.LazyFrame) -> None:
     with pytest.raises(ValueError, match="negative slice lengths"):
-        _ = lf.slice(0, -1)
+        _ = lf.slice(0, -1).collect()
     with pytest.raises(ValueError, match="negative slice lengths"):
         _ = lf.lazy().slice(0, -1)
 
@@ -295,7 +294,7 @@ def test_rename(lf: bl.LazyFrame, mapping: dict[str, str]) -> None:
 
 
 def test_with_columns_star_exprs(lf: bl.LazyFrame) -> None:
-    cols = lf._schema  # pyright: ignore[reportPrivateUsage]
+    cols = lf._compile().schema  # pyright: ignore[reportPrivateUsage]
 
     def _plan(expr: bl.Expr) -> exp.Star | None:
         ast, _ = m.with_columns(cols, expr, (), {})
@@ -351,7 +350,7 @@ def test_fill_null_with_strategy_limit(strategy: t.FillNullStrategy) -> None:
 def test_fill_null_with_value_limit_error() -> None:
     df = bl.LazyFrame({"a": [1.0, None, None, 4.0]})
     with pytest.raises(ValueError, match="can only specify `limit`"):
-        _ = df.fill_null(0, limit=1)
+        _ = df.fill_null(0, limit=1).collect()
 
 
 @pytest.mark.parametrize("strategy", ["min", "max", "mean", "zero", "one"])
@@ -360,14 +359,14 @@ def test_fill_null_with_non_directional_strategy_limit_error(
 ) -> None:
     df = bl.LazyFrame({"a": [1.0, None, None, 4.0]})
     with pytest.raises(ValueError, match="can only specify `limit`"):
-        _ = df.fill_null(strategy=strategy, limit=1)
+        _ = df.fill_null(strategy=strategy, limit=1).collect()
 
 
 def test_fill_null_with_negative_limit_error() -> None:
     df = bl.LazyFrame({"a": [1.0, None, None, 4.0]})
     msg = "Can't process negative `limit` value for fill_null"
     with pytest.raises(ResultUnwrapError, match=msg):
-        _ = df.fill_null(strategy="forward", limit=-1)
+        _ = df.fill_null(strategy="forward", limit=-1).collect()
 
 
 @pytest.mark.parametrize("n", [-2, -1, 0, 1, 2])
@@ -535,7 +534,7 @@ def test_unique(
 def test_unique_without_order_by_error(strategy: t.UniqueKeepStrategy) -> None:
     df = bl.LazyFrame({"a": [1, 1, 2], "b": [1, 2, 3]})
     with pytest.raises(ValueError, match="`order_by` must be specified"):
-        _ = df.unique(keep=strategy)
+        _ = df.unique(keep=strategy).collect()
 
 
 def test_unique_with_multiple_order_by() -> None:

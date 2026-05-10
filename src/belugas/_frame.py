@@ -1,5 +1,3 @@
-"""LazyFrame providing Polars-like API over DuckDB relations."""
-
 from __future__ import annotations
 
 import operator as op
@@ -7,15 +5,15 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Self, SupportsInt, overload, override
+from typing import TYPE_CHECKING, Any, Literal, Self, SupportsInt, overload
 
 from pyochain import Dict, Iter, Option, Vec
-from sqlglot import exp
 
-from . import _plan as planner, datatypes as dt
+from . import datatypes as dt
 from ._core import CoreHandler, Marker
 from ._expr import Expr
 from ._funcs import col
+from ._plan import CompiledPlan, compile_plan, nodes
 from ._scans import ScanSource
 from .utils import try_iter
 
@@ -31,7 +29,7 @@ if TYPE_CHECKING:
         ParquetFieldsOptions,
     )
     from duckdb import DuckDBPyRelation
-    from pyochain.traits import PyoKeysView
+    from pyochain.traits import PyoKeysView, PyoValuesView
 
     from ._groupby import LazyGroupBy
     from ._parser import ParsedQuery
@@ -47,7 +45,6 @@ if TYPE_CHECKING:
         ParquetCompression,
         PivotAgg,
         PythonLiteral,
-        Schema,
         TryIter,
         TrySeq,
         UniqueKeepStrategy,
@@ -55,79 +52,45 @@ if TYPE_CHECKING:
 
 
 @dataclass(slots=True, init=False, repr=False)
-class LazyFrame(CoreHandler[exp.Selectable]):
+class LazyFrame(CoreHandler[ScanSource]):
     """LazyFrame providing Polars-like API over DuckDB relations."""
 
-    _inner: exp.Selectable
-    _sources: Dict[str, ScanSource]
-    _schema: Schema
+    _inner: ScanSource
+    _nodes: Vec[nodes.PlanNode]
 
     def __init__(self, data: IntoRel | Self, orient: Orientation = "col") -> None:
         match data:
             case LazyFrame():
                 self._inner = data._inner
-                self._sources = data._sources
-                self._schema = data._schema
+                self._nodes = data._nodes
             case _:
-                source = ScanSource.build(data, orient).set_alias()
-                self._inner = exp.select(exp.Star()).from_(
-                    exp.to_table(source.identity)
-                )
-                self._sources = Dict.from_ref({source.identity: source})
-                self._schema = source.schema
+                self._inner = ScanSource.build(data, orient).set_alias()
+                self._nodes = Vec.new()
 
-    def _make(
-        self, ast: exp.Selectable, sources: Dict[str, ScanSource], schema: Schema
-    ) -> Self:
+    def _push(self, node: nodes.PlanNode) -> Self:
         out = self.__class__.__new__(self.__class__)
-        out._inner = ast
-        out._sources = sources
-        out._schema = schema
+        out._inner = self._inner
+        out._nodes = self._nodes.concat([node])
         return out
 
-    def _from_ast(self, ast: exp.Selectable, schema: Schema, **subs: Self) -> Self:
-        def _replacer(
-            node: exp.Selectable, subs: Mapping[str, LazyFrame]
-        ) -> exp.Selectable:
-            match node:
-                case exp.Table() if node.name in subs:
-                    pivots = node.args.get("pivots")
-                    alias = exp.TableAlias(this=exp.to_identifier(node.alias_or_name))
-                    this = subs[node.name]._inner
-                    return exp.Subquery(this=this, alias=alias, pivots=pivots)
-                case _:
-                    return node
-
-        new_sources = (
-            Iter(subs.items())
-            .map_star(lambda _name, v: v._sources.items().iter())
-            .flatten()
-            .chain(self._sources.items())
-            .collect(Dict)
-        )
-
-        return ast.transform(_replacer, subs=subs, copy=False).pipe(
-            self._make, new_sources, schema
-        )
-
-    @override
-    def _cls(self, value: exp.Selectable) -> Self:
-        return self._from_ast(value, src=self, schema=self._schema)
+    def _compile(self) -> CompiledPlan:
+        return compile_plan(self._inner, self._nodes)
 
     def _collect(self) -> DuckDBPyRelation:
-        return self._inner.pipe(ScanSource.from_query, **self._sources).relation
+        compiled = self._compile()
+        return compiled.ast.pipe(ScanSource.from_query, **compiled.sources).relation
 
     def _iter_slct(self, func: Callable[[Expr], Expr]) -> Self:
-        ast, schema = planner.select_all(self._schema, func)
-        return self._from_ast(ast, schema, src=self)
+        return self._push(nodes.SelectAll(func))
 
     @overload
     def _into_pl(self, *, lazy: Literal[True]) -> pl.LazyFrame: ...
     @overload
     def _into_pl(self, *, lazy: Literal[False]) -> pl.DataFrame: ...
     def _into_pl(self, *, lazy: bool) -> pl.LazyFrame | pl.DataFrame:
-        df = self._collect().pl(lazy=lazy)
-        if Marker.TEMP in self.columns:
+        rel = self._collect()
+        df = rel.pl(lazy=lazy)
+        if Marker.TEMP in rel.columns:
             return df.drop(Marker.TEMP)
         return df
 
@@ -181,8 +144,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the selected columns.
         """
-        ast, schema = planner.select(self._schema, exprs, more_exprs, named_exprs)
-        return self._from_ast(ast, schema, src=self)
+        return self._push(nodes.Select(exprs, more_exprs, named_exprs))
 
     def with_columns(
         self,
@@ -200,8 +162,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the added or replaced columns.
         """
-        ast, schema = planner.with_columns(self._schema, exprs, more_exprs, named_exprs)
-        return self._from_ast(ast, schema, src=self)
+        return self._push(nodes.WithColumns(exprs, more_exprs, named_exprs))
 
     def filter(
         self,
@@ -219,7 +180,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the filtered rows.
         """
-        return planner.filter(predicates, more_predicates, constraints).pipe(self._cls)
+        return self._push(nodes.Filter(predicates, more_predicates, constraints))
 
     def group_by(
         self,
@@ -265,8 +226,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the aggregated rows.
         """
-        ast, schema = planner.group_by_all(self._schema, exprs, more_exprs, named_exprs)
-        return self._from_ast(ast, schema, src=self)
+        return self._push(nodes.GroupByAll(exprs, more_exprs, named_exprs))
 
     def sort(
         self,
@@ -286,7 +246,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the sorted rows.
         """
-        return planner.sort(by, more_by, descending, nulls_last).pipe(self._cls)
+        return self._push(nodes.Sort(by, more_by, descending, nulls_last))
 
     def limit(self, n: int) -> Self:
         """Limit the number of rows.
@@ -297,7 +257,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the limited rows.
         """
-        return planner.limit(n).pipe(self._cls)
+        return self._push(nodes.Limit(n))
 
     def head(self, n: int = 5) -> Self:
         """Get the first n rows.
@@ -320,7 +280,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the sliced rows.
         """
-        return planner.slice(Option(length), offset).map(self._cls).unwrap()
+        return self._push(nodes.Slice(Option(length), offset))
 
     def tail(self, n: int = 5) -> Self:
         """Get the last n rows.
@@ -355,8 +315,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the specified columns dropped.
         """
-        ast, new_schema = planner.drop(self._schema, columns, more_columns)
-        return self._from_ast(ast, new_schema, src=self)
+        return self._push(nodes.Drop(columns, more_columns))
 
     def drop_nulls(self, subset: TryIter[str] = None) -> Self:
         """Drop rows that contain null values.
@@ -367,7 +326,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with rows containing null values dropped.
         """
-        return planner.drop_rows(self._schema, subset, Expr.is_not_null).pipe(self._cls)
+        return self._push(nodes.DropRows(subset, Expr.is_not_null))
 
     def drop_nans(self, subset: TryIter[str] = None) -> Self:
         """Drop rows that contain NaN values.
@@ -378,7 +337,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with rows containing NaN values dropped.
         """
-        return planner.drop_rows(self._schema, subset, Expr.is_not_nan).pipe(self._cls)
+        return self._push(nodes.DropRows(subset, Expr.is_not_nan))
 
     def explode(
         self, columns: TryIter[IntoExprColumn], *more_columns: IntoExprColumn
@@ -392,20 +351,10 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the exploded columns.
         """
-        return (
-            planner
-            .explode(self._schema, columns, more_columns)
-            .with_(
-                planner.Tables.EXPLODE_SRC.name,
-                as_=self._inner,
-                materialized=False,
-                copy=False,
-            )
-            .pipe(self._make, self._sources, self._schema)
-        )
+        return self._push(nodes.Explode(columns, more_columns))
 
     def union(self, other: Self) -> Self:
-        return self._from_ast(planner.union(), self._schema, lhs=self, rhs=other)
+        return self._push(nodes.Union(other))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         """Rename columns.
@@ -416,8 +365,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the renamed columns.
         """
-        ast, schema = planner.rename(self._schema, mapping)
-        return self._from_ast(ast, schema, src=self)
+        return self._push(nodes.Rename(mapping))
 
     def sql_query(self) -> ParsedQuery:
         """Generate a `ParsedQuery` object.
@@ -429,7 +377,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         """
         from ._parser import ParsedQuery
 
-        return ParsedQuery(self._inner)
+        return ParsedQuery(self._compile().ast)
 
     def explain(self, kind: ExplainType | ExplainTypeLiteral = "standard") -> str:
         return self._collect().explain(kind)
@@ -437,8 +385,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
     def unnest(
         self, columns: TryIter[IntoExprColumn], *more_columns: IntoExprColumn
     ) -> Self:
-        ast, schema = planner.unnest(self._schema, columns, more_columns)
-        return self._from_ast(ast, schema, src=self)
+        return self._push(nodes.Unnest(columns, more_columns))
 
     def first(self) -> Self:
         """Get the first row.
@@ -590,7 +537,10 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame that is a copy of the current one.
         """
-        return self._make(self._inner, self._sources, self._schema)
+        out = self.__class__.__new__(self.__class__)
+        out._inner = self._inner
+        out._nodes = self._nodes
+        return out
 
     def gather_every(self, n: int, offset: int = 0) -> Self:
         """Take every nth row starting from offset.
@@ -605,7 +555,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         expr = col(Marker.TEMP)
         return (
             self
-            .with_row_index(name=Marker.TEMP, order_by=self.columns)
+            .with_row_index(name=Marker.TEMP, order_by=self.schema)
             .filter(expr.ge(offset).and_(expr.sub(offset).mod(n).eq(0)))
             .drop(Marker.TEMP)
         )
@@ -613,17 +563,18 @@ class LazyFrame(CoreHandler[exp.Selectable]):
     @property
     def columns(self) -> PyoKeysView[str]:
         """Get column names."""
-        return self._schema.keys()
+        return self._compile().schema.keys()
 
     @property
-    def dtypes(self) -> Iter[dt.DataType]:
+    def dtypes(self) -> PyoValuesView[dt.DataType]:
         """Get column data types."""
-        return self._schema.values().iter().map(dt.DataType.from_sql)
+        # NOTE: here we rely on `DuckDBPyRelation`, since ATM we still have `sqlglot::exp::DType::UNKNOWN` in the compiled results
+        return self.schema.values()
 
     @property
     def width(self) -> int:
         """Get number of columns."""
-        return self._schema.length()
+        return self._compile().schema.length()
 
     @property
     def schema(self) -> Dict[str, dt.DataType]:
@@ -639,11 +590,11 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Schema: The schema of the LazyFrame.
         """
+        rel = self._collect()
         return (
-            self._schema
-            .items()
-            .iter()
-            .map_star(lambda name, dtype: (name, dt.DataType.from_sql(dtype)))
+            Iter(rel.columns)
+            .zip(rel.dtypes)
+            .map_star(lambda name, dtype: (name, dt.DataType.from_duckdb(dtype)))
             .collect(Dict)
         )
 
@@ -670,10 +621,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame resulting from the join.
         """
-        ast, schema = planner.join(
-            self._schema, other, on, how, left_on, right_on, suffix
-        )
-        return self._from_ast(ast, schema=schema, lhs=self, rhs=other)
+        return self._push(nodes.Join(other, on, how, left_on, right_on, suffix))
 
     def join_cross(self, other: Self, *, suffix: str = "_right") -> Self:
         """Join with another LazyFrame using a cross join.
@@ -685,8 +633,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame resulting from the cross join.
         """
-        ast, new_schema = planner.join_cross(self._schema, other, suffix)
-        return self._from_ast(ast, schema=new_schema, lhs=self, rhs=other)
+        return self._push(nodes.JoinCross(other, suffix))
 
     def join_asof(  # noqa: PLR0913
         self,
@@ -717,19 +664,19 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame resulting from the asof join.
         """
-        ast, new_schema = planner.join_asof(
-            self._schema,
-            other,
-            Option(left_on),
-            Option(right_on),
-            Option(on),
-            by_left,
-            by_right,
-            by,
-            strategy,
-            suffix,
+        return self._push(
+            nodes.JoinAsof(
+                other,
+                Option(left_on),
+                Option(right_on),
+                Option(on),
+                by_left,
+                by_right,
+                by,
+                strategy,
+                suffix,
+            )
         )
-        return self._from_ast(ast, schema=new_schema, lhs=self, rhs=other)
 
     def unique(
         self,
@@ -748,7 +695,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with duplicates removed.
         """
-        return planner.unique(subset, keep, order_by).unwrap().pipe(self._cls)
+        return self._push(nodes.Unique(subset, keep, order_by))
 
     def pivot(  # noqa: PLR0913
         self,
@@ -775,8 +722,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the pivoted data.
         """
-        ast, schema = planner.pivot(
-            self._schema,
+        node = nodes.Pivot(
             on,
             on_columns,
             index,
@@ -785,7 +731,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
             maintain_order=maintain_order,
             separator=separator,
         )
-        return self._from_ast(ast, schema, src=self)
+        return self._push(node)
 
     def unpivot(
         self,
@@ -807,10 +753,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the unpivoted data.
         """
-        ast, new_schema = planner.unpivot(
-            self._schema, on, index, variable_name, value_name, order_by
-        )
-        return self._from_ast(ast, new_schema, src=self)
+        return self._push(nodes.Unpivot(on, index, variable_name, value_name, order_by))
 
     def with_row_index(self, name: str, *, order_by: TryIter[str]) -> Self:
         """Insert row index based on order_by.
@@ -822,8 +765,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the row index added.
         """
-        ast, new_schema = planner.with_row_index(self._schema, name, order_by)
-        return self._from_ast(ast, new_schema, src=self)
+        return self._push(nodes.WithRowIndex(name, order_by))
 
     def top_k(
         self, k: int, by: TryIter[IntoExpr], *, reverse: TrySeq[bool] = False
@@ -854,8 +796,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the columns cast to the specified dtypes.
         """
-        ast, schema = planner.cast(self._schema, dtypes)
-        return self._from_ast(ast, schema, src=self)
+        return self._push(nodes.Cast(dtypes))
 
     def sink_parquet(  # noqa: PLR0913
         self,
@@ -939,7 +880,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         """
         return (
             self
-            .with_row_index(name=Marker.TEMP, order_by=self.columns)
+            .with_row_index(name=Marker.TEMP, order_by=self.schema)
             .sort(Marker.TEMP, descending=True)
             .drop(Marker.TEMP)
         )

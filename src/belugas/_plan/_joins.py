@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     from pyochain.traits import PyoCollection
 
     from .._expr import Expr
-    from .._frame import LazyFrame
     from ..typing import AsofJoinStrategy, JoinStrategy, Schema, TryIter
 type OptSeq = Option[Seq[str]]
 type JoinKeysRes[T: Seq[str] | str] = Result[JoinKeys[T], ValueError]
@@ -21,7 +20,7 @@ type JoinKeysRes[T: Seq[str] | str] = Result[JoinKeys[T], ValueError]
 
 def join(  # noqa: PLR0913, PLR0917
     schema: Schema,
-    other: LazyFrame,
+    other: Schema,
     on: TryIter[str],
     how: JoinStrategy,
     left_on: TryIter[str],
@@ -40,13 +39,13 @@ def join(  # noqa: PLR0913, PLR0917
         .select(*exprs)
         .from_(Tables.LHS, copy=False)
         .join("rhs", on=condition, join_type=join_type),
-        builder.join_schema(schema, other._schema, join_keys, how),  # pyright: ignore[reportPrivateUsage]
+        builder.join_schema(schema, other, join_keys, how),
     )
 
 
 def join_asof(  # noqa: PLR0913, PLR0917
     schema: Schema,
-    other: LazyFrame,
+    other: Schema,
     left_on: Option[str],
     right_on: Option[str],
     on: Option[str],
@@ -88,7 +87,7 @@ def join_asof(  # noqa: PLR0913, PLR0917
         .items()
         .iter()
         .chain(
-            other._schema  # pyright: ignore[reportPrivateUsage]
+            other
             .items()
             .iter()
             .filter_star(lambda name, _: name not in drop_keys)
@@ -105,7 +104,7 @@ def join_asof(  # noqa: PLR0913, PLR0917
         builder.left
         .iter()
         .map(builder.lhs)
-        .chain(other.columns.iter().filter_map(builder.for_inner_left))
+        .chain(other.iter().filter_map(builder.for_inner_left))
         .map(lambda c: c.inner)
     )
     return (
@@ -118,14 +117,14 @@ def join_asof(  # noqa: PLR0913, PLR0917
 
 
 def join_cross(
-    schema: Schema, other: LazyFrame, suffix: str = "_right"
+    schema: Schema, other: Schema, suffix: str = "_right"
 ) -> tuple[exp.Select, Schema]:
-    builder = JoinBuilder(suffix, schema.keys(), other.columns)
+    builder = JoinBuilder(suffix, schema.keys(), other)
     exprs = builder.get_join_cols_cross()
     ast = (
         exp.select(*exprs).from_(Tables.LHS, copy=False).join("rhs", join_type="cross")
     )
-    new_schema = builder.join_schema_cross(schema, other._schema)  # pyright: ignore[reportPrivateUsage]
+    new_schema = builder.join_schema_cross(schema, other)
     return ast, new_schema
 
 
@@ -244,10 +243,10 @@ class JoinBuilder:
         return left_schema.items().iter().chain(right_pairs).collect(Dict)
 
     def get_join_cols(
-        self, other: LazyFrame, join_keys: JoinKeys[Seq[str]], how: JoinStrategy
+        self, other: Schema, join_keys: JoinKeys[Seq[str]], how: JoinStrategy
     ) -> Iter[exp.Expr | str]:
         left = self.left.iter()
-        right = other.columns.iter()
+        right = other.iter()
         match how:
             case "inner" | "left":
                 return (

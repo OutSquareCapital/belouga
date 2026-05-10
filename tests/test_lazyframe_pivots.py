@@ -187,6 +187,9 @@ def test_pivot_integer_on_columns(sample_df: pl.DataFrame) -> None:
 
 def test_pivot_no_index_no_values_error(sample_df: pl.DataFrame) -> None:
     with pytest.raises(ValueError, match=r"index.*or.*values"):
-        _ = bl.LazyFrame(sample_df).pivot(
-            "department", on_columns=["Engineering", "Sales"]
+        _ = (
+            bl
+            .LazyFrame(sample_df)
+            .pivot("department", on_columns=["Engineering", "Sales"])
+            .collect()
         )

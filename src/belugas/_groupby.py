@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING
 
 from pyochain import Option, Seq
 
-from . import _plan as planner
 from ._expr import Expr
 from ._funcs import len
+from ._plan import nodes
 
 if TYPE_CHECKING:
     from ._frame import LazyFrame
@@ -58,13 +58,10 @@ class LazyGroupBy:
         )
 
     def _agg_columns(self, func: Callable[[Expr], Expr]) -> LazyFrame:
-        ast, schema = planner.agg_columns(
-            self._frame._schema,  # pyright: ignore[reportPrivateUsage]
-            self._keys,
-            func,
-            drop_null_keys=self._drop_null_keys,
+        node = nodes.AggColumns(
+            self._keys, self._strategy, drop_null_keys=self._drop_null_keys, func=func
         )
-        return self._frame._from_ast(ast, schema=schema, src=self._frame)  # pyright: ignore[reportPrivateUsage]
+        return self._frame._push(node)  # pyright: ignore[reportPrivateUsage]
 
     def agg(
         self,
@@ -72,14 +69,12 @@ class LazyGroupBy:
         *more_aggs: IntoExpr,
         **named_aggs: IntoExpr,
     ) -> LazyFrame:
-        ast, schema = planner.agg(
-            self._frame._schema,  # pyright: ignore[reportPrivateUsage]
-            self._keys,
+        node = nodes.Agg(
             aggs,
             more_aggs,
             named_aggs,
+            self._keys,
             self._strategy,
             drop_null_keys=self._drop_null_keys,
         )
-
-        return self._frame._from_ast(ast, schema=schema, src=self._frame)  # pyright: ignore[reportPrivateUsage]
+        return self._frame._push(node)  # pyright: ignore[reportPrivateUsage]

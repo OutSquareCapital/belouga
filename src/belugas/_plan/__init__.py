@@ -4,7 +4,7 @@ from ._filters import drop, drop_rows, filter, limit
 from ._group_by import agg, agg_columns, group_by_all
 from ._joins import join, join_asof, join_cross
 from ._pivots import pivot, unpivot
-from ._resolve import Tables, extract_root_name, resolve_all
+from ._resolve import CompiledPlan, Tables, compile_plan, extract_root_name, resolve_all
 from ._selects import (
     cast,
     rename,
@@ -20,10 +20,12 @@ from ._unique import unique
 from ._unnest import unnest
 
 __all__ = [
+    "CompiledPlan",
     "Tables",
     "agg",
     "agg_columns",
     "cast",
+    "compile_plan",
     "drop",
     "drop_rows",
     "explode",

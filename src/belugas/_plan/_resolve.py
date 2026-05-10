@@ -2,17 +2,19 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
-from pyochain import Iter, Null, Option, Seq, Set, Some
+from pyochain import Dict, Iter, Null, Option, Seq, Set, Some, Vec
 from pyochain.traits import Pipeable
 from sqlglot import exp
 
 from .._core import Marker
 from ..utils import try_iter
+from . import nodes
 
 if TYPE_CHECKING:
     from .._expr import Cols, Expr
+    from .._scans import ScanSource
     from ..typing import IntoExpr, Schema, TryIter
 
 
@@ -22,6 +24,187 @@ class Tables:
     RHS: exp.Table = exp.to_table("rhs")
     STATS: exp.Table = exp.to_table("stats")
     EXPLODE_SRC: exp.Table = exp.to_table("_explode_src")
+
+
+class CompiledPlan(NamedTuple):
+    ast: exp.Selectable
+    schema: Schema
+    sources: Dict[str, ScanSource]
+
+
+def compile_plan(source: ScanSource, plan_nodes: Vec[nodes.PlanNode]) -> CompiledPlan:
+
+    schema: Schema = source.schema
+    sources: Dict[str, ScanSource] = Dict.from_ref({source.identity: source})
+    ast: exp.Selectable = exp.select(exp.Star()).from_(exp.to_table(source.identity))
+    for node in plan_nodes:
+        ast, schema, extra = _compile_node(ast, schema, node)
+        sources = sources.items().iter().chain(extra.items()).collect(Dict)
+    return CompiledPlan(ast, schema, sources)
+
+
+def _compile_node(  # noqa: PLR0915
+    src_ast: exp.Selectable, schema: Schema, node: nodes.PlanNode
+) -> tuple[exp.Selectable, Schema, Dict[str, ScanSource]]:
+    from belugas import _plan as plan
+
+    from .._scans import ScanSource
+
+    empty = Dict[str, ScanSource].new()
+
+    def sub(template: exp.Selectable) -> exp.Selectable:
+        return _substitute(template, {"src": src_ast})
+
+    def merge(ast: exp.Selectable, other: exp.Selectable) -> exp.Selectable:
+        return _substitute(ast, {"lhs": src_ast, "rhs": other})
+
+    match node:
+        case nodes.GroupBy() | nodes.Scan():
+            raise NotImplementedError
+        case nodes.Select():
+            ast, new_schema = plan.select(
+                schema, node.exprs, node.more_exprs, node.named
+            )
+            return sub(ast), new_schema, empty
+        case nodes.SelectAll():
+            ast, new_schema = plan.select_all(schema, node.func)
+            return sub(ast), new_schema, empty
+        case nodes.WithColumns():
+            ast, new_schema = plan.with_columns(
+                schema, node.exprs, node.more_exprs, node.named
+            )
+            return sub(ast), new_schema, empty
+        case nodes.Filter():
+            ast = plan.filter(node.predicates, node.more_predicates, node.constraints)
+            return sub(ast), schema, empty
+        case nodes.Sort():
+            ast = plan.sort(node.by, node.more_by, node.descending, node.nulls_last)
+            return sub(ast), schema, empty
+        case nodes.Limit():
+            ast = plan.limit(node.n)
+            return sub(ast), schema, empty
+        case nodes.Slice():
+            ast = plan.slice(node.length, node.offset).unwrap()
+            return sub(ast), schema, empty
+        case nodes.Drop():
+            ast, new_schema = plan.drop(schema, node.columns, node.more_columns)
+            return sub(ast), new_schema, empty
+        case nodes.DropRows():
+            ast = plan.drop_rows(schema, node.subset, node.fn)
+            return sub(ast), schema, empty
+        case nodes.Explode():
+            ast = plan.explode(schema, node.columns, node.more_columns).with_(
+                "_explode_src", as_=src_ast, materialized=False, copy=False
+            )
+            return ast, schema, empty
+        case nodes.Unnest():
+            ast, new_schema = plan.unnest(schema, node.columns, node.more_columns)
+            return sub(ast), new_schema, empty
+        case nodes.Rename():
+            ast, new_schema = plan.rename(schema, node.mapping)
+            return sub(ast), new_schema, empty
+        case nodes.Cast():
+            ast, new_schema = plan.cast(schema, node.dtypes)
+            return sub(ast), new_schema, empty
+        case nodes.WithRowIndex():
+            ast, new_schema = plan.with_row_index(schema, node.name, node.order_by)
+            return sub(ast), new_schema, empty
+        case nodes.GroupByAll():
+            ast, new_schema = plan.group_by_all(
+                schema, node.exprs, node.more_exprs, node.named
+            )
+            return sub(ast), new_schema, empty
+        case nodes.Agg():
+            ast, new_schema = plan.agg(
+                schema,
+                node.keys,
+                node.exprs,
+                node.more_exprs,
+                node.named,
+                node.strategy,
+                drop_null_keys=node.drop_null_keys,
+            )
+            return sub(ast), new_schema, empty
+        case nodes.AggColumns():
+            ast, new_schema = plan.agg_columns(
+                schema, node.keys, node.func, drop_null_keys=node.drop_null_keys
+            )
+            return sub(ast), new_schema, empty
+        case nodes.Unique():
+            ast = plan.unique(node.subset, node.keep, node.order_by).unwrap()
+            return sub(ast), schema, empty
+        case nodes.Pivot():
+            ast, new_schema = plan.pivot(
+                schema,
+                node.on,
+                node.on_columns,
+                node.index,
+                node.values,
+                node.aggregate_function,
+                maintain_order=node.maintain_order,
+                separator=node.separator,
+            )
+            return sub(ast), new_schema, empty
+        case nodes.Unpivot():
+            ast, new_schema = plan.unpivot(
+                schema,
+                node.on,
+                node.index,
+                node.variable_name,
+                node.value_name,
+                node.order_by,
+            )
+            return sub(ast), new_schema, empty
+        case nodes.Union():
+            other = node.other._compile()  # pyright: ignore[reportPrivateUsage]
+            ast = plan.union()
+            return (merge(ast, other.ast), schema, other.sources)
+        case nodes.Join():
+            other = node.other._compile()  # pyright: ignore[reportPrivateUsage]
+            ast, new_schema = plan.join(
+                schema,
+                other.schema,
+                node.on,
+                node.how,
+                node.left_on,
+                node.right_on,
+                node.suffix,
+            )
+            return (merge(ast, other.ast), new_schema, other.sources)
+        case nodes.JoinCross():
+            other = node.other._compile()  # pyright: ignore[reportPrivateUsage]
+            ast, new_schema = plan.join_cross(schema, other.schema, node.suffix)
+            return (merge(ast, other.ast), new_schema, other.sources)
+        case nodes.JoinAsof():
+            other = node.other._compile()  # pyright: ignore[reportPrivateUsage]
+            ast, new_schema = plan.join_asof(
+                schema,
+                other.schema,
+                node.left_on,
+                node.right_on,
+                node.on,
+                node.by_left,
+                node.by_right,
+                node.by,
+                node.strategy,
+                node.suffix,
+            )
+            return (merge(ast, other.ast), new_schema, other.sources)
+
+
+def _substitute(
+    template: exp.Selectable, subs: dict[str, exp.Selectable]
+) -> exp.Selectable:
+    def _replacer(node: exp.Selectable) -> exp.Selectable:
+        match node:
+            case exp.Table() if node.name in subs:
+                pivots = node.args.get("pivots")
+                alias = exp.TableAlias(this=exp.to_identifier(node.alias_or_name))
+                return exp.Subquery(this=subs[node.name], alias=alias, pivots=pivots)
+            case _:
+                return node
+
+    return template.transform(_replacer, copy=False)
 
 
 def lookup_type(inner: exp.Expr, schema: Schema) -> exp.DataType:
@@ -129,7 +312,7 @@ def resolve_all(
     )
 
 
-def _resolve(val: IntoExpr, schema: Schema) -> Iter[ResolvedExpr]:  # noqa: PLR0912
+def _resolve(val: IntoExpr, schema: Schema) -> Iter[ResolvedExpr]:
     from .._expr import Expr, MultiAliasMapper
 
     def _get_inner_node(inner_node: exp.Star | list[exp.Expr]) -> Cols:
@@ -227,7 +410,7 @@ def _expand_columns(
             )
 
 
-def extract_root_name(node: exp.Expr) -> str:  # noqa: PLR0911
+def extract_root_name(node: exp.Expr) -> str:
     match node:
         case exp.Alias() | exp.Column():
             return node.output_name
