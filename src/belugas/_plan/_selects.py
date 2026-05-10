@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from pyochain.traits import PyoIterable
 
     from .._expr import Expr
+    from ..datatypes import DataType
     from ..typing import IntoExpr, Schema
     from ..utils import TryIter
 
@@ -180,3 +181,22 @@ def union() -> exp.Union:
     lhs = slct(Tables.LHS)
     rhs = slct(Tables.RHS)
     return exp.union(lhs, rhs)
+
+
+def cast(
+    schema: Schema, dtypes: Mapping[str, DataType] | DataType
+) -> tuple[exp.Selectable, Schema]:
+    match dtypes:
+        case Mapping():
+            dtype_map = Dict(dtypes)
+            return select_all(
+                schema,
+                lambda c: (
+                    dtype_map
+                    .get_item(c.inner.output_name)
+                    .map(lambda dtype: c.cast(dtype.raw))
+                    .unwrap_or(c)
+                ),
+            )
+        case _:
+            return select_all(schema, lambda c: c.cast(dtypes.raw))

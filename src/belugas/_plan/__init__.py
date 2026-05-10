@@ -4,7 +4,15 @@ from ._group_by import agg, group_by_all
 from ._joins import join, join_asof, join_cross
 from ._meta import Marker, Tables, extract_root_name, resolve_all
 from ._pivots import pivot, unpivot
-from ._selects import rename, select, select_all, union, with_columns, with_row_index
+from ._selects import (
+    cast,
+    rename,
+    select,
+    select_all,
+    union,
+    with_columns,
+    with_row_index,
+)
 from ._slice import slice
 from ._sort import sort
 from ._unique import unique
@@ -14,6 +22,7 @@ __all__ = [
     "Marker",
     "Tables",
     "agg",
+    "cast",
     "drop",
     "drop_rows",
     "explode",

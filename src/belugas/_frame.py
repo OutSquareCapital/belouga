@@ -891,19 +891,8 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the columns cast to the specified dtypes.
         """
-        match dtypes:
-            case Mapping():
-                dtype_map = Dict(dtypes)
-                return self._iter_slct(
-                    lambda c: (
-                        dtype_map
-                        .get_item(c.inner.output_name)
-                        .map(lambda dtype: c.cast(dtype.raw))
-                        .unwrap_or(c)
-                    )
-                )
-            case _:
-                return self._iter_slct(lambda c: c.cast(dtypes.raw))
+        ast, schema = planner.cast(self._schema, dtypes)
+        return self._from_ast(ast, schema, src=self)
 
     def sink_parquet(  # noqa: PLR0913
         self,
