@@ -7,12 +7,12 @@ from pyochain import Dict, Iter, Option, Set
 from sqlglot import exp
 
 from .._core import into_expr
-from ..utils import TryIter, try_iter
+from ..utils import try_iter
 from ._meta import Tables
 
 if TYPE_CHECKING:
     from .._expr import Expr
-    from ..typing import IntoExpr, IntoExprColumn, Schema
+    from ..typing import IntoExpr, IntoExprColumn, Schema, TryIter
 
 
 def filter(

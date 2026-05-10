@@ -10,8 +10,7 @@ from ._meta import ResolvedExpr, Tables, lookup_type, resolve_all
 
 if TYPE_CHECKING:
     from .._expr import Expr
-    from ..typing import GroupByClause, IntoExpr, Schema
-    from ..utils import TryIter
+    from ..typing import GroupByClause, IntoExpr, Schema, TryIter
 
 
 def group_by_all(

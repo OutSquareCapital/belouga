@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, NamedTuple
 from pyochain import NONE, Dict, Err, Iter, Null, Ok, Option, Result, Seq, SetMut, Some
 from sqlglot import exp
 
-from ..utils import TryIter, try_seq
+from ..utils import try_seq
 from ._meta import Tables
 
 if TYPE_CHECKING:
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
     from .._expr import Expr
     from .._frame import LazyFrame
-    from ..typing import AsofJoinStrategy, JoinStrategy, Schema
+    from ..typing import AsofJoinStrategy, JoinStrategy, Schema, TryIter
 type OptSeq = Option[Seq[str]]
 type JoinKeysRes[T: Seq[str] | str] = Result[JoinKeys[T], ValueError]
 

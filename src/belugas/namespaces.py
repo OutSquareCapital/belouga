@@ -38,8 +38,8 @@ if TYPE_CHECKING:
         IntoExprColumn,
         TimeUnit,
         TransferEncoding,
+        TryIter,
     )
-    from .utils import TryIter
 
 
 class Sec(IntEnum):

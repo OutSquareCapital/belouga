@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from enum import StrEnum
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from pyochain import Iter, Option, Seq
 from sqlglot import exp
 
-type TryIter[T] = Iterable[T] | T | None
-"""Represent a value that may or may not be an `Iterable`."""
-type TrySeq[T] = Sequence[T] | T | None
-"""Represent a value that may or may not be a `Sequence`."""
+if TYPE_CHECKING:
+    from .typing import TryIter
 
 
 class UpperStrEnum(StrEnum):

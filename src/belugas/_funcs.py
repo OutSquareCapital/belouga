@@ -1,13 +1,17 @@
+from __future__ import annotations
+
 from collections.abc import Callable, Iterable
-from typing import final
+from typing import TYPE_CHECKING, final
 
 from pyochain import Iter, Option
 from sqlglot import exp
 
 from ._core import Marker, into_expr, into_expr_list
 from ._expr import Expr
-from .typing import IntoExpr, IntoExprColumn, PythonLiteral
-from .utils import TryIter, try_iter
+from .utils import try_iter
+
+if TYPE_CHECKING:
+    from .typing import IntoExpr, IntoExprColumn, PythonLiteral, TryIter
 
 
 def reduce(

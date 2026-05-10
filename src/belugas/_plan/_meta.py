@@ -9,11 +9,11 @@ from pyochain.traits import Pipeable
 from sqlglot import exp
 
 from .._core import Marker
-from ..utils import TryIter, try_iter
+from ..utils import try_iter
 
 if TYPE_CHECKING:
     from .._expr import Cols, Expr
-    from ..typing import IntoExpr, Schema
+    from ..typing import IntoExpr, Schema, TryIter
 
 
 class Tables:

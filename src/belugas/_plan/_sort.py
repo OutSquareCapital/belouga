@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING
 from pyochain import Err, Iter, Ok, Result, Seq
 from sqlglot import exp
 
-from ..utils import TryIter, TrySeq, try_iter
+from ..utils import try_iter
 from ._meta import Tables
 
 if TYPE_CHECKING:
     from .._expr import Expr
-    from ..typing import IntoExpr
+    from ..typing import IntoExpr, TryIter, TrySeq
 
 
 def sort(

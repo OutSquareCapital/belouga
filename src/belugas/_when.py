@@ -12,8 +12,7 @@ from ._funcs import reduce
 from .utils import try_iter
 
 if TYPE_CHECKING:
-    from .typing import IntoExpr
-    from .utils import TryIter
+    from .typing import IntoExpr, TryIter
 
 
 def when(predicates: TryIter[IntoExpr], *more_predicates: IntoExpr) -> When:

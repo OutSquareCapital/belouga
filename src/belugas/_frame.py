@@ -17,7 +17,7 @@ from ._core import CoreHandler, Marker
 from ._expr import Expr
 from ._funcs import col
 from ._scans import ScanSource
-from .utils import TryIter, TrySeq, try_iter
+from .utils import try_iter
 
 if TYPE_CHECKING:
     import polars as pl
@@ -48,6 +48,8 @@ if TYPE_CHECKING:
         PivotAgg,
         PythonLiteral,
         Schema,
+        TryIter,
+        TrySeq,
         UniqueKeepStrategy,
     )
 

@@ -21,8 +21,7 @@ if TYPE_CHECKING:
 
     from .._expr import Expr
     from ..datatypes import DataType
-    from ..typing import IntoExpr, Schema
-    from ..utils import TryIter
+    from ..typing import IntoExpr, Schema, TryIter
 
 
 def with_columns(

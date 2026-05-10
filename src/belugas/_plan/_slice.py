@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pyochain import Err, Ok, Option, Result, Some
 from sqlglot import exp
 

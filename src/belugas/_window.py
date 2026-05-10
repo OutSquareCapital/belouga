@@ -10,10 +10,10 @@ from pyochain import NONE, Iter, Null, Option, Seq, Some
 from sqlglot import exp
 
 from ._core import into_expr
-from .utils import TryIter, UpperStrEnum, try_iter
+from .utils import UpperStrEnum, try_iter
 
 if TYPE_CHECKING:
-    from .typing import FrameMode, IntoExprColumn, WindowExclude
+    from .typing import FrameMode, IntoExprColumn, TryIter, WindowExclude
 
 
 type FrameBound = int | Bounds | str

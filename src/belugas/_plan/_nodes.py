@@ -18,9 +18,10 @@ if TYPE_CHECKING:
         JoinStrategy,
         PivotAgg,
         PythonLiteral,
+        TryIter,
+        TrySeq,
         UniqueKeepStrategy,
     )
-    from ..utils import TryIter, TrySeq
 
 type ExprFn = Callable[[Expr], Expr]
 """Function type for operations that take a single `Expr` and return anoter.

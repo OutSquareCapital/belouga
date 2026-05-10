@@ -1,12 +1,17 @@
+from __future__ import annotations
+
 from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 from pyochain import Dict, Iter, Set
 from sqlglot import exp
 
 from .. import datatypes as dt
-from ..typing import IntoExprColumn, Schema
-from ..utils import TryIter, try_iter
+from ..utils import try_iter
 from ._meta import Tables
+
+if TYPE_CHECKING:
+    from ..typing import IntoExprColumn, Schema, TryIter
 
 
 def unnest(

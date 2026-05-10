@@ -39,9 +39,9 @@ if TYPE_CHECKING:
         RankMethod,
         RoundMode,
         Schema,
+        TryIter,
         WindowExclude,
     )
-    from .utils import TryIter
 
 _FILL_STRATEGY: dict[FillNullStrategy, Callable[[Expr], Expr]] = {
     "forward": lambda expr: expr.last_value().window(frame_end=0, ignore_nulls=True),

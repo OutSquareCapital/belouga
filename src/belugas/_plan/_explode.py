@@ -13,8 +13,7 @@ if TYPE_CHECKING:
     from pyochain.traits import PyoIterable
 
     from .._expr import Expr
-    from ..typing import IntoExprColumn, Schema
-    from ..utils import TryIter
+    from ..typing import IntoExprColumn, Schema, TryIter
 
 
 def explode(

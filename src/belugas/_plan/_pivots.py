@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING
 from pyochain import NONE, Dict, Err, Iter, Null, Ok, Option, Result, Seq, Some
 from sqlglot import exp
 
-from ..utils import TryIter, try_iter, try_seq
+from ..utils import try_iter, try_seq
 from ._meta import Tables
 
 if TYPE_CHECKING:
     from .._expr import Expr
-    from ..typing import PivotAgg, PythonLiteral, Schema
+    from ..typing import PivotAgg, PythonLiteral, Schema, TryIter
 
 PIVOT_AGG: Option[dict[PivotAgg, Callable[[Expr], Expr]]] = NONE
 

@@ -5,11 +5,11 @@ from typing import TYPE_CHECKING
 from pyochain import Err, Null, Ok, Result, Seq, Some
 from sqlglot import exp
 
-from ..utils import TryIter, TrySeq, try_seq
+from ..utils import try_seq
 from ._meta import Tables
 
 if TYPE_CHECKING:
-    from ..typing import UniqueKeepStrategy
+    from ..typing import TryIter, TrySeq, UniqueKeepStrategy
 
 
 def unique(

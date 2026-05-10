@@ -180,6 +180,10 @@ type DatePart = Literal[
 ]
 type AllDateParts = IntervalPart | DatePart
 
+type TryIter[T] = Iterable[T] | T | None
+"""Represent a value that may or may not be an `Iterable`."""
+type TrySeq[T] = Sequence[T] | T | None
+"""Represent a value that may or may not be a `Sequence`."""
 RoundMode = Literal["half_to_even", "half_away_from_zero"]
 type ParquetCompression = DuckParquetCompression
 type Orientation = Literal["row", "col"]

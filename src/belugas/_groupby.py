@@ -12,8 +12,7 @@ from ._funcs import len
 
 if TYPE_CHECKING:
     from ._frame import LazyFrame
-    from .typing import GroupByClause, IntoExpr
-    from .utils import TryIter
+    from .typing import GroupByClause, IntoExpr, TryIter
 
 
 @dataclass(slots=True)
