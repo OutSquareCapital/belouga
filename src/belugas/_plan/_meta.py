@@ -37,23 +37,6 @@ class Tables:
     EXPLODE_SRC: exp.Table = exp.to_table("_explode_src")
 
 
-def _has_window_ancestor(node: exp.Expr) -> bool:
-    def _ancestor_is_window(ancestor: exp.Expr | None) -> bool:
-        match ancestor:
-            case exp.Window():
-                return True
-            case exp.Distinct() | exp.Filter() | exp.IgnoreNulls() | exp.WithinGroup():
-                return (
-                    Option(ancestor.parent)
-                    .map(_ancestor_is_window)
-                    .unwrap_or(default=False)
-                )
-            case _:
-                return False
-
-    return _ancestor_is_window(node.parent)
-
-
 def lookup_type(inner: exp.Expr, schema: Schema) -> exp.DataType:
     node = inner.unalias()
     match node, node.args.get("to"):
@@ -73,48 +56,12 @@ class ResolvedExpr(Pipeable):
 
     expr: Expr
     name: str
-    has_projection_distinct: bool
+    has_distinct: bool
     is_pure_reducer: bool
 
     def __init__(self, expr: Expr, name: str) -> None:
         self.name = name
-        inner = expr.inner
-
-        def _is_projection_distinct(node: exp.Expr) -> bool:
-            return node.find_ancestor(exp.AggFunc, exp.List, exp.Window) is None
-
-        def _classify(
-            acc: tuple[bool, bool, bool], node: exp.Expr
-        ) -> tuple[bool, bool, bool]:
-            has_distinct, has_bare_agg, has_bare_col = acc
-            match node:
-                case exp.Distinct() if _is_projection_distinct(node):
-                    return (True, has_bare_agg, has_bare_col)
-                case exp.AggFunc() | exp.List() if not _has_window_ancestor(node):
-                    return (has_distinct, True, has_bare_col)
-                case exp.Column() if _is_projection_distinct(node):
-                    return (has_distinct, has_bare_agg, True)
-                case _:
-                    return acc
-
-        has_distinct, has_bare_agg, has_bare_col = Iter(inner.walk(bfs=False)).fold(
-            (False, False, False), _classify
-        )
-        self.has_projection_distinct = has_distinct
-        self.is_pure_reducer = has_bare_agg and not has_bare_col
-
-        if has_distinct:
-
-            def _strip(node: exp.Expr) -> exp.Expr:
-                match node:
-                    case exp.Distinct(expressions=[exp.Expr() as expr]):
-                        return expr
-                    case _:
-                        return node
-
-            self.expr = inner.transform(_strip).pipe(expr.__class__)
-        else:
-            self.expr = expr
+        self.expr, self.has_distinct, self.is_pure_reducer = into_resolved(expr)
 
     def as_aliased(self, *, broadcast_agg: bool) -> Expr:
         def _broadcast_reducers(expr: Expr) -> Expr:
@@ -130,6 +77,59 @@ class ResolvedExpr(Pipeable):
         return self.expr.pipe(
             lambda e: _broadcast_reducers(e) if broadcast_agg else e
         ).alias(self.name)
+
+
+def into_resolved(expr: Expr) -> tuple[Expr, bool, bool]:
+    inner = expr.inner
+
+    def _is_projection_distinct(node: exp.Expr) -> bool:
+        return node.find_ancestor(exp.AggFunc, exp.List, exp.Window) is None
+
+    def _classify(
+        acc: tuple[bool, bool, bool], node: exp.Expr
+    ) -> tuple[bool, bool, bool]:
+        has_distinct, has_bare_agg, has_bare_col = acc
+        match node, _is_projection_distinct(node):
+            case exp.Distinct(), True:
+                return (True, has_bare_agg, has_bare_col)
+            case exp.Column(), True:
+                return (has_distinct, has_bare_agg, True)
+            case exp.AggFunc() | exp.List(), _ if not _has_window_ancestor(node):
+                return (has_distinct, True, has_bare_col)
+            case _:
+                return acc
+
+    has_distinct, has_bare_agg, has_bare_col = Iter(inner.walk(bfs=False)).fold(
+        (False, False, False), _classify
+    )
+    if has_distinct:
+
+        def _strip(node: exp.Expr) -> exp.Expr:
+            match node:
+                case exp.Distinct(expressions=[exp.Expr() as expr]):
+                    return expr
+                case _:
+                    return node
+
+        expr = inner.transform(_strip).pipe(expr.__class__)
+    return expr, has_distinct, has_bare_agg and not has_bare_col
+
+
+def _has_window_ancestor(node: exp.Expr) -> bool:
+    def _ancestor_is_window(ancestor: exp.Expr | None) -> bool:
+        match ancestor:
+            case exp.Window():
+                return True
+            case exp.Distinct() | exp.Filter() | exp.IgnoreNulls() | exp.WithinGroup():
+                return (
+                    Option(ancestor.parent)
+                    .map(_ancestor_is_window)
+                    .unwrap_or(default=False)
+                )
+            case _:
+                return False
+
+    return _ancestor_is_window(node.parent)
 
 
 def resolve_all(

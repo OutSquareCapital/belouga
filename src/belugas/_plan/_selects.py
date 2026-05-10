@@ -150,7 +150,7 @@ def select(
         case Some(projs):
             new_schema = _select_schema(schema, projs)
             source = _into_windowed(projs)
-            if projs.all(lambda resolved: resolved.has_projection_distinct):
+            if projs.all(lambda resolved: resolved.has_distinct):
                 ast = aliased(broadcast_agg=False).from_(source).distinct()
             else:
                 ast = aliased(

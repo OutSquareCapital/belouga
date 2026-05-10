@@ -98,15 +98,13 @@ def agg(  # noqa: PLR0913, PLR0917
                 resolved = (
                     proj.expr
                     .__class__(inner)
-                    .pipe(_exploded, is_distinct=proj.has_projection_distinct)
+                    .pipe(_exploded, is_distinct=proj.has_distinct)
                     .list.flatten()
                 )
             case _, True:
                 resolved = proj.expr
             case _, False:
-                resolved = proj.expr.pipe(
-                    _exploded, is_distinct=proj.has_projection_distinct
-                )
+                resolved = proj.expr.pipe(_exploded, is_distinct=proj.has_distinct)
         _ = select_exprs.append(resolved.alias(proj.name).inner)
         base = lookup_type(proj.expr.inner, non_key_schema)
         _ = out_schema.insert(
