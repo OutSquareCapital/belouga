@@ -965,3 +965,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
     @property
     def shape(self) -> tuple[int, int]:
         return self._collect().shape
+
+    @property
+    def height(self) -> int:
+        return self._collect().shape[0]
