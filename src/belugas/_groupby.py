@@ -4,11 +4,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from pyochain import Option, Seq, Set
+from pyochain import Option, Seq
 
 from . import _plan as planner
 from ._expr import Expr
-from ._funcs import col, len
+from ._funcs import len
 
 if TYPE_CHECKING:
     from ._frame import LazyFrame
@@ -59,14 +59,13 @@ class LazyGroupBy:
         )
 
     def _agg_columns(self, func: Callable[[Expr], Expr]) -> LazyFrame:
-        key_names = self._keys.iter().map(lambda k: k.inner.output_name).collect(Set)
-        agg_exprs = (
-            self._frame._schema  # pyright: ignore[reportPrivateUsage]
-            .iter()
-            .filter(lambda name: name not in key_names)
-            .map(lambda name: col(name).pipe(func).alias(name))
+        ast, schema = planner.agg_columns(
+            self._frame._schema,  # pyright: ignore[reportPrivateUsage]
+            self._keys,
+            func,
+            drop_null_keys=self._drop_null_keys,
         )
-        return self.agg(agg_exprs)
+        return self._frame._from_ast(ast, schema=schema, src=self._frame)  # pyright: ignore[reportPrivateUsage]
 
     def agg(
         self,

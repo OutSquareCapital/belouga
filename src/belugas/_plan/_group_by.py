@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING
 
 from pyochain import Dict, Iter, Seq, Set, Vec
@@ -144,3 +144,22 @@ def _group_by_clause(
             return Iter.once(exp.Rollup(expressions=list(key_glots)))
         case None:
             return key_glots
+
+
+def agg_columns(
+    schema: Schema,
+    keys: Seq[Expr],
+    func: Callable[[Expr], Expr],
+    *,
+    drop_null_keys: bool,
+) -> tuple[exp.Select, Schema]:
+    from .._funcs import col
+
+    key_names = keys.iter().map(lambda k: k.inner.output_name).collect(Set)
+    agg_exprs = (
+        schema
+        .iter()
+        .filter(lambda name: name not in key_names)
+        .map(lambda name: col(name).pipe(func).alias(name))
+    )
+    return agg(schema, keys, agg_exprs, (), {}, None, drop_null_keys=drop_null_keys)
