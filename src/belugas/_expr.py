@@ -922,9 +922,7 @@ class Expr(Fns):
         Returns:
             Self: A boolean expression indicating whether the value is duplicated.
         """
-        from ._funcs import all
-
-        return self._cls(all().count().window(self).gt(1).inner)
+        return self._cls(self.count().window(self).gt(1).inner)
 
     def is_unique(self) -> Self:
         """Check if value is unique.
@@ -932,9 +930,7 @@ class Expr(Fns):
         Returns:
             Self: A boolean expression indicating whether the value is unique.
         """
-        from ._funcs import all
-
-        return self._cls(all().count().window(self).eq(1).inner)
+        return self._cls(self.count().window(self).eq(0).inner)
 
     def arg_sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """Return indices that would sort the expression."""
@@ -1191,9 +1187,7 @@ class Expr(Fns):
         """
 
         def _peer_count() -> Expr:
-            from ._funcs import all
-
-            return all().count().window(self.inner)
+            return self.count().window(self.inner)
 
         def _base_rank() -> Self:
             return (

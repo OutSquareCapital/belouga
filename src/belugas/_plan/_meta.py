@@ -171,7 +171,10 @@ def _resolve(val: IntoExpr, schema: Schema) -> Iter[ResolvedExpr]:  # noqa: PLR0
                 case _:
                     match val.inner.find(exp.Columns):
                         case None:
-                            match val.inner:
+                            match val.inner.find(exp.Star):
+                                case None:
+                                    name = extract_root_name(val.inner)
+                                    return ResolvedExpr(val, name).into(Iter.once)
                                 case exp.Star() as star:
                                     excepts: list[exp.Expr] | None = star.args.get(
                                         "except_"
@@ -192,9 +195,6 @@ def _resolve(val: IntoExpr, schema: Schema) -> Iter[ResolvedExpr]:  # noqa: PLR0
                                                 .collect()
                                             )
                                     return _expand_columns(val, base_names, base_names)
-                                case _:
-                                    name = extract_root_name(val.inner)
-                                    return ResolvedExpr(val, name).into(Iter.once)
                         case _ as columns_node:
                             base_names = _get_inner_node(columns_node.this)  # pyright: ignore[reportAny]
                             return _expand_columns(val, base_names, base_names)
