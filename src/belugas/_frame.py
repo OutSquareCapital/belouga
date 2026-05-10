@@ -219,9 +219,7 @@ class LazyFrame(CoreHandler[exp.Selectable]):
         Returns:
             Self: A new LazyFrame with the filtered rows.
         """
-        return planner.filter(predicates, *more_predicates, **constraints).pipe(
-            self._cls
-        )
+        return planner.filter(predicates, more_predicates, constraints).pipe(self._cls)
 
     def group_by(
         self,

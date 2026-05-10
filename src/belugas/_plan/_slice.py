@@ -8,7 +8,7 @@ from ._resolve import Tables
 MAX_I64 = 9_223_372_036_854_775_807
 
 
-def slice(lf_length: Option[int], offset: int) -> Result[exp.Select, ValueError]:
+def slice(lf_length: Option[int], offset: int) -> Result[exp.Selectable, ValueError]:
     from .._expr import Expr
     from .._funcs import col, lit
 

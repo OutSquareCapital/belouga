@@ -90,6 +90,8 @@ class Agg(_Expressions, _GroupByBase):
 class AggColumns(_GroupByBase):
     """Node representing an aggregation operation that applies the same function to all columns."""
 
+    func: ExprFn
+
 
 @dataclass(slots=True)
 class GroupByAll(_Expressions, Node):
@@ -164,7 +166,7 @@ class JoinCross(_JoinBase):
 
 
 @dataclass(slots=True)
-class JoinAsof(Node):
+class JoinAsof(_JoinBase):
     left_on: Option[str]
     right_on: Option[str]
     on: Option[str]

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 def unique(
     subset: TryIter[str], keep: UniqueKeepStrategy, order_by: TrySeq[str]
-) -> Result[exp.Select, ValueError]:
+) -> Result[exp.Selectable, ValueError]:
     match (keep, try_seq(order_by), try_seq(subset)):
         case ("none", _, Null()):
             return Ok(_none_on_all())

@@ -17,8 +17,8 @@ if TYPE_CHECKING:
 
 def filter(
     predicates: TryIter[IntoExprColumn],
-    *more_predicates: IntoExprColumn,
-    **constraints: IntoExpr,
+    more_predicates: Iterable[IntoExprColumn],
+    constraints: dict[str, IntoExpr],
 ) -> exp.Select:
     from .._expr import Expr
     from .._funcs import col
@@ -52,7 +52,7 @@ def drop_rows(
         .map(try_iter)
         .unwrap_or_else(lambda: schema.keys().iter())
         .map(lambda name: col(name).pipe(fn))
-        .into(filter)
+        .into(filter, (), {})
     )
 
 
