@@ -291,18 +291,22 @@ def _get_conn(connection: DuckDBPyConnection | None) -> DuckDBPyConnection:
 COL0 = "column_0"
 
 
-class PQLConversionError(ValueError):
+class BelugasConversionError(ValueError):
     """Raised when a conversion from a sqlglot expression to a DuckDB expression fails."""
 
     def __init__(self, e: Exception, expr: exp.Expr) -> None:
         msg = f"""
 Failed to convert expression to DuckDB!
-error:
+DuckDB error:
         {e}
-    expression:
-        {expr!r}
-    SQL:
-        {expr.sql(dialect="duckdb", pretty=True, identify=True)}
+----------------------------------
+sqlglot expression:
+{expr!r}
+----------------------------------
+SQL representation:
+```sql
+{expr.sql(dialect="duckdb", pretty=True, identify=True)}
+```
 """
         super().__init__(msg)
 
@@ -324,7 +328,7 @@ class ScanSource:
             DuckDBPyRelation: The resulting DuckDB relation.
 
         Raises:
-                PQLConversionError: If the SQL query cannot be parsed by DuckDB.
+                BelugasConversionError: If the SQL query cannot be parsed by DuckDB.
         """
         try:
             rels = (
@@ -338,7 +342,7 @@ class ScanSource:
             result = cast(DuckDBPyRelation, namespace["relation"])
             return cls.from_relation(result)
         except duckdb.Error as e:
-            raise PQLConversionError(e, query) from e
+            raise BelugasConversionError(e, query) from e
 
     @classmethod
     def build(cls, source: IntoRel | None, orient: Orientation = "col") -> Self:  # noqa: PLR0911
