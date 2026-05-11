@@ -27,6 +27,8 @@ from .utils import try_iter
 if TYPE_CHECKING:
     from decimal import Decimal
 
+    from rich.console import RenderableType
+
     from . import namespaces as nm
     from .selectors import Selector
     from .typing import (
@@ -179,6 +181,11 @@ class Expr(Fns):
     """A wrapper around sqlglot.exp.Expr that provides operator overloading and SQL function methods."""
 
     aliaser: AliasMapper = field(default_factory=AliasMapper)
+
+    def __rich__(self) -> RenderableType:  # noqa: PLW3201
+        from ._show import expr_tree
+
+        return expr_tree(self.inner)
 
     @classmethod
     def new(cls, value: IntoExpr, *, as_col: bool = False) -> Self:
