@@ -5,7 +5,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Self, SupportsInt, overload
+from typing import TYPE_CHECKING, Any, Literal, Self, SupportsInt, overload, override
 
 from pyochain import Dict, Option, Vec
 
@@ -69,9 +69,11 @@ class LazyFrame(CoreHandler[nodes.Node]):
                 node = nodes.ScanInMemory(Option(connection), data, orient)
                 self._inner = node
 
-    def _push(self, node: nodes.Node) -> Self:
-        out = self.__class__.__new__(self.__class__)
-        out._inner = node
+    @override
+    def _cls(self, value: nodes.Node) -> Self:
+        cls = self.__class__
+        out = cls.__new__(cls)
+        out._inner = value
         return out
 
     def _collect(self) -> scans.ScanResult:
@@ -80,7 +82,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
         return compiled.ast.pipe(scans.run_query, compiled.sources)
 
     def _iter_slct(self, func: Callable[[Expr], Expr]) -> Self:
-        return self._push(nodes.SelectAll(self._inner, func))
+        return self._cls(nodes.SelectAll(self._inner, func))
 
     @overload
     def _into_pl(self, *, lazy: Literal[True]) -> pl.LazyFrame: ...
@@ -143,7 +145,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Returns:
             Self: A new LazyFrame with the selected columns.
         """
-        return self._push(nodes.Select(self._inner, exprs, more_exprs, named_exprs))
+        return self._cls(nodes.Select(self._inner, exprs, more_exprs, named_exprs))
 
     def with_columns(
         self,
@@ -161,9 +163,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Returns:
             Self: A new LazyFrame with the added or replaced columns.
         """
-        return self._push(
-            nodes.WithColumns(self._inner, exprs, more_exprs, named_exprs)
-        )
+        return self._cls(nodes.WithColumns(self._inner, exprs, more_exprs, named_exprs))
 
     def filter(
         self,
@@ -181,7 +181,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Returns:
             Self: A new LazyFrame with the filtered rows.
         """
-        return self._push(
+        return self._cls(
             nodes.Filter(self._inner, predicates, more_predicates, constraints)
         )
 
@@ -229,7 +229,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Returns:
             Self: A new LazyFrame with the aggregated rows.
         """
-        return self._push(nodes.GroupByAll(self._inner, exprs, more_exprs, named_exprs))
+        return self._cls(nodes.GroupByAll(self._inner, exprs, more_exprs, named_exprs))
 
     def sort(
         self,
@@ -249,7 +249,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Returns:
             Self: A new LazyFrame with the sorted rows.
         """
-        return self._push(nodes.Sort(self._inner, by, more_by, descending, nulls_last))
+        return self._cls(nodes.Sort(self._inner, by, more_by, descending, nulls_last))
 
     def limit(self, n: int) -> Self:
         """Limit the number of rows.
@@ -260,7 +260,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Returns:
             Self: A new LazyFrame with the limited rows.
         """
-        return self._push(nodes.Limit(self._inner, n))
+        return self._cls(nodes.Limit(self._inner, n))
 
     def head(self, n: int = 5) -> Self:
         """Get the first n rows.
@@ -283,7 +283,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Returns:
             Self: A new LazyFrame with the sliced rows.
         """
-        return self._push(nodes.Slice(self._inner, Option(length), offset))
+        return self._cls(nodes.Slice(self._inner, Option(length), offset))
 
     def tail(self, n: int = 5) -> Self:
         """Get the last n rows.
@@ -318,7 +318,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Returns:
             Self: A new LazyFrame with the specified columns dropped.
         """
-        return self._push(nodes.Drop(self._inner, columns, more_columns))
+        return self._cls(nodes.Drop(self._inner, columns, more_columns))
 
     def drop_nulls(self, subset: TryIter[str] = None) -> Self:
         """Drop rows that contain null values.
@@ -329,7 +329,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Returns:
             Self: A new LazyFrame with rows containing null values dropped.
         """
-        return self._push(nodes.DropRows(self._inner, subset, Expr.is_not_null))
+        return self._cls(nodes.DropRows(self._inner, subset, Expr.is_not_null))
 
     def drop_nans(self, subset: TryIter[str] = None) -> Self:
         """Drop rows that contain NaN values.
@@ -340,7 +340,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Returns:
             Self: A new LazyFrame with rows containing NaN values dropped.
         """
-        return self._push(nodes.DropRows(self._inner, subset, Expr.is_not_nan))
+        return self._cls(nodes.DropRows(self._inner, subset, Expr.is_not_nan))
 
     def explode(
         self, columns: TryIter[IntoExprColumn], *more_columns: IntoExprColumn
@@ -354,10 +354,10 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Returns:
             Self: A new LazyFrame with the exploded columns.
         """
-        return self._push(nodes.Explode(self._inner, columns, more_columns))
+        return self._cls(nodes.Explode(self._inner, columns, more_columns))
 
     def union(self, other: Self) -> Self:
-        return self._push(nodes.Union(self._inner, other.inner))
+        return self._cls(nodes.Union(self._inner, other.inner))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         """Rename columns.
@@ -368,7 +368,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Returns:
             Self: A new LazyFrame with the renamed columns.
         """
-        return self._push(nodes.Rename(self._inner, mapping))
+        return self._cls(nodes.Rename(self._inner, mapping))
 
     def sql_query(self) -> ParsedQuery:
         """Generate a `ParsedQuery` object.
@@ -395,7 +395,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
     def unnest(
         self, columns: TryIter[IntoExprColumn], *more_columns: IntoExprColumn
     ) -> Self:
-        return self._push(nodes.Unnest(self._inner, columns, more_columns))
+        return self._cls(nodes.Unnest(self._inner, columns, more_columns))
 
     def first(self) -> Self:
         """Get the first row.
@@ -631,7 +631,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Returns:
             Self: A new LazyFrame resulting from the join.
         """
-        return self._push(
+        return self._cls(
             nodes.Join(self._inner, other.inner, on, how, left_on, right_on, suffix)
         )
 
@@ -645,7 +645,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Returns:
             Self: A new LazyFrame resulting from the cross join.
         """
-        return self._push(nodes.JoinCross(self._inner, other.inner, suffix))
+        return self._cls(nodes.JoinCross(self._inner, other.inner, suffix))
 
     def join_asof(  # noqa: PLR0913
         self,
@@ -676,7 +676,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Returns:
             Self: A new LazyFrame resulting from the asof join.
         """
-        return self._push(
+        return self._cls(
             nodes.JoinAsof(
                 self._inner,
                 other.inner,
@@ -708,7 +708,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Returns:
             Self: A new LazyFrame with duplicates removed.
         """
-        return self._push(nodes.Unique(self._inner, subset, keep, order_by))
+        return self._cls(nodes.Unique(self._inner, subset, keep, order_by))
 
     def pivot(  # noqa: PLR0913
         self,
@@ -745,7 +745,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
             maintain_order=maintain_order,
             separator=separator,
         )
-        return self._push(node)
+        return self._cls(node)
 
     def unpivot(
         self,
@@ -767,7 +767,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Returns:
             Self: A new LazyFrame with the unpivoted data.
         """
-        return self._push(
+        return self._cls(
             nodes.Unpivot(self._inner, on, index, variable_name, value_name, order_by)
         )
 
@@ -781,7 +781,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Returns:
             Self: A new LazyFrame with the row index added.
         """
-        return self._push(nodes.WithRowIndex(self._inner, name, order_by))
+        return self._cls(nodes.WithRowIndex(self._inner, name, order_by))
 
     def top_k(
         self, k: int, by: TryIter[IntoExpr], *, reverse: TrySeq[bool] = False
@@ -812,7 +812,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Returns:
             Self: A new LazyFrame with the columns cast to the specified dtypes.
         """
-        return self._push(nodes.Cast(self._inner, dtypes))
+        return self._cls(nodes.Cast(self._inner, dtypes))
 
     def sink_parquet(  # noqa: PLR0913
         self,

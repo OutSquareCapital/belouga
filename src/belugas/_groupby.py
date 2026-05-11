@@ -65,7 +65,7 @@ class LazyGroupBy:
             drop_null_keys=self._drop_null_keys,
             func=func,
         )
-        return self._frame._push(node)  # pyright: ignore[reportPrivateUsage]
+        return self._frame._cls(node)  # pyright: ignore[reportPrivateUsage]
 
     def agg(
         self,
@@ -82,4 +82,4 @@ class LazyGroupBy:
             self._strategy,
             drop_null_keys=self._drop_null_keys,
         )
-        return self._frame._push(node)  # pyright: ignore[reportPrivateUsage]
+        return self._frame._cls(node)  # pyright: ignore[reportPrivateUsage]
