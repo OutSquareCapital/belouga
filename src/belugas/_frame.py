@@ -211,7 +211,8 @@ class LazyFrame(CoreHandler[nodes.Node]):
             .map(lambda key: Expr.new(key, as_col=True))
             .collect()
         )
-        return LazyGroupBy(self, key_exprs, strategy, drop_null_keys)
+        node = nodes.GroupBy(self._inner, key_exprs, strategy, drop_null_keys)
+        return LazyGroupBy(node)
 
     def group_by_all(
         self,

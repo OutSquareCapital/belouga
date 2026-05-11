@@ -175,25 +175,22 @@ class Filter(LogicalNode):
     constraints: dict[str, IntoExpr]
 
 
-@dataclass(repr=False)
-class _GroupByBase(LogicalNode):
+@dataclass(slots=True, repr=False)
+class GroupBy(LogicalNode):
+    """Node representing a group_by operation."""
+
     keys: Seq[Expr]
     strategy: GroupByClause | None
     drop_null_keys: bool
 
 
 @dataclass(slots=True, repr=False)
-class GroupBy(_GroupByBase):
-    """Node representing a group_by operation."""
-
-
-@dataclass(slots=True, repr=False)
-class Agg(_GroupByBase, _Expressions):
+class Agg(_Expressions):
     """Node representing an aggregation operation."""
 
 
 @dataclass(slots=True, repr=False)
-class AggColumns(_GroupByBase):
+class AggColumns(LogicalNode):
     """Node representing an aggregation operation that applies the same function to all columns."""
 
     func: ExprFn

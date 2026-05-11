@@ -4,23 +4,20 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from pyochain import Option, Seq
+from pyochain import Option
 
 from ._expr import Expr
+from ._frame import LazyFrame
 from ._funcs import len
 from ._plan import nodes
 
 if TYPE_CHECKING:
-    from ._frame import LazyFrame
-    from .typing import GroupByClause, IntoExpr, TryIter
+    from .typing import IntoExpr, TryIter
 
 
 @dataclass(slots=True)
 class LazyGroupBy:
-    _frame: LazyFrame
-    _keys: Seq[Expr]
-    _strategy: GroupByClause | None
-    _drop_null_keys: bool
+    _inner: nodes.GroupBy
 
     def len(self, name: str | None = None) -> LazyFrame:
         return self.agg(Option(name).map(len().alias).unwrap_or_else(len))
@@ -58,14 +55,8 @@ class LazyGroupBy:
         )
 
     def _agg_columns(self, func: Callable[[Expr], Expr]) -> LazyFrame:
-        node = nodes.AggColumns(
-            self._frame.inner,
-            self._keys,
-            self._strategy,
-            drop_null_keys=self._drop_null_keys,
-            func=func,
-        )
-        return self._frame._cls(node)  # pyright: ignore[reportPrivateUsage]
+        node = nodes.AggColumns(self._inner, func=func)
+        return _from_node(node)
 
     def agg(
         self,
@@ -73,13 +64,11 @@ class LazyGroupBy:
         *more_aggs: IntoExpr,
         **named_aggs: IntoExpr,
     ) -> LazyFrame:
-        node = nodes.Agg(
-            self._frame.inner,
-            aggs,
-            more_aggs,
-            named_aggs,
-            self._keys,
-            self._strategy,
-            drop_null_keys=self._drop_null_keys,
-        )
-        return self._frame._cls(node)  # pyright: ignore[reportPrivateUsage]
+        node = nodes.Agg(self._inner, aggs, more_aggs, named_aggs)
+        return _from_node(node)
+
+
+def _from_node(scan: nodes.Agg | nodes.AggColumns) -> LazyFrame:
+    out = LazyFrame.__new__(LazyFrame)
+    out._inner = scan  # pyright: ignore[reportPrivateUsage]
+    return out
