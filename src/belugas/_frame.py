@@ -13,8 +13,7 @@ from . import datatypes as dt
 from ._core import CoreHandler, Marker
 from ._expr import Expr
 from ._funcs import col
-from ._plan import compile_plan, nodes
-from ._scans import ScanSource
+from ._plan import compile_plan, nodes, scans
 from .utils import try_iter
 
 if TYPE_CHECKING:
@@ -28,7 +27,7 @@ if TYPE_CHECKING:
         CsvCompression,
         ParquetFieldsOptions,
     )
-    from duckdb import DuckDBPyRelation
+    from duckdb import DuckDBPyConnection, DuckDBPyRelation
     from pyochain.traits import PyoKeysView, PyoValuesView
 
     from ._groupby import LazyGroupBy
@@ -57,12 +56,18 @@ class LazyFrame(CoreHandler[nodes.Plan]):
 
     _inner: nodes.Plan
 
-    def __init__(self, data: IntoRel | Self, orient: Orientation = "col") -> None:
+    def __init__(
+        self,
+        data: IntoRel | Self,
+        orient: Orientation = "col",
+        connection: DuckDBPyConnection | None = None,
+    ) -> None:
         match data:
             case LazyFrame():
                 self._inner = data._inner
             case _:
-                self._inner = Vec([nodes.Scan(data, orient)])
+                node = nodes.ScanInMemory(Option(connection), data, orient)
+                self._inner = Vec([node])  # pyright: ignore[reportAttributeAccessIssue]
 
     def _push(self, node: nodes.Node) -> Self:
         out = self.__class__.__new__(self.__class__)
@@ -71,7 +76,8 @@ class LazyFrame(CoreHandler[nodes.Plan]):
 
     def _collect(self) -> DuckDBPyRelation:
         compiled = compile_plan(self._inner)
-        return compiled.ast.pipe(ScanSource.from_query, **compiled.sources).relation
+
+        return compiled.ast.pipe(scans.run_query, **compiled.sources).relation
 
     def _iter_slct(self, func: Callable[[Expr], Expr]) -> Self:
         return self._push(nodes.SelectAll(func))

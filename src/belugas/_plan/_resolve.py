@@ -1,21 +1,29 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, NamedTuple
 
+from duckdb import DuckDBPyRelation
 from pyochain import Dict, Iter, Null, Option, Seq, Set, Some, Vec
 from pyochain.traits import Pipeable
 from sqlglot import exp
 
+from belugas.typing import (
+    IntoArrowArray,
+    IntoArrowStream,
+    IntoPlDataFrame,
+    IntoPlLazyFrame,
+    NPArrayLike,
+)
+
 from .._core import Marker
 from ..utils import try_iter
-from . import nodes
+from . import nodes, scans
 from ._optimize import optimize_nodes
 
 if TYPE_CHECKING:
     from .._expr import Cols, Expr
-    from .._scans import ScanSource
     from ..typing import IntoExpr, Schema, TryIter
 
 type NodeResult = tuple[exp.Selectable, Schema]
@@ -32,7 +40,7 @@ class Tables:
 class CompiledPlan(NamedTuple):
     ast: exp.Selectable
     schema: Schema
-    sources: Dict[str, ScanSource]
+    sources: Dict[str, DuckDBPyRelation]
 
 
 def compile_plan(plan_nodes: nodes.Plan, *, optimize: bool = True) -> CompiledPlan:
@@ -41,27 +49,53 @@ def compile_plan(plan_nodes: nodes.Plan, *, optimize: bool = True) -> CompiledPl
         sources.extend(extra.items())
         return new_ast, new_schema
 
-    from .._scans import ScanSource
-
     scan: nodes.Scan = plan_nodes.first()  # pyright: ignore[reportAssignmentType]
-    source = ScanSource.build(scan.data, scan.orient).set_alias()
+    source = _resolve_scan(scan).set_alias()
     ast = exp.select(exp.Star()).from_(exp.to_table(source.identity))
     accumulator = (ast, source.schema)
-    sources = Vec([(source.identity, source)])
+    sources = Vec([(source.identity, source.relation)])
     optimized_nodes = optimize_nodes(plan_nodes) if optimize else plan_nodes
     return CompiledPlan(
-        *optimized_nodes.iter().fold(accumulator, _process), sources.into(Dict)
+        *optimized_nodes.iter().skip(1).fold(accumulator, _process), sources.into(Dict)
     )
+
+
+def _resolve_scan(node: nodes.Scan) -> scans.ScanResult:
+    match node:
+        case nodes.ScanInMemory():
+            match node.data:
+                case None:
+                    return scans.from_dict({Marker.TEMP: ()})
+                case DuckDBPyRelation():
+                    return scans.from_query(node.data)
+                case Mapping():
+                    return scans.from_dict(node.data)
+                case NPArrayLike():
+                    return scans.from_numpy(node.data, orient=node.orient)
+                case IntoPlDataFrame() | IntoPlLazyFrame():
+                    return scans.from_polars(node.data)
+                case IntoArrowStream() | IntoArrowArray():
+                    return scans.from_arrow(node.data)
+                case Sequence():
+                    return scans.from_records(node.data, orient=node.orient)
+        case nodes.ScanTable():
+            return scans.from_table(node.table)
+        case nodes.ScanTableFunction():
+            return scans.from_table_function(node.function)
+        case nodes.ScanCSV():
+            return scans.from_csv(node.path, node.connection, node.options)
+        case nodes.ScanParquet():
+            return scans.from_parquet(node.path, node.connection, node.options)
+        case nodes.ScanJson():
+            return scans.from_json(node.path, node.connection, node.options)
 
 
 def _compile_node(  # noqa: PLR0915
     src_ast: exp.Selectable, schema: Schema, node: nodes.Node
-) -> tuple[exp.Selectable, Schema, Dict[str, ScanSource]]:
+) -> tuple[exp.Selectable, Schema, Dict[str, DuckDBPyRelation]]:
     from belugas import _plan as plan
 
-    from .._scans import ScanSource
-
-    empty = Dict[str, ScanSource].new()
+    empty = Dict[str, DuckDBPyRelation].new()
 
     def sub(ast: exp.Selectable) -> exp.Selectable:
         return _substitute(ast, {"src": src_ast})
@@ -70,11 +104,6 @@ def _compile_node(  # noqa: PLR0915
         return _substitute(ast, {"lhs": src_ast, "rhs": other})
 
     match node:
-        case nodes.Scan():
-            source = ScanSource.build(node.data, node.orient).set_alias()
-            ast = exp.select(exp.Star()).from_(exp.to_table(source.identity))
-            new_schema = source.schema
-            return ast, new_schema, Dict([(source.identity, source)])
         case nodes.GroupBy():
             raise NotImplementedError
         case nodes.Select():

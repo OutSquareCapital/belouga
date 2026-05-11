@@ -6,7 +6,6 @@ import duckdb
 import numpy as np
 import polars as pl
 import pytest
-import sqlglot
 from polars.testing import assert_frame_equal
 from pyochain import Iter
 
@@ -58,14 +57,6 @@ def test_protocols() -> None:
     assert isinstance(df.to_pandas(), t.IntoArrowStream)
     assert isinstance(df.to_numpy(), t.NPArrayLike)
     assert isinstance(df.to_arrow(), t.IntoArrowStream)
-
-
-def test_from_query() -> None:
-    df = PL_DF  # pyright: ignore[reportUnusedVariable]  # noqa: F841
-    qry = sqlglot.select("*").from_("df")
-    bl_df = bl.from_query(qry, df=PL_DF).collect()
-    pl_df = duckdb.from_query(qry.sql(dialect="duckdb")).pl()
-    assert_eq(bl_df, pl_df)
 
 
 def test_from_duckdb_relation() -> None:

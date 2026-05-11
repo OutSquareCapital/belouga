@@ -14,6 +14,26 @@ if TYPE_CHECKING:
     from .typing import IntoExpr
 
 
+class BelugasConversionError(ValueError):
+    """Raised when a conversion from a sqlglot expression to a DuckDB expression fails."""
+
+    def __init__(self, e: Exception, expr: exp.Expr) -> None:
+        msg = f"""
+Failed to convert expression to DuckDB!
+DuckDB error:
+        {e}
+----------------------------------
+sqlglot expression:
+{expr!r}
+----------------------------------
+SQL representation:
+```sql
+{expr.sql(dialect="duckdb", pretty=True, identify=True)}
+```
+"""
+        super().__init__(msg)
+
+
 class Marker(StrEnum):
     """Column name markers for special expression types."""
 

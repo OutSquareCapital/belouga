@@ -4,7 +4,12 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from pyochain import Seq
+
+from ..typing import FileGlob, PathOrBuffer
+
 if TYPE_CHECKING:
+    from duckdb import DuckDBPyConnection
     from pyochain import Option, Seq, Vec
 
     from .._expr import Expr
@@ -12,12 +17,15 @@ if TYPE_CHECKING:
     from ..datatypes import DataType
     from ..typing import (
         AsofJoinStrategy,
+        CSVOptions,
         GroupByClause,
         IntoExpr,
         IntoExprColumn,
         IntoRel,
         JoinStrategy,
+        JsonOptions,
         Orientation,
+        ParquetOptions,
         PivotAgg,
         PythonLiteral,
         TryIter,
@@ -47,14 +55,48 @@ class _Expressions(BaseNode):
 
 
 @dataclass(slots=True)
-class Scan(BaseNode):
-    """Node representing a scan operation."""
+class _BaseScan(BaseNode):
+    """Base class for all scan nodes."""
 
-    data: IntoRel
-    orient: Orientation
+    connection: Option[DuckDBPyConnection]
 
 
 @dataclass(slots=True)
+class ScanInMemory[T: IntoRel](_BaseScan):
+    data: T | None
+    orient: Orientation = "col"
+
+
+@dataclass(slots=True)
+class ScanTable(_BaseScan):
+    table: str
+
+
+@dataclass(slots=True)
+class ScanTableFunction(_BaseScan):
+    function: str
+
+
+@dataclass(slots=True)
+class _ScanFile[F: FileGlob | PathOrBuffer](_BaseScan):
+    path: F
+
+
+@dataclass(slots=True)
+class ScanParquet(_ScanFile[FileGlob]):
+    options: ParquetOptions
+
+
+@dataclass(slots=True)
+class ScanCSV(_ScanFile[PathOrBuffer]):
+    options: CSVOptions
+
+
+@dataclass(slots=True)
+class ScanJson(_ScanFile[PathOrBuffer]):
+    options: JsonOptions
+
+
 class Select(_Expressions):
     """Node representing a select operation."""
 
@@ -227,6 +269,14 @@ class Rename(BaseNode):
     mapping: Mapping[str, str]
 
 
+type Scan = (
+    ScanTable
+    | ScanTableFunction
+    | ScanParquet
+    | ScanCSV
+    | ScanJson
+    | ScanInMemory[IntoRel]
+)
 # plan node marker START
 Node = (
     Agg
@@ -244,7 +294,6 @@ Node = (
     | Limit
     | Pivot
     | Rename
-    | Scan
     | Select
     | SelectAll
     | Slice

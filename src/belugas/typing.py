@@ -2,7 +2,16 @@
 
 from __future__ import annotations
 
-from typing import IO, TYPE_CHECKING, Any, Literal, Protocol, Self, runtime_checkable
+from typing import (
+    IO,
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    Protocol,
+    Self,
+    TypedDict,
+    runtime_checkable,
+)
 
 from sqlglot import exp
 
@@ -11,23 +20,115 @@ if TYPE_CHECKING:
     from os import PathLike
     from pathlib import Path
 
-    from _duckdb._typing import (  # pyright: ignore[reportMissingModuleSource]
+    from _duckdb._enums import (  # pyright: ignore[reportMissingModuleSource]
+        CSVLineTerminator,
+    )
+    from _duckdb._typing import (  # pyright: ignore[reportMissingModuleSource]  # pyright: ignore[reportMissingModuleSource]
         BlobLiteral as DuckBlobLit,
+        ColumnsTypes,
+        CsvCompression,
+        CsvEncoding,
+        HiveTypes,
         IntoExpr as DuckIntoExpr,
         IntoExprColumn as DuckIntoExprColumn,
+        IntoFields,
+        JsonCompression,
+        JsonFormat,
+        JsonRecordOptions,
         NestedLiteral as DuckNestedLit,
         NonNestedLiteral as DuckNonNestedLit,
         ParquetCompression as DuckParquetCompression,
         PythonLiteral as DuckPyLit,
         PyTypeIds as DuckPyTypeIds,
+        StrIntoPyType,
         StrIntoPyType as DuckStrIntoPyType,
     )
     from pyochain import Dict
 
     from ._core import ExprHandler
     from ._expr import Expr
-    from ._scans import ScanSource
     from .datatypes import DataType
+
+
+class ParquetOptions(TypedDict):
+    """Options for reading Parquet files."""
+
+    binary_as_string: bool
+    file_row_number: bool
+    filename: bool
+    hive_partitioning: bool
+    union_by_name: bool
+    compression: ParquetCompression | None
+
+
+class CSVOptions(TypedDict):
+    """Options for reading CSV files."""
+
+    header: bool | int | None
+    compression: CsvCompression | None
+    sep: str | None
+    delimiter: str | None
+    files_to_sniff: int | None
+    comment: str | None
+    thousands: str | None
+    dtype: IntoFields | None
+    na_values: str | list[str] | None
+    skiprows: int | None
+    quotechar: str | None
+    escapechar: str | None
+    encoding: CsvEncoding | None
+    parallel: bool | None
+    date_format: str | None
+    timestamp_format: str | None
+    sample_size: int | None
+    auto_detect: bool | int | None
+    all_varchar: bool | None
+    normalize_names: bool | None
+    null_padding: bool | None
+    names: list[str] | None
+    lineterminator: CSVLineTerminator | None
+    columns: ColumnsTypes | None
+    auto_type_candidates: list[StrIntoPyType] | None
+    max_line_size: int | None
+    ignore_errors: bool | None
+    store_rejects: bool | None
+    rejects_table: str | None
+    rejects_scan: str | None
+    rejects_limit: int | None
+    force_not_null: list[str] | None
+    buffer_size: int | None
+    decimal: str | None
+    allow_quoted_nulls: bool | None
+    filename: bool | str | None
+    hive_partitioning: bool | None
+    union_by_name: bool | None
+    hive_types: HiveTypes | None
+    hive_types_autocast: bool | None
+    strict_mode: bool | None
+
+
+class JsonOptions(TypedDict):
+    """Options for reading JSON files."""
+
+    columns: ColumnsTypes | None
+    sample_size: int | None
+    maximum_depth: int | None
+    records: JsonRecordOptions | None
+    format: JsonFormat | None
+    date_format: str | None
+    timestamp_format: str | None
+    compression: JsonCompression | None
+    maximum_object_size: int | None
+    ignore_errors: bool | None
+    convert_strings_to_integers: bool | None
+    field_appearance_threshold: float | None
+    map_inference_threshold: int | None
+    maximum_sample_files: int | None
+    filename: bool | str | None
+    hive_partitioning: bool | None
+    union_by_name: bool | None
+    hive_types: HiveTypes | None
+    hive_types_autocast: bool | None
 
 
 @runtime_checkable
@@ -137,7 +238,7 @@ type SeqIntoVals = Sequence[Mapping[str, PythonLiteral]] | NestedSeq | LitSeq | 
 
 type IntoValues = Mapping[str, LitSeq] | SeqIntoVals
 """Types that can be converted into a `values` relation (either an expression, a mapping, or a sequence)."""
-type IntoRel = IntoValues | ScanSource | IntoArrow | IntoPolars
+type IntoRel = IntoValues | IntoArrow | IntoPolars
 """"Types that can be converted into a relation (either a frame or values)."""
 type IntoExprColumn = str | ExprLike
 """Inputs that can convert into a `col` expression."""
