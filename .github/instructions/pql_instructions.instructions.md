@@ -24,11 +24,12 @@ Secondary objective:
 
 - `LazyFrame` in `src/belugas/_frame.py`.
 - `Expr` in `src/belugas/_expr.py`, re-exported from `src/belugas/__init__.py`.
-- Public scan constructors in `src/belugas/_scans.py` and at package root (`from_df`, `from_dict`, `from_query`, `from_table`, `from_table_function`, ...).
-- Module-level expression helpers in `src/belugas/_funcs.py` (`col`, `lit`, `when`, `coalesce`, scalar aggs, horizontal aggs, `element`, `row_number`, ...).
+- Public scan constructors in `src/belugas/_scans.py` and at package root (`from_arrow`, `from_dict`, `from_dicts`, `from_numpy`, `from_pandas`, `from_polars`, `from_query`, `from_records`, `from_table`, `from_table_function`, `scan_csv`, `scan_json`, `scan_parquet`).
+- Module-level expression helpers in `src/belugas/_funcs.py` (`col`, `lit`, `when`, `coalesce`, scalar aggs, horizontal aggs, `element`, `count`, `len`, `all`, `any`, ...).
 - `selectors`, `meta`, and datatype objects re-exported from the package root.
-- `Expr` lives in `src/belugas/_expr.py` and the public frame type is `LazyFrame`.
-- Relation handling is organized around `LazyFrame` plus `ScanSource`.
+- Query inspection helpers exposed through `LazyFrame.sql_query()` and `LazyFrame.explain()`.
+- Grouped operations through `LazyGroupBy` in `src/belugas/_groupby.py`.
+- Relation handling organized around `LazyFrame`, `ScanSource`, and the logical plan in `src/belugas/_plan/`.
 
 ---
 
@@ -36,118 +37,63 @@ Secondary objective:
 
 ### 1) Public API layer
 
-- `src/belugas/_frame.py`: public `LazyFrame` API.
-- `src/belugas/_scans.py`: public constructors for turning Python/native data into `LazyFrame`.
-- `src/belugas/__init__.py`: exported user-facing symbols.
-- `src/belugas/_expr.py`: public `Expr` API, re-exported at the package root.
-
-This layer should remain Polars-like and user ergonomic.
+The user-facing API is centered on `LazyFrame` in `src/belugas/_frame.py` and `Expr` in `src/belugas/_expr.py`, re-exported from `src/belugas/__init__.py`. Constructors and scan entrypoints live in `src/belugas/_scans.py`, and the overall surface should stay Polars-like and ergonomic.
 
 ### 2) Frame/query layer
 
 #### `LazyFrame` (`src/belugas/_frame.py`)
 
-`LazyFrame` is the main query builder.
+`LazyFrame` is the main query builder. It inherits from `CoreHandler[ScanSource]`, keeps the input relation in `_inner`, and accumulates deferred operations in `_nodes`. It does not keep a final SQL query around. Compilation happens on demand in `_compile()`, and terminal methods such as `collect`, `lazy`, `fetch_all`, `sql_query`, `explain`, and the sink methods all execute from that compiled plan. In practice, relation behavior in `belugas` is driven by `LazyFrame`, `ScanSource`, and the plan compiler together.
 
-- Inherits from `CoreHandler[sqlglot.exp.Query]`.
-- Stores `_inner: sqlglot.exp.Query`, `_sources`, and `_schema`.
-- Builds query context for expressions (`select`, `with_columns`, `filter`, `group_by`, `join`, `pivot`, `sort`, ...).
-- Executes through `ScanSource.from_query(...)`.
-- Converts back to Polars through DuckDB relation interop in `lazy()` and `collect()`.
+### 3) Plan layer
 
-`LazyFrame` plus `ScanSource` form the relation/query abstraction.
+#### `src/belugas/_plan/`
 
-### 3) Expression layer
+The plan layer is the center of relation compilation. `nodes.py` defines the logical operations, `_resolve.py` turns a source plus node sequence into a `CompiledPlan`, and the other modules in `src/belugas/_plan/` compile or optimize specific families of operations. Most frame changes therefore belong either in the public method that appends the operation or in the plan layer that resolves and emits it.
+
+### 4) Expression layer
 
 #### `Expr` (`src/belugas/_expr.py`)
 
-`Expr` is the public expression object.
+`Expr` is the public expression object. It extends the generated `Fns` mixin, wraps a `sqlglot` expression through the core handler stack, and carries alias metadata so names survive context changes correctly. `Expr.new(...)` is the normal coercion entrypoint, and most expression feature work happens here or in the namespace layer. Reverse literal operators are a sharp edge because they rely on `Marker.LITERAL` aliasing to preserve Polars-like output names.
 
-- Extends the generated `Fns` mixin from `src/belugas/_fns.py`.
-- Wraps a `sqlglot.exp.Expr` through `ExprHandler`/`CoreHandler`.
-- Carries `aliaser: AliasMapper` to preserve naming, aliasing, and context-sensitive behavior.
-- Uses `Expr.new(...)` as the normal coercion entrypoint.
-- Exposes namespaces such as `.str`, `.list`, `.struct`, `.dt`, `.arr`, `.json`, `.re`, `.map`, `.enum`, `.geo`, and `.name`.
-
-The expression layer is where most feature work happens.
-
-Important sharp edge:
-
-- Reverse literal operators rely on `Marker.LITERAL` aliasing to preserve Polars-like output names. Be careful when touching reverse arithmetic/logical operators or alias/meta handling.
-
-### 4) SQL core layer
+### 5) SQL core layer
 
 #### Core abstractions (`src/belugas/_core.py`)
 
-The current SQL core layer is centered on `sqlglot` AST composition plus a DuckDB conversion boundary.
-
-- **`CoreHandler[T]`**
-  - Generic wrapper base shared by `Expr`, `LazyFrame`, and namespace handlers.
-  - Provides `.pipe(...)`, `._cls(...)`, and `.inner`.
-
-- **`ExprHandler(CoreHandler[sqlglot.exp.Expr])`**
-  - Specialization for `sqlglot` expressions.
-  - Base for expression-side fluent behavior.
-
-- **`NameSpaceHandler[T: ExprHandler]`**
-  - Wraps a parent expression and returns the parent type from namespace methods.
-
-- **`anon(name, *args)` / `anon_agg(name, *args)` / `func(name, *args)`**
-  - Low-level expression builders used throughout the expression layer.
+The SQL core layer is the shared `sqlglot` boundary. `CoreHandler`, `ExprHandler`, and `NameSpaceHandler` provide the common wrapper behavior used across expressions, frames, and namespaces, while helpers such as `anon`, `anon_agg`, `func`, `into_expr`, and `into_expr_list` normalize Python inputs into `sqlglot` expressions.
 
 #### Conversion helpers (`src/belugas/_core.py`)
 
-- **`into_expr(value, as_col=True) -> sqlglot.exp.Expr`**
-  - Normalizes `Expr`, strings, and Python literals into `sqlglot` expressions.
-
-- **`into_expr_list(args, as_col=False) -> list[sqlglot.exp.Expr]`**
-  - Bulk conversion helper for function arguments.
-
-- **`PQLConversionError`**
-  - Raised from `src/belugas/_scans.py` when SQL generation cannot be parsed by DuckDB.
+`PQLConversionError` is raised from `src/belugas/_scans.py` when generated SQL cannot be parsed by DuckDB.
 
 #### Relation/input wrapper (`src/belugas/_scans.py`)
 
-`ScanSource` is the current wrapper around `duckdb.DuckDBPyRelation` plus column metadata.
+`ScanSource` wraps a `duckdb.DuckDBPyRelation` together with schema metadata. It is the execution boundary for relation inputs and the bridge from compiled `sqlglot` ASTs back to executable DuckDB relations.
 
-- Holds `relation: duckdb.DuckDBPyRelation` and `schema`.
-- Normalizes input sources through `build(...)`.
-- Supports relation construction from `LazyFrame`, DuckDB relations, mappings, sequences, NumPy arrays, Narwhals/Polars frames, SQL queries, tables, and table functions.
-- `from_query(...)` is the main bridge from AST query nodes to executable DuckDB relations.
+### 6) Query inspection and supporting modules
 
-### 5) Supporting modules
+#### `src/belugas/_parser.py`
 
-- `src/belugas/_funcs.py`: public module-level expression helpers (`col`, `lit`, `reduce`, `coalesce`, horizontal aggs, `unnest`, ...).
-- `src/belugas/_when.py`: fluent `when(...).then(...).otherwise(...)` builder.
-- `src/belugas/_window.py`: window specification helpers and rolling/window plumbing.
-- `src/belugas/_meta.py`: expression metadata, markers, and planning helpers used by context methods.
-- `src/belugas/namespaces.py`: handwritten namespace behavior and Polars-compat shims.
-- `src/belugas/selectors.py`: selectors API.
-- `src/belugas/datatypes.py`: `belugas` datatype objects and conversions.
+`ParsedQuery` is the public query-inspection object returned by `LazyFrame.sql_query()`. It handles SQL rendering, tokenization, and pretty display, so SQL-inspection changes should usually be made here.
 
-### 6) Auto-generated code (do not edit manually)
+### 7) Supporting modules
 
-- `src/belugas/_fns.py`: generated DuckDB function wrappers and generated namespace mixins.
-- `src/belugas/meta.py`: generated `duckdb_*` module-level meta helpers.
+The main handwritten support code is split between module-level expression helpers in `src/belugas/_funcs.py`, conditional and window helpers in `src/belugas/_when.py` and `src/belugas/_window.py`, DuckDB-specific `sqlglot` patching in `src/belugas/_sqlglot_patch.py`, and the public namespace, selector, and datatype layers. Expression metadata and alias-planning helpers such as `Resolver`, `AliasMapper`, and `MultiAliasMapper` live directly in `src/belugas/_expr.py`.
 
-Generated from scripts in `scripts/`.
+### 8) Auto-generated code (do not edit manually)
 
-Edit generator pipelines and regenerate instead of patching generated files by hand.
+Generated outputs include `src/belugas/_fns.py`, `src/belugas/meta.py`, `src/belugas/_plan/nodes.py`, and generated parts of `src/belugas/typing.py`. Update the generator pipeline in `scripts/` and regenerate instead of patching those files by hand.
 
-### 7) Code generation and analysis scripts
+### 9) Code generation and analysis scripts
 
-- `scripts/fn_generator/*`: generate DuckDB SQL function wrappers.
-- `scripts/meta_generator/*`: generate DuckDB meta table functions.
-- `scripts/comparator/*`: build `API_COVERAGE.md`.
-- `scripts/_theme_generator.py`: generate SQL theme literals.
-- `scripts/_check_missing_sqlglot.py`: compare DuckDB function coverage with sqlglot parser support.
-- `scripts/__main__.py`: Typer CLI entrypoint.
+Dev tooling lives under `scripts/`. It covers function and meta generation, plan-node and theme generation, coverage comparison, missing-sqlglot analysis, and benchmarks, with `scripts/__main__.py` as the CLI entrypoint.
 
 ---
 
 ## Non-negotiable implementation rules
 
-1. Prefer `Expr`, `sqlglot`, and `ScanSource` over raw SQL strings
+1. Prefer `Expr`, `sqlglot`, `ScanSource`, and plan nodes over raw SQL strings
 - Raw SQL strings are not needed AT ALL, since sqlglot can express any SQL construct we need. If you think you need raw SQL, check if sqlglot can do it first, and if it can't, either create an anonymous Expr, or patch it in the `_sqlglot_patch.py` module. Note that this should only be the case for SQL functions. Other relational nodes are all supported by sqlglot, and if you don't know how to do it, it's a documentation fetching issue from your part.
 
 2. Do not patch generated files directly:
@@ -182,7 +128,7 @@ Edit generator pipelines and regenerate instead of patching generated files by h
 
 8. Stay within the current abstractions:
 
-- Build features around `Expr`, `LazyFrame`, `ScanSource`, namespace classes, and the active generator/comparator pipelines.
+- Build features around `Expr`, `LazyFrame`, `ScanSource`, `src/belugas/_plan/`, namespace classes, and the active generator/comparator pipelines.
 - When in doubt, verify the current code before introducing a new abstraction layer.
 
 ---
@@ -211,6 +157,7 @@ This often allow to reuse the arguments already in-scope, and improve "code loca
 Goal:
 
 - 100% coverage target for public API behavior.
+- Prefer narrow targeted test runs while iterating, then broaden only once the touched area is stable.
 
 Current helpers and conventions:
 
@@ -264,34 +211,38 @@ When implementing a missing/mismatched method:
 
 Use `uv` commands:
 
-- Fetch DuckDB function metadata cache:
-  - `uv run -m scripts fns-to-parquet`
 - Generate function wrappers:
   - `uv run -m scripts gen-fns`
+- Regenerate function metadata and wrappers from DuckDB introspection:
+  - `uv run -m scripts gen-fns --r`
 - Generate DuckDB meta helpers:
   - `uv run -m scripts gen-meta`
 - Generate SQL theme literal:
   - `uv run -m scripts gen-themes`
+- Generate logical plan node declarations:
+  - `uv run -m scripts gen-nodes`
 - Rebuild API coverage:
   - `uv run -m scripts compare`
 - Analyze cached function metadata:
   - `uv run -m scripts analyze-funcs`
 - Check sqlglot DuckDB function coverage:
   - `uv run -m scripts check-sqlglot`
-- `gen-fns` depends on the parquet cache produced by `fns-to-parquet`.
+- Run benchmarks:
+  - `uv run -m scripts bench`
 
-After generation, run Ruff on touched files.
+After generation or handwritten code changes, run Ruff and type-checking on the touched scope.
 
 ---
 
 ## Validation checklist before opening/merging changes
 
-1. Did you avoid editing `_code_gen` manually?
+1. Did you avoid editing generated outputs manually?
 2. Did you implement the change in the correct layer (`LazyFrame`, `Expr`, namespace, `ScanSource`, generator, comparator)?
-3. Did you preserve DuckDB and `sqlglot` semantics (especially null/order behavior and expression naming)?
-4. Are tests using comparison helpers and identical call chains where required?
-5. If API changed, did you refresh/report coverage implications in `API_COVERAGE.md`?
-6. Did you run Ruff and the relevant tests for the touched area?
+3. If the change affects relation behavior, did you check whether it belongs in a plan node push, a plan optimizer rule, or a plan compiler handler?
+4. Did you preserve DuckDB and `sqlglot` semantics (especially null/order behavior and expression naming)?
+5. Are tests using comparison helpers and identical call chains where required?
+6. If API changed, did you refresh/report coverage implications in `API_COVERAGE.md`?
+7. Did you run Ruff and the relevant tests for the touched area?
 
 ---
 
