@@ -3,14 +3,14 @@ from __future__ import annotations
 from pyochain import Err, Ok, Option, Result, Some
 from sqlglot import exp
 
-from ._resolve import Tables
+from ..._core import Tables
+from ..._expr import Expr
+from ..._funcs import col, lit
 
 MAX_I64 = 9_223_372_036_854_775_807
 
 
 def slice(lf_length: Option[int], offset: int) -> Result[exp.Selectable, ValueError]:
-    from .._expr import Expr
-    from .._funcs import col, lit
 
     match (lf_length, offset):
         case (Some(length), _) if length < 0:

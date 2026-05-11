@@ -294,10 +294,12 @@ def test_rename(lf: bl.LazyFrame, mapping: dict[str, str]) -> None:
 
 
 def test_with_columns_star_exprs(lf: bl.LazyFrame) -> None:
+    from belugas._plan import ops  # noqa: PLC2701
+
     cols = m.compile_plan(lf.inner).schema
 
     def _plan(expr: bl.Expr) -> exp.Star | None:
-        ast, _ = m.with_columns(cols, expr, (), {})
+        ast, _ = ops.with_columns(cols, expr, (), {})
         return ast.find(exp.Star)
 
     assert _plan(bl_age) is None

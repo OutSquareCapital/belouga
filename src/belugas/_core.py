@@ -34,6 +34,14 @@ SQL representation:
         super().__init__(msg)
 
 
+class Tables:
+    SRC: exp.Table = exp.to_table("src")
+    LHS: exp.Table = exp.to_table("lhs")
+    RHS: exp.Table = exp.to_table("rhs")
+    STATS: exp.Table = exp.to_table("stats")
+    EXPLODE_SRC: exp.Table = exp.to_table("_explode_src")
+
+
 class Marker(StrEnum):
     """Column name markers for special expression types."""
 

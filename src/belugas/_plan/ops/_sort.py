@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING
 from pyochain import Err, Iter, Ok, Result, Seq
 from sqlglot import exp
 
-from ..utils import try_iter
-from ._resolve import Tables
+from ..._core import Tables
+from ..._expr import Expr
+from ...utils import try_iter
 
 if TYPE_CHECKING:
-    from .._expr import Expr
-    from ..typing import IntoExpr, TryIter, TrySeq
+    from ...typing import IntoExpr, TryIter, TrySeq
 
 
 def sort(
@@ -20,7 +20,6 @@ def sort(
     descending: TrySeq[bool],
     nulls_last: TrySeq[bool],
 ) -> exp.Select:
-    from .._expr import Expr
 
     order_exprs = (
         try_iter(by)

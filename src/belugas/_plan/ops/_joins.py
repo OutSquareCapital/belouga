@@ -6,14 +6,15 @@ from typing import TYPE_CHECKING, NamedTuple
 from pyochain import NONE, Dict, Err, Iter, Null, Ok, Option, Result, Seq, SetMut, Some
 from sqlglot import exp
 
-from ..utils import try_seq
-from ._resolve import Tables
+from ..._core import Tables
+from ..._expr import Expr
+from ..._funcs import col
+from ...utils import try_seq
 
 if TYPE_CHECKING:
     from pyochain.traits import PyoCollection
 
-    from .._expr import Expr
-    from ..typing import AsofJoinStrategy, JoinStrategy, Schema, TryIter
+    from ...typing import AsofJoinStrategy, JoinStrategy, Schema, TryIter
 type OptSeq = Option[Seq[str]]
 type JoinKeysRes[T: Seq[str] | str] = Result[JoinKeys[T], ValueError]
 
@@ -55,7 +56,6 @@ def join_asof(  # noqa: PLR0913, PLR0917
     strategy: AsofJoinStrategy,
     suffix: str,
 ) -> tuple[exp.Select, Schema]:
-    from .._expr import Expr
 
     on_keys = JoinKeys.from_on(on, left_on, right_on).unwrap()
     by_keys = JoinKeys.from_by(
@@ -140,14 +140,10 @@ class JoinBuilder:
     @staticmethod
     def lhs(name: str) -> Expr:
 
-        from .._funcs import col
-
         return col(name, table=Tables.LHS.name)
 
     @staticmethod
     def rhs(name: str) -> Expr:
-        from .._funcs import col
-
         return col(name, table=Tables.RHS.name)
 
     def for_inner_left(self, name: str) -> Option[Expr]:
@@ -334,7 +330,6 @@ class JoinKeys[T: Seq[str] | str](NamedTuple):
                 return Err(ValueError(msg))
 
     def get_join_condition(self: JoinKeys[Seq[str]], builder: JoinBuilder) -> exp.Expr:
-        from .._expr import Expr
 
         return (
             self.left

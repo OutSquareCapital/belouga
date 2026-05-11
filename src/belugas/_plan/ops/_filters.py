@@ -6,13 +6,13 @@ from typing import TYPE_CHECKING
 from pyochain import Dict, Iter, Option, Set
 from sqlglot import exp
 
-from .._core import into_expr
-from ..utils import try_iter
-from ._resolve import Tables
+from ..._core import Tables, into_expr
+from ..._expr import Expr
+from ..._funcs import all, col
+from ...utils import try_iter
 
 if TYPE_CHECKING:
-    from .._expr import Expr
-    from ..typing import IntoExpr, IntoExprColumn, Schema, TryIter
+    from ...typing import IntoExpr, IntoExprColumn, Schema, TryIter
 
 
 def filter(
@@ -20,8 +20,6 @@ def filter(
     more_predicates: Iterable[IntoExprColumn],
     constraints: dict[str, IntoExpr],
 ) -> exp.Select:
-    from .._expr import Expr
-    from .._funcs import col
 
     def _constraint(k: str, val: IntoExpr) -> Expr:
         return col(k).eq(into_expr(val, as_col=False))
@@ -45,7 +43,6 @@ def filter(
 def drop_rows(
     schema: Schema, subset: TryIter[str], fn: Callable[[Expr], Expr]
 ) -> exp.Select:
-    from .._funcs import col
 
     return (
         Option(subset)
@@ -70,8 +67,6 @@ def drop(
     columns: TryIter[IntoExprColumn],
     more_columns: Iterable[IntoExprColumn],
 ) -> tuple[exp.Select, Schema]:
-    from .._expr import Expr
-    from .._funcs import all
 
     cols = (
         try_iter(columns)

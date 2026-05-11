@@ -6,11 +6,13 @@ from typing import TYPE_CHECKING
 from pyochain import Dict, Iter, Seq, Set, Vec
 from sqlglot import exp
 
-from ._resolve import ResolvedExpr, Tables, lookup_type, resolve_all
+from ..._core import Tables
+from ..._expr import Expr
+from ..._funcs import col
+from .._resolve import ResolvedExpr, lookup_type, resolve_all
 
 if TYPE_CHECKING:
-    from .._expr import Expr
-    from ..typing import GroupByClause, IntoExpr, Schema, TryIter
+    from ...typing import GroupByClause, IntoExpr, Schema, TryIter
 
 
 def group_by_all(
@@ -51,7 +53,6 @@ def agg_columns(
     *,
     drop_null_keys: bool,
 ) -> tuple[exp.Select, Schema]:
-    from .._funcs import col
 
     key_names = keys.iter().map(lambda k: k.inner.output_name).collect(Set)
     agg_exprs = (
@@ -73,7 +74,6 @@ def agg(  # noqa: PLR0913, PLR0917
     *,
     drop_null_keys: bool,
 ) -> tuple[exp.Select, Schema]:
-    from .._expr import Expr
 
     key_glots = keys.iter().map(lambda k: k.inner).collect(Vec)
     key_names = key_glots.iter().map(lambda e: e.output_name).collect(Set)

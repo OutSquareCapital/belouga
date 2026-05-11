@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING
 from pyochain import Dict, Iter, Seq, Some
 from sqlglot import exp
 
-from .._core import Marker
-from ._resolve import (
+from ..._core import Marker, Tables
+from ..._funcs import col, row_number
+from .._resolve import (
     ResolvedExpr,
-    Tables,
     find_all,
     has_window_ancestor,
     lookup_type,
@@ -19,9 +19,9 @@ from ._resolve import (
 if TYPE_CHECKING:
     from pyochain.traits import PyoIterable
 
-    from .._expr import Expr
-    from ..datatypes import DataType
-    from ..typing import IntoExpr, Schema, TryIter
+    from ..._expr import Expr
+    from ...datatypes import DataType
+    from ...typing import IntoExpr, Schema, TryIter
 
 
 def with_columns(
@@ -100,8 +100,6 @@ def rename(schema: Schema, mapping: Mapping[str, str]) -> tuple[exp.Selectable, 
 def with_row_index(
     schema: Schema, name: str, order_by: TryIter[str]
 ) -> tuple[exp.Selectable, Schema]:
-    from .._funcs import row_number
-
     row_nb = row_number().window(order_by=order_by).sub(1).alias(name).inner
     new_schema = (
         Iter
@@ -141,7 +139,6 @@ def cast(
 def select_all(
     schema: Schema, func: Callable[[Expr], Expr]
 ) -> tuple[exp.Selectable, Schema]:
-    from .._funcs import col
 
     exprs = schema.iter().map(lambda c: col(c).pipe(func).alias(c).inner)
 
@@ -197,7 +194,6 @@ def _select_schema(schema: Schema, projections: Seq[ResolvedExpr]) -> Schema:
 
 
 def _into_windowed(cols: PyoIterable[ResolvedExpr]) -> exp.Expr:
-    from .._funcs import row_number
 
     def _is_windowed(p: ResolvedExpr) -> bool:
         return p.name != Marker.TEMP and p.expr.inner.pipe(find_all, exp.Column).any(

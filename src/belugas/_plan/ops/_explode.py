@@ -7,13 +7,15 @@ from typing import TYPE_CHECKING, NamedTuple
 from pyochain import Dict, Iter
 from sqlglot import exp
 
-from ._resolve import Tables, resolve_all
+from ..._core import Tables
+from ..._funcs import col, lit, unnest
+from .._resolve import resolve_all
 
 if TYPE_CHECKING:
     from pyochain.traits import PyoIterable
 
-    from .._expr import Expr
-    from ..typing import IntoExprColumn, Schema, TryIter
+    from ..._expr import Expr
+    from ...typing import IntoExprColumn, Schema, TryIter
 
 
 def explode(
@@ -21,7 +23,6 @@ def explode(
     columns: TryIter[IntoExprColumn],
     more_columns: Iterable[IntoExprColumn],
 ) -> exp.Union:
-    from .._funcs import col
 
     to_explode = (
         resolve_all(schema, columns, more_columns, {})
@@ -58,7 +59,6 @@ def explode(
 
 
 def _get_target(exprs: Iter[IndexedExpr], *, is_single_explode: bool) -> Expr:
-    from .._funcs import lit
 
     first_expr = exprs.next().unwrap().expr
     if is_single_explode:
@@ -79,7 +79,6 @@ def transform(
     is_single: bool,
     nested: bool,
 ) -> Iter[exp.Expr]:
-    from .._funcs import col, lit, unnest
 
     def _project_col(name: str, replace: Expr) -> Expr:
         match (nested, name in to_explode):

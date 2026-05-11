@@ -6,12 +6,13 @@ from typing import TYPE_CHECKING
 from pyochain import Dict, Iter, Set
 from sqlglot import exp
 
-from .. import datatypes as dt
-from ..utils import try_iter
-from ._resolve import Tables
+from ... import datatypes as dt
+from ..._core import Tables
+from ..._funcs import col, unnest as unnest_fn
+from ...utils import try_iter
 
 if TYPE_CHECKING:
-    from ..typing import IntoExprColumn, Schema, TryIter
+    from ...typing import IntoExprColumn, Schema, TryIter
 
 
 def unnest(
@@ -19,7 +20,6 @@ def unnest(
     columns: TryIter[IntoExprColumn],
     more_columns: Iterable[IntoExprColumn],
 ) -> tuple[exp.Select, Schema]:
-    from .._funcs import col, unnest as unnest_fn
 
     targets = try_iter(columns).chain(more_columns).collect(Set)
 

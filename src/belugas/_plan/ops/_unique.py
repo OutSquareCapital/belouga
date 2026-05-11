@@ -5,11 +5,13 @@ from typing import TYPE_CHECKING
 from pyochain import Err, Null, Ok, Result, Seq, Some
 from sqlglot import exp
 
-from ..utils import try_seq
-from ._resolve import Tables
+from ..._core import Tables
+from ..._expr import Expr
+from ..._funcs import col, lit
+from ...utils import try_seq
 
 if TYPE_CHECKING:
-    from ..typing import TryIter, TrySeq, UniqueKeepStrategy
+    from ...typing import TryIter, TrySeq, UniqueKeepStrategy
 
 
 def unique(
@@ -43,8 +45,6 @@ def unique(
 
 
 def _none_on_subset(subset_names: Seq[str]) -> exp.Select:
-    from .._expr import Expr
-    from .._funcs import col, lit
 
     subset_exprs = subset_names.iter().map(exp.column).collect()
     rhs = (
@@ -77,8 +77,6 @@ def _none_on_subset(subset_names: Seq[str]) -> exp.Select:
 
 
 def _none_on_all() -> exp.Select:
-    from .._funcs import lit
-
     return (
         exp
         .select(exp.Star())
@@ -95,7 +93,6 @@ def _distinct_on(
     descending: bool,
     nulls_last: bool,
 ) -> exp.Select:
-    from .._funcs import col
 
     order_exprs = (
         subset_names

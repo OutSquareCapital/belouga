@@ -3,34 +3,28 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Sequence
 from typing import TYPE_CHECKING
 
-from pyochain import NONE, Dict, Err, Iter, Null, Ok, Option, Result, Seq, Some
+from pyochain import Dict, Err, Iter, Null, Ok, Result, Seq, Some
 from sqlglot import exp
 
-from ..utils import try_iter, try_seq
-from ._resolve import Tables
+from ..._core import Tables
+from ..._expr import Expr
+from ..._funcs import col
+from ...utils import try_iter, try_seq
 
 if TYPE_CHECKING:
-    from .._expr import Expr
-    from ..typing import PivotAgg, PythonLiteral, Schema, TryIter
+    from ...typing import PivotAgg, PythonLiteral, Schema, TryIter
 
-PIVOT_AGG: Option[dict[PivotAgg, Callable[[Expr], Expr]]] = NONE
-
-
-def _get_pivot_agg() -> dict[PivotAgg, Callable[[Expr], Expr]]:
-
-    from .._expr import Expr
-
-    return {
-        "min": Expr.min,
-        "max": Expr.max,
-        "first": Expr.first,
-        "last": Expr.last,
-        "sum": Expr.sum,
-        "mean": Expr.mean,
-        "median": Expr.median,
-        "len": Expr.count,
-        "count": Expr.count,
-    }
+PIVOT_AGG: dict[PivotAgg, Callable[[Expr], Expr]] = {
+    "min": Expr.min,
+    "max": Expr.max,
+    "first": Expr.first,
+    "last": Expr.last,
+    "sum": Expr.sum,
+    "mean": Expr.mean,
+    "median": Expr.median,
+    "len": Expr.count,
+    "count": Expr.count,
+}
 
 
 def pivot(  # noqa: PLR0913, PLR0914, PLR0917
@@ -70,11 +64,9 @@ def pivot(  # noqa: PLR0913, PLR0914, PLR0917
     on_values = Iter(on_columns).map(str).collect()
 
     multi = val_cols.length() > 1
-    agg = PIVOT_AGG.unwrap_or_else(_get_pivot_agg)[aggregate_function]
+    agg = PIVOT_AGG[aggregate_function]
 
     def _aliased(name: str) -> Expr:
-
-        from .._funcs import col
 
         expr = col(name).pipe(agg)
         return expr.alias(name) if multi else expr
