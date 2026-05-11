@@ -81,7 +81,7 @@ Output:
  └─────────┴───────────────┴───────────┴────────────┘
 ```
 
-You can inspect the generated SQL query directly, format it, with syntax highlighting and various available themes:
+### Inspect the generated SQL query with syntax highlighting and  pretty formatting
 
 ```python
 import belugas as bl
@@ -96,40 +96,12 @@ sql.show(pretty=True)
 
 ![alt text](docs/sql_highlight.png)
 
-You can also inspect the DuckDB plan:
+### Inspect the query graph from belugas
 
-```python
-print(query.explain())
-```
+Simply print the `LazyFrame` with `rich.print` to get a nice tree visualization of the query graph, with all the expressions and their arguments.
 
-Output:
+This is the tree that will be forwarded to `DuckDB` for execution. It's a logical plan, before any optimization or transformation from the engine.
 
-```shell
-┌───────────────────────────┐
-│         PROJECTION        │
-│    ────────────────────   │
-│             #1            │
-│                           │
-│          ~0 rows          │
-└─────────────┬─────────────┘
-┌─────────────┴─────────────┐
-│           FILTER          │
-│    ────────────────────   │
-│          (x > 1)          │
-│                           │
-│          ~0 rows          │
-└─────────────┬─────────────┘
-┌─────────────┴─────────────┐
-│           UNNEST          │
-└─────────────┬─────────────┘
-┌─────────────┴─────────────┐
-│      COLUMN_DATA_SCAN     │
-│    ────────────────────   │
-│           ~1 row          │
-└───────────────────────────┘
-```
-
-If you print the `LazyFrame` and you have rich installed, you can inspect the AST of the query as a tree:
 ![alt text](docs/tree.png)
 
 ## Dependencies
