@@ -73,10 +73,9 @@ class Resolver:
         return self._fn(schema)
 
     def into_selector(self) -> Selector:
-        from ._funcs import all
         from .selectors import Selector
 
-        return Selector(all().inner, self.into_meta())
+        return Selector(exp.Star(), self.into_meta())
 
     def into_meta(self) -> MultiAliasMapper:
         return MultiAliasMapper(self)
