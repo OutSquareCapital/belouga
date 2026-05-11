@@ -36,9 +36,9 @@ class CompiledPlan(NamedTuple):
 
 
 def compile_plan(
-    source: ScanSource, plan_nodes: Vec[nodes.PlanNode], *, optimize: bool = True
+    source: ScanSource, plan_nodes: nodes.Plan, *, optimize: bool = True
 ) -> CompiledPlan:
-    def _process(acc: NodeResult, node: nodes.PlanNode) -> NodeResult:
+    def _process(acc: NodeResult, node: nodes.Node) -> NodeResult:
         new_ast, new_schema, extra = _compile_node(*acc, node)
         sources.extend(extra.items())
         return new_ast, new_schema
@@ -53,7 +53,7 @@ def compile_plan(
 
 
 def _compile_node(  # noqa: PLR0915
-    src_ast: exp.Selectable, schema: Schema, node: nodes.PlanNode
+    src_ast: exp.Selectable, schema: Schema, node: nodes.Node
 ) -> tuple[exp.Selectable, Schema, Dict[str, ScanSource]]:
     from belugas import _plan as plan
 

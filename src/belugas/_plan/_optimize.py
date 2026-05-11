@@ -9,13 +9,13 @@ from . import nodes
 
 if TYPE_CHECKING:
     from ..typing import IntoExpr, IntoExprColumn
+type NewNode = Option[nodes.Node]
+type OptimizeStep = tuple[NewNode, nodes.Plan]
+"""Type alias for the accumulator used in the optimization fold step."""
 
 
-def optimize_nodes(plan_nodes: Vec[nodes.PlanNode]) -> Vec[nodes.PlanNode]:
-    def _step(
-        acc: tuple[Option[nodes.PlanNode], Vec[nodes.PlanNode]],
-        node: nodes.PlanNode,
-    ) -> tuple[Option[nodes.PlanNode], Vec[nodes.PlanNode]]:
+def optimize_nodes(plan_nodes: nodes.Plan) -> nodes.Plan:
+    def _step(acc: OptimizeStep, node: nodes.Node) -> OptimizeStep:
         pending, out = acc
         match pending:
             case Some(prev):
@@ -28,7 +28,7 @@ def optimize_nodes(plan_nodes: Vec[nodes.PlanNode]) -> Vec[nodes.PlanNode]:
             case _:
                 return Some(node), out
 
-    init = (NONE, Vec[nodes.PlanNode].new())
+    init = (NONE, Vec[nodes.Node].new())
     pending, optimized = plan_nodes.iter().fold(init, _step)
     match pending:
         case Some(last):
@@ -38,7 +38,7 @@ def optimize_nodes(plan_nodes: Vec[nodes.PlanNode]) -> Vec[nodes.PlanNode]:
             return optimized
 
 
-def _flatten_pair(prev: nodes.PlanNode, nxt: nodes.PlanNode) -> Option[nodes.PlanNode]:
+def _flatten_pair(prev: nodes.Node, nxt: nodes.Node) -> NewNode:
     match prev, nxt:
         case nodes.Filter() as lhs, nodes.Filter() as rhs:
             return Some(_merge_filters(lhs, rhs))
@@ -60,9 +60,7 @@ def _flatten_pair(prev: nodes.PlanNode, nxt: nodes.PlanNode) -> Option[nodes.Pla
             return NONE
 
 
-def _merge_limit_then_slice(
-    lhs: nodes.Limit, rhs: nodes.Slice
-) -> Option[nodes.PlanNode]:
+def _merge_limit_then_slice(lhs: nodes.Limit, rhs: nodes.Slice) -> NewNode:
     if rhs.offset < 0:
         return NONE
 
@@ -76,7 +74,7 @@ def _merge_limit_then_slice(
             return Some(merged)
 
 
-def _merge_slices(lhs: nodes.Slice, rhs: nodes.Slice) -> Option[nodes.PlanNode]:
+def _merge_slices(lhs: nodes.Slice, rhs: nodes.Slice) -> Option[nodes.Node]:
     if lhs.offset < 0 or rhs.offset < 0:
         return NONE
 
@@ -104,9 +102,7 @@ def _merge_slices(lhs: nodes.Slice, rhs: nodes.Slice) -> Option[nodes.PlanNode]:
                     return Some(unbounded_slice)
 
 
-def _merge_slice_then_limit(
-    lhs: nodes.Slice, rhs: nodes.Limit
-) -> Option[nodes.PlanNode]:
+def _merge_slice_then_limit(lhs: nodes.Slice, rhs: nodes.Limit) -> NewNode:
     if lhs.offset < 0:
         return NONE
 

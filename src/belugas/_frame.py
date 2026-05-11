@@ -56,7 +56,7 @@ class LazyFrame(CoreHandler[ScanSource]):
     """LazyFrame providing Polars-like API over DuckDB relations."""
 
     _inner: ScanSource
-    _nodes: Vec[nodes.PlanNode]
+    _nodes: nodes.Plan
 
     def __init__(self, data: IntoRel | Self, orient: Orientation = "col") -> None:
         match data:
@@ -67,14 +67,14 @@ class LazyFrame(CoreHandler[ScanSource]):
                 self._inner = ScanSource.build(data, orient).set_alias()
                 self._nodes = Vec.new()
 
-    def _push(self, node: nodes.PlanNode) -> Self:
+    def _push(self, node: nodes.Node) -> Self:
         out = self.__class__.__new__(self.__class__)
         out._inner = self._inner
         out._nodes = self._nodes.concat([node])
         return out
 
     @property
-    def nodes(self) -> Vec[nodes.PlanNode]:
+    def nodes(self) -> nodes.Plan:
         return self._nodes
 
     def _compile(self) -> CompiledPlan:

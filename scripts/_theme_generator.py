@@ -31,16 +31,31 @@ def generate_nodes(caller: Path, dest: Path) -> int:
         return _subcls().chain(_subcls().flat_map(all_subclasses))
 
     content = (
-        all_subclasses(nodes.Node)
+        all_subclasses(nodes.BaseNode)
         .map(lambda cls: cls.__name__)
         .filter(lambda name: not name.startswith("_"))
         .unique()
         .sort()
         .join(" | ")
     )
-    content = f"PlanNode = ({content})"
+    content = f"Node = ({content})"
 
-    doc = """All public `Node` subclasses.."""
+    doc = """All nodes that can be part of the logical plan.
+
+Each node represents a logical operation to be performed on the data, such as filtering, joining, or aggregating.
+
+They just hold the input arguments for the operation, and are used to build the logical plan before it's compiled into executable code.
+
+Note:
+    - `Node` is a type alias for the union of all public `Node` subclasses.
+    - `BaseNode` is the base class for all nodes, but should not be used directly.
+
+    We do this because Python does not have built-in support for Enums with associated data like Rust does.
+
+    Using dataclasses for each node allows us to easily store the necessary information for each operation,
+
+    while still being able to treat them as a unified type when building the plan, relying on the type checker to ensure exhaustiveness when matching on them.
+    """
 
     return _build_content(
         dest, caller, "# plan node marker START", "# plan node marker END", content, doc
