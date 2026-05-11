@@ -48,12 +48,32 @@ def _flatten_pair(prev: nodes.PlanNode, nxt: nodes.PlanNode) -> Option[nodes.Pla
             return Some(_merge_renames(lhs, rhs))
         case nodes.Limit() as lhs, nodes.Limit() as rhs:
             return Some(nodes.Limit(min(rhs.n, lhs.n)))
+        case nodes.Limit() as lhs, nodes.Slice() as rhs:
+            return _merge_limit_then_slice(lhs, rhs)
         case nodes.Slice() as lhs, nodes.Slice() as rhs:
             return _merge_slices(lhs, rhs)
+        case nodes.Slice() as lhs, nodes.Limit() as rhs:
+            return _merge_slice_then_limit(lhs, rhs)
         case nodes.Sort(), nodes.Sort() as rhs:
             return Some(rhs)
         case _:
             return NONE
+
+
+def _merge_limit_then_slice(
+    lhs: nodes.Limit, rhs: nodes.Slice
+) -> Option[nodes.PlanNode]:
+    if rhs.offset < 0:
+        return NONE
+
+    available = max(lhs.n - rhs.offset, 0)
+    match rhs.length:
+        case Some(rhs_length):
+            merged = nodes.Slice(Some(min(rhs_length, available)), rhs.offset)
+            return Some(merged)
+        case _:
+            merged = nodes.Slice(Some(available), rhs.offset)
+            return Some(merged)
 
 
 def _merge_slices(lhs: nodes.Slice, rhs: nodes.Slice) -> Option[nodes.PlanNode]:
@@ -69,25 +89,34 @@ def _merge_slices(lhs: nodes.Slice, rhs: nodes.Slice) -> Option[nodes.PlanNode]:
                         Some(min(rhs_length, max(lhs_length - rhs.offset, 0))), offset
                     )
                     return Some(merged_bounded_slice)
-                case _ if rhs.length is NONE:
+                case _:
                     merged_open_slice = nodes.Slice(
                         Some(max(lhs_length - rhs.offset, 0)), offset
                     )
                     return Some(merged_open_slice)
-                case _:
-                    return NONE
-        case _ if lhs.length is NONE:
+        case _:
             match rhs.length:
                 case Some(rhs_length):
                     rhs_slice = nodes.Slice(Some(rhs_length), offset)
                     return Some(rhs_slice)
-                case _ if rhs.length is NONE:
+                case _:
                     unbounded_slice = nodes.Slice(NONE, offset)
                     return Some(unbounded_slice)
-                case _:
-                    return NONE
+
+
+def _merge_slice_then_limit(
+    lhs: nodes.Slice, rhs: nodes.Limit
+) -> Option[nodes.PlanNode]:
+    if lhs.offset < 0:
+        return NONE
+
+    match lhs.length:
+        case Some(lhs_length):
+            merged = nodes.Slice(Some(min(lhs_length, rhs.n)), lhs.offset)
+            return Some(merged)
         case _:
-            return NONE
+            merged = nodes.Slice(Some(rhs.n), lhs.offset)
+            return Some(merged)
 
 
 def _merge_filters(lhs: nodes.Filter, rhs: nodes.Filter) -> nodes.Filter:
