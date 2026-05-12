@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from pyochain.traits import PyoKeysView, PyoValuesView
 
     from ._groupby import LazyGroupBy
-    from ._parser import ParsedQuery
+    from ._show import ParsedQuery
     from .typing import (
         AsofJoinStrategy,
         FillNullStrategy,
@@ -382,7 +382,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Raises:
             ImportError: If `rich` is not installed.
         """
-        from ._parser import ParsedQuery
+        from ._show import ParsedQuery
 
         try:
             return ParsedQuery(compile_plan(self._inner).ast)

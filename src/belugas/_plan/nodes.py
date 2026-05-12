@@ -1,16 +1,14 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, override
-
-from pyochain import Seq
 
 from ..typing import FileGlob, PathOrBuffer
 
 if TYPE_CHECKING:
     from duckdb import DuckDBPyConnection
-    from pyochain import Option
+    from pyochain import Option, Seq
     from rich.console import RenderableType
 
     from .._expr import Expr
@@ -46,54 +44,14 @@ class BaseNode:
 
     @override
     def __repr__(self) -> str:
-        return _to_s(self)
+        from .._show import node_structure
+
+        return node_structure(self)
 
     def __rich__(self) -> RenderableType:  # noqa: PLW3201
         from .._show import node_tree
 
         return node_tree(self)
-
-
-def _to_s(node: object, level: int = 0) -> str:
-    indent = "\n" + ("  " * (level + 1))
-    delim = f",{indent}"
-
-    match node:
-        case BaseNode():
-            node_fields = Seq(fields(node))
-            is_leaf = node_fields.all(
-                lambda field: not _is_nested_node(node, field.name)
-            )
-
-            if is_leaf:
-                indent = ""
-                delim = ", "
-
-            items = (
-                node_fields
-                .iter()
-                .filter(lambda field: field.name != "inner")
-                .chain(node_fields.iter().filter(lambda field: field.name == "inner"))
-                .map(lambda field: _field_to_s(node, field.name, level + 1))
-                .join(delim)
-            )
-            return f"{node.__class__.__name__}({indent}{items})"
-        case _:
-            return repr(node)
-
-
-def _is_nested_node(node: BaseNode, name: str) -> bool:
-    value: object = getattr(node, name)  # pyright: ignore[reportAny]
-    return isinstance(value, BaseNode)
-
-
-def _field_to_s(node: BaseNode, name: str, level: int) -> str:
-    value = _node_field_value(node, name)
-    return f"{name}={_to_s(value, level)}"
-
-
-def _node_field_value(node: BaseNode, name: str) -> object:
-    return getattr(node, name)  # pyright: ignore[reportAny]
 
 
 @dataclass(slots=True, repr=False)

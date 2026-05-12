@@ -28,6 +28,13 @@ if TYPE_CHECKING:
         SeqIntoVals,
     )
 
+# TODO: see if we can pushdown belugas IR into in-memory scans.
+# DuckDB will handle file reads just fine, but we should aim to minimize the python objects conversions to duckdb expressions, as well as the sqlglot AST size.
+# Polars pushdown seem like a quick free win, espcially with lazyframe: simply select the needed columns before calling collect. same for arrow, and duckdb relations
+# Numpy could also be very nice, but seems harder to handle
+# The best gain would be from python object: avoid converting unneded dict keys, sequences, etc... if possible.
+# This is where taking an approach where we go from the last operations backwards to the scan would be interesting, as we could directly see what columns/keys are needed at the scan level, and only convert those to duckdb expressions. This would also allow us to pushdown filters and projections into the scan, which would be a big win for in-memory scans.
+
 COL0 = "column_0"
 
 
