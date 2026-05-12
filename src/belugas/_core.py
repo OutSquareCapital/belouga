@@ -39,7 +39,7 @@ class Tables:
     LHS: exp.Table = exp.to_table("lhs")
     RHS: exp.Table = exp.to_table("rhs")
     STATS: exp.Table = exp.to_table("stats")
-    EXPLODE_SRC: exp.Table = exp.to_table("_explode_src")
+    EXPLODE: exp.Table = exp.to_table("_explode_src")
 
 
 class Marker(StrEnum):

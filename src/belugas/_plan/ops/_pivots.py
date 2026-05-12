@@ -10,6 +10,7 @@ from ..._core import Tables
 from ..._expr import Expr
 from ..._funcs import col
 from ...utils import try_iter, try_seq
+from .._deferred import as_relation
 
 if TYPE_CHECKING:
     from ...typing import PivotAgg, PythonLiteral, Schema, TryIter
@@ -28,6 +29,7 @@ PIVOT_AGG: dict[PivotAgg, Callable[[Expr], Expr]] = {
 
 
 def pivot(  # noqa: PLR0913, PLR0914, PLR0917
+    ast: exp.Selectable,
     schema: Schema,
     on: TryIter[str],
     on_columns: Sequence[PythonLiteral],
@@ -100,7 +102,21 @@ def pivot(  # noqa: PLR0913, PLR0914, PLR0917
         expressions=pivot_exprs, fields=[pivot_field], group=group, columns=pivot_cols
     )
 
-    table = exp.Table(this=Tables.SRC, pivots=[pivot_node])
+    match as_relation(ast):
+        case exp.Table() as table:
+            table = exp.Table(
+                this=exp.to_identifier(table.name),
+                db=table.args.get("db"),
+                catalog=table.args.get("catalog"),
+                alias=table.args.get("alias"),
+                pivots=[pivot_node],
+            )
+        case exp.Subquery(this=exp.Selectable() as inner):
+            alias = exp.TableAlias(this=exp.to_identifier(Tables.SRC.name))
+            table = exp.Subquery(this=inner, alias=alias, pivots=[pivot_node])
+        case _:
+            msg = f"Unexpected AST node type for pivot input: {ast.__class__.__name__}"
+            raise ValueError(msg)
 
     selected = (
         pivoted_cols
@@ -214,6 +230,7 @@ def _select(exprs: Iterable[exp.Expr | str]) -> exp.Select:
 
 
 def unpivot(  # noqa: PLR0913, PLR0917
+    ast: exp.Selectable,
     schema: Schema,
     on: TryIter[str],
     index: TryIter[str],
@@ -224,7 +241,7 @@ def unpivot(  # noqa: PLR0913, PLR0917
     index_set = try_iter(index).collect(dict.fromkeys)
     match on:
         case None:
-            first_dtype = schema.keys().iter().next()
+            first_dtype = schema.iter().next()
         case _:
             first_dtype = try_iter(on).next()
     value_dtype = first_dtype.and_then(schema.get_item).unwrap_or_else(
@@ -247,17 +264,23 @@ def unpivot(  # noqa: PLR0913, PLR0917
         try_iter(on)
         .then_some()
         .unwrap_or_else(
-            lambda: (
-                schema.keys().iter().iter().filter(lambda name: name not in index_cols)
-            )
+            lambda: schema.iter().filter(lambda name: name not in index_cols)
         )
         .collect(list)
     )
 
     into = exp.UnpivotColumns(this=variable_name, expressions=[value_name])
-    pivot = Tables.SRC.pipe(
-        lambda e: exp.Pivot(this=e, expressions=unpivot_cols, unpivot=True, into=into)
-    ).pipe(lambda e: exp.Subquery(this=e))
+    pivot = (
+        ast
+        .pipe(as_relation)
+        .pipe(
+            lambda e: exp.Pivot(
+                this=e, expressions=unpivot_cols, unpivot=True, into=into
+            )
+        )
+        .pipe(lambda e: exp.Subquery(this=e))
+    )
+
     selected = exp.select(*index_cols, variable_name, value_name).from_(
         pivot, copy=False
     )

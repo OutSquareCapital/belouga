@@ -10,6 +10,7 @@ from ..._core import Tables
 from ..._expr import Expr
 from ..._funcs import col
 from ...utils import try_seq
+from .._deferred import as_relation
 
 if TYPE_CHECKING:
     from pyochain.traits import PyoCollection
@@ -20,6 +21,8 @@ type JoinKeysRes[T: Seq[str] | str] = Result[JoinKeys[T], ValueError]
 
 
 def join(  # noqa: PLR0913, PLR0917
+    lhs_ast: exp.Selectable,
+    rhs_ast: exp.Selectable,
     schema: Schema,
     other: Schema,
     on: TryIter[str],
@@ -38,13 +41,15 @@ def join(  # noqa: PLR0913, PLR0917
     return (
         exp
         .select(*exprs)
-        .from_(Tables.LHS, copy=False)
-        .join("rhs", on=condition, join_type=join_type),
+        .from_(as_relation(lhs_ast, Tables.LHS.name), copy=False)
+        .join(as_relation(rhs_ast, Tables.RHS.name), on=condition, join_type=join_type),
         builder.join_schema(schema, other, join_keys, how),
     )
 
 
 def join_asof(  # noqa: PLR0913, PLR0917
+    lhs_ast: exp.Selectable,
+    rhs_ast: exp.Selectable,
     schema: Schema,
     other: Schema,
     left_on: Option[str],
@@ -110,19 +115,26 @@ def join_asof(  # noqa: PLR0913, PLR0917
     return (
         exp
         .select(*exprs)
-        .from_(Tables.LHS, copy=False)
-        .join("rhs", on=by_cond, join_type="asof left"),
+        .from_(as_relation(lhs_ast, Tables.LHS.name), copy=False)
+        .join(as_relation(rhs_ast, Tables.RHS.name), on=by_cond, join_type="asof left"),
         new_schema,
     )
 
 
 def join_cross(
-    schema: Schema, other: Schema, suffix: str = "_right"
+    lhs_ast: exp.Selectable,
+    rhs_ast: exp.Selectable,
+    schema: Schema,
+    other: Schema,
+    suffix: str = "_right",
 ) -> tuple[exp.Select, Schema]:
     builder = JoinBuilder(suffix, schema.keys(), other)
     exprs = builder.get_join_cols_cross()
     ast = (
-        exp.select(*exprs).from_(Tables.LHS, copy=False).join("rhs", join_type="cross")
+        exp
+        .select(*exprs)
+        .from_(as_relation(lhs_ast, Tables.LHS.name), copy=False)
+        .join(as_relation(rhs_ast, Tables.RHS.name), join_type="cross")
     )
     new_schema = builder.join_schema_cross(schema, other)
     return ast, new_schema

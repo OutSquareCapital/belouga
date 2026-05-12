@@ -9,29 +9,38 @@ from ..._core import Tables
 from ..._expr import Expr
 from ..._funcs import col, lit
 from ...utils import try_seq
+from .._deferred import as_relation
 
 if TYPE_CHECKING:
     from ...typing import TryIter, TrySeq, UniqueKeepStrategy
 
 
 def unique(
-    subset: TryIter[str], keep: UniqueKeepStrategy, order_by: TrySeq[str]
+    ast: exp.Selectable,
+    subset: TryIter[str],
+    keep: UniqueKeepStrategy,
+    order_by: TrySeq[str],
 ) -> Result[exp.Selectable, ValueError]:
     match (keep, try_seq(order_by), try_seq(subset)):
         case ("none", _, Null()):
-            return Ok(_none_on_all())
+            return Ok(_none_on_all(ast))
         case ("any", _, Null()) | ("first" | "last", Some(_), Null()):
-            return Ok(exp.select(exp.Star()).from_(Tables.SRC, copy=False).distinct())
+            return Ok(
+                exp.select(exp.Star()).from_(as_relation(ast), copy=False).distinct()
+            )
         case ("none", _, Some(subset_names)):
-            res = _none_on_subset(subset_names)
+            res = _none_on_subset(ast, subset_names)
             return Ok(res)
         case ("last", Some(order_cols), Some(subset_names)):
             return Ok(
-                _distinct_on(subset_names, order_cols, descending=True, nulls_last=True)
+                _distinct_on(
+                    ast, subset_names, order_cols, descending=True, nulls_last=True
+                )
             )
         case ("any" | "first", order_cols, Some(subset_names)):
             return Ok(
                 _distinct_on(
+                    ast,
                     subset_names,
                     order_cols.unwrap_or_else(Seq[str].new),
                     descending=False,
@@ -44,13 +53,13 @@ def unique(
             return Err(ValueError(msg))
 
 
-def _none_on_subset(subset_names: Seq[str]) -> exp.Select:
+def _none_on_subset(ast: exp.Selectable, subset_names: Seq[str]) -> exp.Select:
 
     subset_exprs = subset_names.iter().map(exp.column).collect()
     rhs = (
         exp
         .select(*subset_exprs)
-        .from_(Tables.SRC, copy=False)
+        .from_(as_relation(ast, copy_source=True), copy=False)
         .group_by(*subset_exprs)
         .having(lit(1).count().eq(1).inner)
         .subquery(Tables.RHS.name, copy=False)
@@ -71,22 +80,23 @@ def _none_on_subset(subset_names: Seq[str]) -> exp.Select:
     return (
         exp
         .select("lhs.*")
-        .from_("src AS lhs")
+        .from_(as_relation(ast, Tables.LHS.name), copy=False)
         .join(rhs, on=condition, join_type="semi")
     )
 
 
-def _none_on_all() -> exp.Select:
+def _none_on_all(ast: exp.Selectable) -> exp.Select:
     return (
         exp
         .select(exp.Star())
-        .from_(Tables.SRC, copy=False)
+        .from_(as_relation(ast), copy=False)
         .group_by("ALL")
         .having(lit(1).count().eq(1).inner)
     )
 
 
 def _distinct_on(
+    ast: exp.Selectable,
     subset_names: Seq[str],
     order_names: Seq[str],
     *,
@@ -110,7 +120,7 @@ def _distinct_on(
     return (
         exp
         .select(exp.Star())
-        .from_(Tables.SRC, copy=False)
+        .from_(as_relation(ast), copy=False)
         .distinct(*subset_names)
         .order_by(*order_exprs)
     )

@@ -142,38 +142,90 @@ class LogicalNode(BaseNode):
 
 
 @dataclass(slots=True, repr=False)
-class _Expressions(LogicalNode):
+class _UnaryNode(LogicalNode):
+    """Base class for nodes that transform a single input relation."""
+
+
+@dataclass(slots=True, repr=False)
+class DeferredNode(_UnaryNode):
+    """Unary nodes that can be accumulated before the scan is resolved."""
+
+
+@dataclass(slots=True, repr=False)
+class _DescriptorNode(_UnaryNode):
+    """Unary nodes that describe context and are consumed by another node."""
+
+
+@dataclass(slots=True, repr=False)
+class _AggregateNode(_UnaryNode):
+    """Unary nodes that consume grouping context and change row grain."""
+
+
+@dataclass(slots=True, repr=False)
+class _BoundaryNode(_UnaryNode):
+    """Unary nodes that force a relational boundary when compiled."""
+
+
+@dataclass(slots=True, repr=False)
+class _ConditionalBoundaryNode(_UnaryNode):
+    """Unary nodes whose compilation strategy depends on their arguments."""
+
+
+@dataclass(slots=True, repr=False)
+class _BinaryNode(LogicalNode):
+    """Base class for nodes that compose two child relations."""
+
+    other: Node
+
+
+@dataclass(repr=False)
+class _Expressions:
     exprs: TryIter[IntoExpr]
     more_exprs: Iterable[IntoExpr]
     named: dict[str, IntoExpr]
 
 
+@dataclass(slots=True, repr=False)
+class _DeferredExpressions(_Expressions, DeferredNode):
+    pass
+
+
+@dataclass(slots=True, repr=False)
+class _AggregateExpressions(_Expressions, _AggregateNode):
+    pass
+
+
+@dataclass(slots=True, repr=False)
+class _BoundaryExpressions(_Expressions, _BoundaryNode):
+    pass
+
+
 _LogicalNode = LogicalNode
 
 
-class Select(_Expressions):
+class Select(_DeferredExpressions):
     """Node representing a select operation."""
 
 
 @dataclass(slots=True, repr=False)
-class SelectAll(LogicalNode):
+class SelectAll(DeferredNode):
     func: ExprFn
 
 
 @dataclass(slots=True, repr=False)
-class WithColumns(_Expressions):
+class WithColumns(_DeferredExpressions):
     """Node representing a with_columns operation."""
 
 
 @dataclass(slots=True, repr=False)
-class Filter(LogicalNode):
+class Filter(DeferredNode):
     predicates: TryIter[IntoExprColumn]
     more_predicates: Iterable[IntoExprColumn]
     constraints: dict[str, IntoExpr]
 
 
 @dataclass(slots=True, repr=False)
-class GroupBy(LogicalNode):
+class GroupBy(_DescriptorNode):
     """Node representing a group_by operation."""
 
     keys: Seq[Expr]
@@ -182,24 +234,24 @@ class GroupBy(LogicalNode):
 
 
 @dataclass(slots=True, repr=False)
-class Agg(_Expressions):
+class Agg(_AggregateExpressions):
     """Node representing an aggregation operation."""
 
 
 @dataclass(slots=True, repr=False)
-class AggColumns(LogicalNode):
+class AggColumns(_AggregateNode):
     """Node representing an aggregation operation that applies the same function to all columns."""
 
     func: ExprFn
 
 
 @dataclass(slots=True, repr=False)
-class GroupByAll(_Expressions):
+class GroupByAll(_BoundaryExpressions):
     """Node representing a group_by_all operation."""
 
 
 @dataclass(slots=True, repr=False)
-class Sort(LogicalNode):
+class Sort(DeferredNode):
     by: TryIter[IntoExpr]
     more_by: Iterable[IntoExpr]
     descending: TrySeq[bool]
@@ -207,48 +259,47 @@ class Sort(LogicalNode):
 
 
 @dataclass(slots=True, repr=False)
-class Limit(LogicalNode):
+class Limit(DeferredNode):
     n: int
 
 
 @dataclass(slots=True, repr=False)
-class Slice(LogicalNode):
+class Slice(_ConditionalBoundaryNode):
     length: Option[int]
     offset: int
 
 
 @dataclass(slots=True, repr=False)
-class DropRows(LogicalNode):
+class DropRows(DeferredNode):
     subset: TryIter[str]
     fn: ExprFn
 
 
 @dataclass(slots=True, repr=False)
-class Drop(LogicalNode):
+class Drop(DeferredNode):
     columns: TryIter[IntoExprColumn]
     more_columns: Iterable[IntoExprColumn]
 
 
 @dataclass(slots=True, repr=False)
-class Explode(LogicalNode):
+class Explode(_BoundaryNode):
     columns: TryIter[IntoExprColumn]
     more_columns: Iterable[IntoExprColumn]
 
 
 @dataclass(slots=True, repr=False)
-class Unnest(LogicalNode):
+class Unnest(_BoundaryNode):
     columns: TryIter[IntoExprColumn]
     more_columns: Iterable[IntoExprColumn]
 
 
 @dataclass(slots=True, repr=False)
-class Union(LogicalNode):
-    other: Node
+class Union(_BinaryNode):
+    pass
 
 
 @dataclass(slots=True, repr=False)
-class Join(LogicalNode):
-    other: Node
+class Join(_BinaryNode):
     on: TryIter[str]
     how: JoinStrategy
     left_on: TryIter[str]
@@ -257,16 +308,14 @@ class Join(LogicalNode):
 
 
 @dataclass(slots=True, repr=False)
-class JoinCross(LogicalNode):
+class JoinCross(_BinaryNode):
     """Node representing a cross join operation."""
 
-    other: Node
     suffix: str
 
 
 @dataclass(slots=True, repr=False)
-class JoinAsof(LogicalNode):
-    other: Node
+class JoinAsof(_BinaryNode):
     left_on: Option[str]
     right_on: Option[str]
     on: Option[str]
@@ -278,14 +327,14 @@ class JoinAsof(LogicalNode):
 
 
 @dataclass(slots=True, repr=False)
-class Unique(LogicalNode):
+class Unique(_ConditionalBoundaryNode):
     subset: TryIter[str]
     keep: UniqueKeepStrategy
     order_by: TrySeq[str]
 
 
 @dataclass(slots=True, repr=False)
-class Pivot(LogicalNode):
+class Pivot(_BoundaryNode):
     on: TryIter[str]
     on_columns: Sequence[PythonLiteral]
     index: TryIter[str]
@@ -296,7 +345,7 @@ class Pivot(LogicalNode):
 
 
 @dataclass(slots=True, repr=False)
-class Unpivot(LogicalNode):
+class Unpivot(_BoundaryNode):
     on: TryIter[str]
     index: TryIter[str]
     variable_name: str
@@ -305,18 +354,18 @@ class Unpivot(LogicalNode):
 
 
 @dataclass(slots=True, repr=False)
-class WithRowIndex(LogicalNode):
+class WithRowIndex(DeferredNode):
     name: str
     order_by: TryIter[str]
 
 
 @dataclass(slots=True, repr=False)
-class Cast(LogicalNode):
+class Cast(DeferredNode):
     dtypes: Mapping[str, DataType] | DataType
 
 
 @dataclass(slots=True, repr=False)
-class Rename(LogicalNode):
+class Rename(DeferredNode):
     mapping: Mapping[str, str]
 
 

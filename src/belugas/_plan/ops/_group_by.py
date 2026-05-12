@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING
 from pyochain import Dict, Iter, Seq, Set, Vec
 from sqlglot import exp
 
-from ..._core import Tables
 from ..._expr import Expr
 from ..._funcs import col
+from .._deferred import as_relation
 from .._resolve import ResolvedExpr, lookup_type, resolve_all
 
 if TYPE_CHECKING:
@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 
 def group_by_all(
+    ast: exp.Selectable,
     schema: Schema,
     exprs: TryIter[IntoExpr],
     more_exprs: Iterable[IntoExpr],
@@ -40,13 +41,14 @@ def group_by_all(
     return (
         exp
         .select(*select_exprs)
-        .from_(Tables.SRC, copy=False)
+        .from_(as_relation(ast), copy=False)
         .group_by("ALL", copy=False),
         out_schema,
     )
 
 
 def agg_columns(
+    ast: exp.Selectable,
     schema: Schema,
     keys: Seq[Expr],
     func: Callable[[Expr], Expr],
@@ -61,10 +63,13 @@ def agg_columns(
         .filter(lambda name: name not in key_names)
         .map(lambda name: col(name).pipe(func).alias(name))
     )
-    return agg(schema, keys, agg_exprs, (), {}, None, drop_null_keys=drop_null_keys)
+    return agg(
+        ast, schema, keys, agg_exprs, (), {}, None, drop_null_keys=drop_null_keys
+    )
 
 
 def agg(  # noqa: PLR0913, PLR0917
+    ast: exp.Selectable,
     schema: Schema,
     keys: Seq[Expr],
     aggs: TryIter[IntoExpr],
@@ -115,7 +120,7 @@ def agg(  # noqa: PLR0913, PLR0917
         (key_glots, key_schema.items().iter().collect(Dict)),
         _acc,
     )
-    ast = exp.select(*select_exprs).from_(Tables.SRC, copy=False)
+    ast = exp.select(*select_exprs).from_(as_relation(ast), copy=False)
     if drop_null_keys:
         null_cond = keys.iter().map(lambda k: k.is_not_null()).reduce(Expr.and_).inner
         ast = ast.where(null_cond, copy=False)

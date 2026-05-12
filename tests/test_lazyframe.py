@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
-from pyochain import ResultUnwrapError
+from pyochain import Option, ResultUnwrapError
 from sqlglot import exp
 
 import belugas as bl
@@ -298,12 +298,16 @@ def test_with_columns_star_exprs(lf: bl.LazyFrame) -> None:
 
     cols = m.compile_plan(lf.inner).schema
 
-    def _plan(expr: bl.Expr) -> exp.Star | None:
-        ast, _ = ops.with_columns(cols, expr, (), {})
-        return ast.find(exp.Star)
+    def _plan(expr: bl.Expr) -> Option[exp.Expr]:
+        delta = ops.with_columns(cols, expr, (), {})
+        return delta.projection.and_then(
+            lambda spec: spec.Exprs.iter().find(
+                lambda expr_: isinstance(expr_, exp.Star)
+            )
+        )
 
-    assert _plan(bl_age) is None
-    assert _plan(bl_age.alias("age2")) is not None
+    assert _plan(bl_age).is_none()
+    assert _plan(bl_age.alias("age2")).is_some()
 
 
 def test_with_columns_single_expr(lf: bl.LazyFrame) -> None:

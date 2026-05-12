@@ -4,11 +4,10 @@ from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING
 
 from pyochain import Err, Iter, Ok, Result, Seq
-from sqlglot import exp
 
-from ..._core import Tables
 from ..._expr import Expr
 from ...utils import try_iter
+from .._deferred import DeferredDelta
 
 if TYPE_CHECKING:
     from ...typing import IntoExpr, TryIter, TrySeq
@@ -19,7 +18,7 @@ def sort(
     more_by: Iterable[IntoExpr],
     descending: TrySeq[bool],
     nulls_last: TrySeq[bool],
-) -> exp.Select:
+) -> DeferredDelta:
 
     order_exprs = (
         try_iter(by)
@@ -35,13 +34,9 @@ def sort(
         .map_star(
             lambda expr, desc, nls: expr.order_by(descending=desc, nulls_last=nls).inner
         )
+        .collect()
     )
-    return (
-        exp
-        .select(exp.Star())
-        .from_(Tables.SRC, copy=False)
-        .order_by(*order_exprs, copy=False)
-    )
+    return DeferredDelta(order_by=order_exprs)
 
 
 def check_by_arg(

@@ -8,6 +8,7 @@ from sqlglot import exp
 
 from ..._core import Marker, Tables
 from ..._funcs import col, row_number
+from .._deferred import DeferredDelta, ProjectionSpec, as_relation
 from .._resolve import (
     ResolvedExpr,
     find_all,
@@ -29,7 +30,7 @@ def with_columns(
     exprs: TryIter[IntoExpr],
     more_exprs: Iterable[IntoExpr],
     named_exprs: dict[str, IntoExpr],
-) -> tuple[exp.Select, Schema]:
+) -> DeferredDelta:
     def _resolved(updates: Dict[str, Expr]) -> Iter[exp.Expr]:
         update_iter = updates.items().iter()
         if not updates.any(lambda name: name in schema):
@@ -68,9 +69,15 @@ def with_columns(
         )
         .collect(Dict)
     )
-    return exp.select(*updates.into(_resolved)).from_(
-        projections.into(_into_windowed), copy=False
-    ), _with_columns_schema(schema, projections)
+    return DeferredDelta(
+        schema=Some(_with_columns_schema(schema, projections)),
+        projection=Some(
+            ProjectionSpec(
+                Exprs=updates.into(_resolved).collect(),
+                windowed_source=_is_windowed_projection(projections),
+            )
+        ),
+    )
 
 
 def _with_columns_schema(schema: Schema, projections: Seq[ResolvedExpr]) -> Schema:
@@ -85,7 +92,7 @@ def _with_columns_schema(schema: Schema, projections: Seq[ResolvedExpr]) -> Sche
     )
 
 
-def rename(schema: Schema, mapping: Mapping[str, str]) -> tuple[exp.Selectable, Schema]:
+def rename(schema: Schema, mapping: Mapping[str, str]) -> DeferredDelta:
     exprs = schema.iter().map(lambda c: exp.column(c).as_(mapping.get(c, c)))
     new_schema = (
         schema
@@ -94,12 +101,13 @@ def rename(schema: Schema, mapping: Mapping[str, str]) -> tuple[exp.Selectable, 
         .map_star(lambda name, dtype: (mapping.get(name, name), dtype))
         .collect(Dict)
     )
-    return exp.select(*exprs).from_(Tables.SRC, copy=False), new_schema
+    return DeferredDelta(
+        schema=Some(new_schema),
+        projection=Some(ProjectionSpec(Exprs=exprs.collect())),
+    )
 
 
-def with_row_index(
-    schema: Schema, name: str, order_by: TryIter[str]
-) -> tuple[exp.Selectable, Schema]:
+def with_row_index(schema: Schema, name: str, order_by: TryIter[str]) -> DeferredDelta:
     row_nb = row_number().window(order_by=order_by).sub(1).alias(name).inner
     new_schema = (
         Iter
@@ -107,19 +115,20 @@ def with_row_index(
         .chain(schema.items())
         .collect(Dict)
     )
-    return exp.select(row_nb, exp.Star()).from_(Tables.SRC, copy=False), new_schema
+    return DeferredDelta(
+        schema=Some(new_schema),
+        projection=Some(ProjectionSpec(Exprs=Seq((row_nb, exp.Star())))),
+    )
 
 
-def union() -> exp.Union:
+def union(lhs_ast: exp.Selectable, rhs_ast: exp.Selectable) -> exp.Union:
     slct = exp.select(exp.Star()).from_
-    lhs = slct(Tables.LHS)
-    rhs = slct(Tables.RHS)
+    lhs = slct(as_relation(lhs_ast, Tables.LHS.name), copy=False)
+    rhs = slct(as_relation(rhs_ast, Tables.RHS.name), copy=False)
     return exp.union(lhs, rhs)
 
 
-def cast(
-    schema: Schema, dtypes: Mapping[str, DataType] | DataType
-) -> tuple[exp.Selectable, Schema]:
+def cast(schema: Schema, dtypes: Mapping[str, DataType] | DataType) -> DeferredDelta:
     match dtypes:
         case Mapping():
             dtype_map = Dict(dtypes)
@@ -136,9 +145,7 @@ def cast(
             return select_all(schema, lambda c: c.cast(dtypes.raw))
 
 
-def select_all(
-    schema: Schema, func: Callable[[Expr], Expr]
-) -> tuple[exp.Selectable, Schema]:
+def select_all(schema: Schema, func: Callable[[Expr], Expr]) -> DeferredDelta:
 
     exprs = schema.iter().map(lambda c: col(c).pipe(func).alias(c).inner)
 
@@ -150,38 +157,60 @@ def select(
     exprs: TryIter[IntoExpr],
     more_exprs: Iterable[IntoExpr],
     named_exprs: dict[str, IntoExpr],
-) -> tuple[exp.Selectable, Schema]:
+) -> DeferredDelta:
     projections = resolve_all(schema, exprs, more_exprs, named_exprs)
-
-    def aliased(*, broadcast_agg: bool) -> exp.Select:
-        def _into_expr(resolved: ResolvedExpr) -> exp.Expr:
-            return (
-                _maybe_broadcast(resolved.expr, broadcast_agg=broadcast_agg)
-                .alias(resolved.name)
-                .inner
-            )
-
-        return exp.select(*projections.iter().map(_into_expr))
+    broadcast_agg = _should_broadcast_agg(
+        include_source_cols=False, projections=projections
+    )
 
     match projections.then_some():
         case Some(projs):
             new_schema = _select_schema(schema, projs)
-            source = _into_windowed(projs)
-            if projs.all(lambda resolved: resolved.has_distinct):
-                ast = aliased(broadcast_agg=False).from_(source).distinct()
-            else:
-                ast = aliased(
-                    broadcast_agg=_should_broadcast_agg(
-                        include_source_cols=False, projections=projections
+            select_exprs = (
+                projs
+                .iter()
+                .map(
+                    lambda resolved: (
+                        _maybe_broadcast(
+                            resolved.expr,
+                            broadcast_agg=broadcast_agg,
+                        )
+                        .alias(resolved.name)
+                        .inner
                     )
-                ).from_(source)
-            return ast, new_schema
+                )
+                .collect()
+            )
+            if projs.all(lambda resolved: resolved.has_distinct):
+                return DeferredDelta(
+                    schema=Some(new_schema),
+                    projection=Some(
+                        ProjectionSpec(
+                            Exprs=select_exprs,
+                            distinct=True,
+                            windowed_source=_is_windowed_projection(projs),
+                        )
+                    ),
+                )
+            return DeferredDelta(
+                schema=Some(new_schema),
+                projection=Some(
+                    ProjectionSpec(
+                        Exprs=select_exprs,
+                        windowed_source=_is_windowed_projection(projs),
+                    )
+                ),
+            )
         case _:
-            ast = exp.select(exp.null().as_(Marker.TEMP)).from_(Tables.SRC)
             new_schema: Schema = Dict.from_ref({
                 Marker.TEMP: exp.DType.NULL.into_expr()
             })
-            return ast, new_schema
+            return DeferredDelta(
+                schema=Some(new_schema),
+                projection=Some(
+                    ProjectionSpec(Exprs=Seq((exp.null().as_(Marker.TEMP),)))
+                ),
+            )
 
 
 def _select_schema(schema: Schema, projections: Seq[ResolvedExpr]) -> Schema:
@@ -193,22 +222,13 @@ def _select_schema(schema: Schema, projections: Seq[ResolvedExpr]) -> Schema:
     )
 
 
-def _into_windowed(cols: PyoIterable[ResolvedExpr]) -> exp.Expr:
-
+def _is_windowed_projection(cols: PyoIterable[ResolvedExpr]) -> bool:
     def _is_windowed(p: ResolvedExpr) -> bool:
         return p.name != Marker.TEMP and p.expr.inner.pipe(find_all, exp.Column).any(
             lambda col: col.parts[-1].name == Marker.TEMP
         )
 
-    if cols.any(_is_windowed):
-        row_nb = row_number().window().sub(1).alias(Marker.TEMP).inner
-        return (
-            exp
-            .select(row_nb, exp.Star())
-            .from_(Tables.SRC)
-            .subquery(Tables.SRC.name, copy=False)
-        )
-    return Tables.SRC
+    return cols.any(_is_windowed)
 
 
 def _should_broadcast_agg(
