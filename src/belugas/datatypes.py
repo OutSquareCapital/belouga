@@ -1,4 +1,4 @@
-"""Data types Mapping for PQL."""
+"""Data types Mapping for `belugas`."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from typing import (
     cast,
     final,
     overload,
+    override,
 )
 
 import duckdb
@@ -68,13 +69,20 @@ class DataType(ABC):
 
     @classmethod
     def from_duckdb(cls, dtype: DuckDBPyType) -> DataType:
-        """Convert a DuckDBPyType to a PQL DataType.
+        """Convert a `duckdb::DuckDBPyType` to the correspond `DataType`.
+
+        Warning:
+            When called on subclasses of `DataType`, this method may make unsafe assumptions on the provided `DuckDBPyType`.
+
+            This is done for performance reasons, but can result in unexpected behavior.
+
+            As such, unless you are certain of the exact `DuckDBPyType` being passed, prefer using `DataType::from_duckdb` instead of `List::from_duckdb`, `Enum::from_duckdb`, etc..
 
         Args:
-            dtype (DuckDBPyType): The DuckDBPyType to convert.
+            dtype (DuckDBPyType): The `duckdb::DuckDBPyType` to convert.
 
         Returns:
-            DataType: The corresponding PQL DataType.
+            DataType
         """
         return DUCKDB_MAP.get_item(dtype).unwrap_or_else(
             lambda: (
@@ -86,14 +94,28 @@ class DataType(ABC):
         )
 
     @classmethod
+    def from_str(cls, dtype: str) -> DataType:
+        """Convert a `str` representation of a data type to a `belugas::DataType`.
+
+        Prefer using `DataType::{from_duckdb, from_sql}` when possible, as this will be much faster and more reliable.
+
+        Args:
+            dtype (str): The string representation of the data type to convert.
+
+        Returns:
+            DataType
+        """
+        return exp.DataType.from_str(dtype, dialect="duckdb").pipe(DataType.from_sql)
+
+    @classmethod
     def from_sql(cls, dtype: exp.DataType) -> DataType:
-        """Convert a sqlglot DataType to a PQL DataType.
+        """Convert a `sqlglot::exp::DataType` to the corresponding `DataType`.
 
         Args:
             dtype (exp.DataType): The sqlglot DataType to convert.
 
         Returns:
-            DataType: The corresponding PQL DataType.
+            DataType
 
         Notes:
             **DuckDB list/array type parsing asymmetry:**
@@ -123,7 +145,7 @@ class DataType(ABC):
                 return (
                     NESTED_MAP
                     .get_item(dt_enum)
-                    .map(lambda constructor: constructor.__from_raw__(dtype))
+                    .map(lambda constructor: constructor(dtype))
                     .unwrap_or_else(
                         lambda: (
                             NON_NESTED_MAP
@@ -264,7 +286,7 @@ class ComplexDataType(DataType):
     """Base class for complex data types that need reverse-construction from parsed sqlglot AST."""
 
     @classmethod
-    def __from_raw__(cls, raw: exp.DataType) -> DataType:  # noqa: PLW3201
+    def __from_raw__(cls, raw: exp.DataType) -> Self:  # noqa: PLW3201
         """Construct a DataType instance from a raw sqlglot DataType expression.
 
         Args:
@@ -405,6 +427,12 @@ class Decimal(NumericType, ComplexDataType):
         self.raw = exp.DataType(
             this=exp.DType.DECIMAL, expressions=[_nb(precision), _nb(scale)]
         )
+
+    @override
+    @classmethod
+    def from_duckdb(cls, dtype: DuckDBPyType) -> Self:
+        precision, scale = _Cast.into_decimal(dtype.children)
+        return cls(NamedInt(*precision).value, NamedInt(*scale).value)
 
     @property
     def precision(self) -> int:
@@ -555,7 +583,19 @@ class Enum(StringType, ComplexDataType):
             case Iterable():
                 values = Iter(categories)
         exprs = values.map(exp.Literal.string).collect(list)
-        self.raw = exp.DataType(this=exp.DType.ENUM, expressions=exprs)
+        self.raw = _into_enum(exprs)
+
+    @override
+    @classmethod
+    def from_duckdb(cls, dtype: DuckDBPyType) -> Self:
+        exprs = (
+            NamedValues
+            .from_raw(_Cast.into_enum(dtype.children))
+            .values.iter()
+            .map(exp.Literal.string)
+            .collect(list)
+        )
+        return cls.__from_raw__(_into_enum(exprs))
 
     @property
     def categories(self) -> Seq[str]:
@@ -564,6 +604,10 @@ class Enum(StringType, ComplexDataType):
         return (
             Iter(exprs).map(lambda lit: lit.this).collect()  # pyright: ignore[reportAny]
         )
+
+
+def _into_enum(exprs: list[exp.Literal]) -> exp.DataType:
+    return exp.DataType(this=exp.DType.ENUM, expressions=exprs)
 
 
 @final
@@ -577,12 +621,22 @@ class Union(NestedType, ComplexDataType):
         Args:
             fields (Iterable[DataType]): The fields of the union type.
         """
+        exprs = Iter(fields).enumerate().map_star(_into_union_field).collect(list)
+        self.raw = _into_union(exprs)
 
-        def _into_col(i: int, field: DataType) -> exp.ColumnDef:
-            return exp.ColumnDef(this=exp.to_identifier(f"v{i}"), kind=field.raw)
+    @override
+    @classmethod
+    def from_duckdb(cls, dtype: DuckDBPyType) -> Self:
+        exprs = (
+            Iter(_Cast.into_union(dtype.children))
+            .skip(1)  # First dtype is the tag of the union itself
+            .map(lambda f: Field.from_raw(f).dtype)
+            .enumerate()
+            .map_star(_into_union_field)
+            .collect(list)
+        )
 
-        exprs = Iter(fields).enumerate().map_star(_into_col).collect(list)
-        self.raw = exp.DataType(this=exp.DType.UNION, expressions=exprs, nested=True)
+        return cls.__from_raw__(_into_union(exprs))
 
     @property
     def fields(self) -> Seq[DataType]:
@@ -592,6 +646,14 @@ class Union(NestedType, ComplexDataType):
             .map(lambda col_def: self.from_sql(col_def.kind))  # pyright: ignore[reportAny]
             .collect()
         )
+
+
+def _into_union_field(i: int, field: DataType) -> exp.ColumnDef:
+    return exp.ColumnDef(this=exp.to_identifier(f"v{i}"), kind=field.raw)
+
+
+def _into_union(exprs: list[exp.ColumnDef]) -> exp.DataType:
+    return exp.DataType(this=exp.DType.UNION, expressions=exprs, nested=True)
 
 
 @final
@@ -606,9 +668,14 @@ class Map(NestedType, ComplexDataType):
             key (DataType): The data type of the map keys.
             value (DataType): The data type of the map values.
         """
-        self.raw = exp.DataType(
-            this=exp.DType.MAP, expressions=[key.raw, value.raw], nested=True
-        )
+        self.raw = _into_map([key.raw, value.raw])
+
+    @override
+    @classmethod
+    def from_duckdb(cls, dtype: DuckDBPyType) -> Self:
+        key, value = _Cast.into_map(dtype.children)
+        exprs = [Field.from_raw(key).dtype.raw, Field.from_raw(value).dtype.raw]
+        return cls.__from_raw__(_into_map(exprs))
 
     @property
     def key(self) -> DataType:
@@ -619,6 +686,10 @@ class Map(NestedType, ComplexDataType):
     def value(self) -> DataType:
         """Get the value type of the map."""
         return self.from_sql(self.raw.expressions[1])  # pyright: ignore[reportAny]
+
+
+def _into_map(exprs: list[exp.DataType]) -> exp.DataType:
+    return exp.DataType(this=exp.DType.MAP, expressions=exprs, nested=True)
 
 
 @final
@@ -632,12 +703,20 @@ class Struct(NestedType, ComplexDataType):
         Args:
             fields (IntoDict[str, DataType]): The fields of the struct type, either as a dictionary or an iterable of key-value pairs.
         """
+        exprs = Dict(fields).items().iter().map_star(_into_struct_field).collect(list)
+        self.raw = _into_struct(exprs)
 
-        def _into_col(name: str, col: DataType) -> exp.ColumnDef:
-            return exp.ColumnDef(this=exp.to_identifier(name), kind=col.raw)
-
-        exprs = Dict(fields).items().iter().map_star(_into_col).collect(list)
-        self.raw = exp.DataType(this=exp.DType.STRUCT, expressions=exprs, nested=True)
+    @override
+    @classmethod
+    def from_duckdb(cls, dtype: DuckDBPyType) -> Self:
+        exprs = (
+            Iter(_Cast.into_struct(dtype.children))
+            .map(Field.from_raw)
+            .map(lambda f: (f.name, f.dtype))
+            .map_star(_into_struct_field)
+            .collect(list)
+        )
+        return cls.__from_raw__(_into_struct(exprs))
 
     @property
     def fields(self) -> Dict[str, DataType]:
@@ -652,6 +731,14 @@ class Struct(NestedType, ComplexDataType):
             )
             .collect(Dict)
         )
+
+
+def _into_struct_field(name: str, col: DataType) -> exp.ColumnDef:
+    return exp.ColumnDef(this=exp.to_identifier(name), kind=col.raw)
+
+
+def _into_struct(exprs: list[exp.ColumnDef]) -> exp.DataType:
+    return exp.DataType(this=exp.DType.STRUCT, expressions=exprs, nested=True)
 
 
 @final
@@ -672,6 +759,12 @@ class Array(NestedType, ComplexDataType):
             values=[exp.Literal.number(size)],
             nested=True,
         )
+
+    @override
+    @classmethod
+    def from_duckdb(cls, dtype: DuckDBPyType) -> Self:
+        child, size = _Cast.into_array(dtype.children)
+        return cls(Field.from_raw(child).dtype, NamedInt(*size).value)
 
     def with_dim(self, size: int) -> Self:
         """Add another level of nesting to the array.
@@ -710,6 +803,11 @@ class List(NestedType, ComplexDataType):
         self.raw = exp.DataType(
             this=exp.DType.LIST, expressions=[inner.raw], nested=True
         )
+
+    @override
+    @classmethod
+    def from_duckdb(cls, dtype: DuckDBPyType) -> Self:
+        return cls(Field.from_raw(*_Cast.into_list(dtype.children)).dtype)
 
     @property
     def inner(self) -> DataType:
@@ -812,46 +910,12 @@ class _Cast:
         return cast(RawDecimalChildren, dtype)
 
 
-def _build_decimal(dtype: DuckDBPyType) -> Decimal:
-    precision, scale = _Cast.into_decimal(dtype.children)
-    return Decimal(NamedInt(*precision).value, NamedInt(*scale).value)
-
-
-def _build_enum(dtype: DuckDBPyType) -> Enum:
-    return Enum(NamedValues.from_raw(_Cast.into_enum(dtype.children)).values)
-
-
-def _build_list(dtype: DuckDBPyType) -> List:
-    return List(Field.from_raw(*_Cast.into_list(dtype.children)).dtype)
-
-
-def _build_array(dtype: DuckDBPyType) -> Array:
-    child, size = _Cast.into_array(dtype.children)
-    return Array(Field.from_raw(child).dtype, NamedInt(*size).value)
-
-
-def _build_struct(dtype: DuckDBPyType) -> Struct:
-    return Struct(
-        Iter(_Cast.into_struct(dtype.children))
-        .map(Field.from_raw)
-        .map(lambda f: (f.name, f.dtype))
-    )
-
-
-def _build_map(dtype: DuckDBPyType) -> Map:
-    key, value = _Cast.into_map(dtype.children)
-    return Map(Field.from_raw(key).dtype, Field.from_raw(value).dtype)
-
-
-def _build_union(dtype: DuckDBPyType) -> Union:
-    return Union(
-        Iter(_Cast.into_union(dtype.children))
-        .skip(1)  # First dtype is the tag of the union itself
-        .map(Field.from_raw)
-        .map(lambda f: f.dtype)
-    )
-
-
+type DTypeBuilder[T] = Callable[[T], DataType]
+"""Function that takes a raw input of type T (e.g. a `sqlglot::exp::DataType`) and returns the corresponding DataType instance, used for constructing complex types from their raw representations."""
+type DTypeMap[K] = Dict[K, DataType]
+"""Mapping from raw representation to `DataType` instances for simple, non-parameterized types."""
+type BuilderMap[K, V] = Dict[K, DTypeBuilder[V]]
+"""Mapping from raw representation to functions that can construct `DataType` instances from raw representations for complex, parameterized types."""
 PRECISION_MAP: Dict[EpochTimeUnit, exp.DataType] = Dict.from_ref({
     "s": exp.DType.TIMESTAMP_S.into_expr(),
     "ms": exp.DType.TIMESTAMP_MS.into_expr(),
@@ -860,101 +924,133 @@ PRECISION_MAP: Dict[EpochTimeUnit, exp.DataType] = Dict.from_ref({
 })
 
 
-NESTED_MAP: Dict[exp.DType, type[ComplexDataType]] = Dict.from_ref({
-    exp.DType.LIST: List,
-    exp.DType.ARRAY: Array,
-    exp.DType.STRUCT: Struct,
-    exp.DType.MAP: Map,
-    exp.DType.UNION: Union,
-    exp.DType.ENUM: Enum,
-    exp.DType.DECIMAL: Decimal,
+NESTED_MAP: BuilderMap[exp.DType, exp.DataType] = Dict.from_ref({
+    exp.DType.LIST: List.__from_raw__,
+    exp.DType.ARRAY: Array.__from_raw__,
+    exp.DType.STRUCT: Struct.__from_raw__,
+    exp.DType.MAP: Map.__from_raw__,
+    exp.DType.UNION: Union.__from_raw__,
+    exp.DType.ENUM: Enum.__from_raw__,
+    exp.DType.DECIMAL: Decimal.__from_raw__,
 })
-"""Mapping from `sqlglot::exp::DType` to `ComplexDataType` constructors for parameterized, nested types."""
-NON_NESTED_MAP: Dict[exp.DType, DataType] = Dict.from_ref({
-    exp.DType.BIGINT: Int64(),
-    exp.DType.BIT: BitString(),
-    exp.DType.BIGNUM: Number(),
-    exp.DType.VARBINARY: Binary(),
-    exp.DType.BLOB: Binary(),
-    exp.DType.BINARY: Binary(),
-    exp.DType.BOOLEAN: Boolean(),
-    exp.DType.DATE: Date(),
-    exp.DType.DOUBLE: Float64(),
-    exp.DType.FLOAT: Float32(),
-    exp.DType.INT128: Int128(),
-    exp.DType.GEOMETRY: Geometry(),
-    exp.DType.INT: Int32(),
-    exp.DType.INTERVAL: Duration(),
-    exp.DType.JSON: Json(),
-    exp.DType.SMALLINT: Int16(),
-    exp.DType.TIMESTAMP_S: Datetime("s"),
-    exp.DType.TIMESTAMP_MS: Datetime("ms"),
-    exp.DType.TIMESTAMP: Datetime(),
-    exp.DType.TIMESTAMPNTZ: Datetime(),
-    exp.DType.TIMESTAMP_NS: Datetime("ns"),
-    exp.DType.TIMESTAMPTZ: DatetimeTZ(),
-    exp.DType.DATETIME: Datetime(),
-    exp.DType.TIME: Time(),
-    exp.DType.TIME_NS: Time(),
-    exp.DType.TIMETZ: TimeTZ(),
-    exp.DType.TINYINT: Int8(),
-    exp.DType.UUID: UUID(),
-    exp.DType.UINT128: UInt128(),
-    exp.DType.UBIGINT: UInt64(),
-    exp.DType.UINT: UInt32(),
-    exp.DType.USMALLINT: UInt16(),
-    exp.DType.UTINYINT: UInt8(),
-    exp.DType.TEXT: String(),
-    exp.DType.VARCHAR: String(),
-    exp.DType.VARIANT: Number(),
-})
-"""Mapping from `sqlglot::exp::DType` to `DataType` for constant, non-parameterized types."""
-DUCKDB_MAP: Dict[sqltypes.DuckDBPyType, DataType] = Dict.from_ref({
-    sqltypes.BIGINT: Int64(),
-    sqltypes.BIT: BitString(),
-    sqltypes.BLOB: Binary(),
-    sqltypes.BOOLEAN: Boolean(),
-    sqltypes.DATE: Date(),
-    sqltypes.DOUBLE: Float64(),
-    sqltypes.FLOAT: Float32(),
-    sqltypes.HUGEINT: Int128(),
-    sqltypes.INTEGER: Int32(),
-    sqltypes.INTERVAL: Duration(),
-    sqltypes.SMALLINT: Int16(),
-    sqltypes.SQLNULL: Null(),
-    sqltypes.TIME: Time(),
-    sqltypes.TIME_NS: Time(),
-    sqltypes.TIMESTAMP: Datetime(),
-    sqltypes.TIMESTAMP_MS: Datetime("ms"),
-    sqltypes.TIMESTAMP_NS: Datetime("ns"),
-    sqltypes.TIMESTAMP_S: Datetime("s"),
-    sqltypes.TIMESTAMP_TZ: DatetimeTZ(),
-    sqltypes.TIME_TZ: TimeTZ(),
-    sqltypes.TINYINT: Int8(),
-    sqltypes.UBIGINT: UInt64(),
-    sqltypes.UHUGEINT: UInt128(),
-    sqltypes.UINTEGER: UInt32(),
-    sqltypes.USMALLINT: UInt16(),
-    sqltypes.UTINYINT: UInt8(),
-    sqltypes.UUID: UUID(),
-    sqltypes.VARCHAR: String(),
-    sqltypes.VARIANT: Number(),
-    duckdb.type("JSON"): Json(),
-    duckdb.type("GEOMETRY"): Geometry(),
-    duckdb.type("BIGNUM"): Number(),
-})
-"""Mapping from `duckdb::sqltypes::DuckDBPyType` to `DataType` for constant, non-parameterized types."""
 
 
-DUCKDB_NESTED_MAP: Dict[StrIntoPyType, Callable[[DuckDBPyType], DataType]] = (
-    Dict.from_ref({
-        "list": _build_list,
-        "struct": _build_struct,
-        "array": _build_array,
-        "enum": _build_enum,
-        "map": _build_map,
-        "decimal": _build_decimal,
-        "union": _build_union,
-    })
-)
-"""Mapping from DuckDB nested type identifiers to `DataType` for parameterized, nested types."""
+DUCKDB_NESTED_MAP: BuilderMap[StrIntoPyType, DuckDBPyType] = Dict.from_ref({
+    "list": List.from_duckdb,
+    "struct": Struct.from_duckdb,
+    "array": Array.from_duckdb,
+    "enum": Enum.from_duckdb,
+    "map": Map.from_duckdb,
+    "decimal": Decimal.from_duckdb,
+    "union": Union.from_duckdb,
+})
+
+
+class BelugasDType(PyEnum):
+    """Enum of constant, non-parameterized data types with their corresponding `DataType` instances as values for efficient reference."""
+
+    INT_64 = Int64()
+    BIT_STRING = BitString()
+    BIGNUM = Number()
+    BINARY = Binary()
+    BOOLEAN = Boolean()
+    DATE = Date()
+    DOUBLE = Float64()
+    FLOAT = Float32()
+    INT128 = Int128()
+    GEOMETRY = Geometry()
+    INT = Int32()
+    INTERVAL = Duration()
+    JSON = Json()
+    SMALLINT = Int16()
+    DATETIME_S = Datetime("s")
+    DATETIME_MS = Datetime("ms")
+    DATETIME = Datetime()
+    DATETIME_NS = Datetime("ns")
+    DATETIMETZ = DatetimeTZ()
+    TIME = Time()
+    TIMETZ = TimeTZ()
+    TINYINT = Int8()
+    UUID = UUID()
+    UINT128 = UInt128()
+    UBIGINT = UInt64()
+    UINT = UInt32()
+    USMALLINT = UInt16()
+    UTINYINT = UInt8()
+    STRING = String()
+    NULL = Null()
+
+
+NON_NESTED_MAP: DTypeMap[exp.DType] = Dict.from_ref({
+    exp.DType.BIGINT: BelugasDType.INT_64.value,
+    exp.DType.BIT: BelugasDType.BIT_STRING.value,
+    exp.DType.BIGNUM: BelugasDType.BIGNUM.value,
+    exp.DType.VARBINARY: BelugasDType.BINARY.value,
+    exp.DType.BLOB: BelugasDType.BINARY.value,
+    exp.DType.BINARY: BelugasDType.BINARY.value,
+    exp.DType.BOOLEAN: BelugasDType.BOOLEAN.value,
+    exp.DType.DATE: BelugasDType.DATE.value,
+    exp.DType.DOUBLE: BelugasDType.DOUBLE.value,
+    exp.DType.FLOAT: BelugasDType.FLOAT.value,
+    exp.DType.INT128: BelugasDType.INT128.value,
+    exp.DType.GEOMETRY: BelugasDType.GEOMETRY.value,
+    exp.DType.INT: BelugasDType.INT.value,
+    exp.DType.INTERVAL: BelugasDType.INTERVAL.value,
+    exp.DType.JSON: BelugasDType.JSON.value,
+    exp.DType.SMALLINT: BelugasDType.SMALLINT.value,
+    exp.DType.TIMESTAMP_S: BelugasDType.DATETIME_S.value,
+    exp.DType.TIMESTAMP_MS: BelugasDType.DATETIME_MS.value,
+    exp.DType.TIMESTAMP: BelugasDType.DATETIME.value,
+    exp.DType.TIMESTAMPNTZ: BelugasDType.DATETIME.value,
+    exp.DType.TIMESTAMP_NS: BelugasDType.DATETIME_NS.value,
+    exp.DType.TIMESTAMPTZ: BelugasDType.DATETIMETZ.value,
+    exp.DType.DATETIME: BelugasDType.DATETIME.value,
+    exp.DType.TIME: BelugasDType.TIME.value,
+    exp.DType.TIME_NS: BelugasDType.TIME.value,
+    exp.DType.TIMETZ: BelugasDType.TIMETZ.value,
+    exp.DType.TINYINT: BelugasDType.TINYINT.value,
+    exp.DType.UUID: BelugasDType.UUID.value,
+    exp.DType.UINT128: BelugasDType.UINT128.value,
+    exp.DType.UBIGINT: BelugasDType.UBIGINT.value,
+    exp.DType.UINT: BelugasDType.UINT.value,
+    exp.DType.USMALLINT: BelugasDType.USMALLINT.value,
+    exp.DType.UTINYINT: BelugasDType.UTINYINT.value,
+    exp.DType.TEXT: BelugasDType.STRING.value,
+    exp.DType.VARCHAR: BelugasDType.STRING.value,
+    exp.DType.VARIANT: BelugasDType.BIGNUM.value,
+    exp.DType.NULL: BelugasDType.NULL.value,
+})
+DUCKDB_MAP: DTypeMap[DuckDBPyType] = Dict.from_ref({
+    sqltypes.BIGINT: BelugasDType.INT_64.value,
+    sqltypes.BIT: BelugasDType.BIT_STRING.value,
+    sqltypes.BLOB: BelugasDType.BINARY.value,
+    sqltypes.BOOLEAN: BelugasDType.BOOLEAN.value,
+    sqltypes.DATE: BelugasDType.DATE.value,
+    sqltypes.DOUBLE: BelugasDType.DOUBLE.value,
+    sqltypes.FLOAT: BelugasDType.FLOAT.value,
+    sqltypes.HUGEINT: BelugasDType.INT128.value,
+    sqltypes.INTEGER: BelugasDType.INT.value,
+    sqltypes.INTERVAL: BelugasDType.INTERVAL.value,
+    sqltypes.SMALLINT: BelugasDType.SMALLINT.value,
+    sqltypes.SQLNULL: BelugasDType.NULL.value,
+    sqltypes.TIME: BelugasDType.TIME.value,
+    sqltypes.TIME_NS: BelugasDType.TIME.value,
+    sqltypes.TIMESTAMP: BelugasDType.DATETIME.value,
+    sqltypes.TIMESTAMP_MS: BelugasDType.DATETIME_MS.value,
+    sqltypes.TIMESTAMP_NS: BelugasDType.DATETIME_NS.value,
+    sqltypes.TIMESTAMP_S: BelugasDType.DATETIME_S.value,
+    sqltypes.TIMESTAMP_TZ: BelugasDType.DATETIMETZ.value,
+    sqltypes.TIME_TZ: BelugasDType.TIMETZ.value,
+    sqltypes.TINYINT: BelugasDType.TINYINT.value,
+    sqltypes.UBIGINT: BelugasDType.UBIGINT.value,
+    sqltypes.UHUGEINT: BelugasDType.UINT128.value,
+    sqltypes.UINTEGER: BelugasDType.UINT.value,
+    sqltypes.USMALLINT: BelugasDType.USMALLINT.value,
+    sqltypes.UTINYINT: BelugasDType.UTINYINT.value,
+    sqltypes.UUID: BelugasDType.UUID.value,
+    sqltypes.VARCHAR: BelugasDType.STRING.value,
+    sqltypes.VARIANT: BelugasDType.BIGNUM.value,
+    duckdb.type("JSON"): BelugasDType.JSON.value,
+    duckdb.type("GEOMETRY"): BelugasDType.GEOMETRY.value,
+    duckdb.type("BIGNUM"): BelugasDType.BIGNUM.value,
+})
