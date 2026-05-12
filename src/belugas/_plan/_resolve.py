@@ -46,7 +46,7 @@ def _compile_tree(node: nodes.Node) -> CompiledPlan:
             compiled_src = _compile_tree(node.inner)
             compiled_node = _compile_node(
                 compiled_src.ast, compiled_src.schema, node
-            ).unwrap()
+            ).unwrap_or_else((_ for _ in ()).throw)
             sources = (
                 compiled_src.sources
                 .items()
@@ -119,6 +119,11 @@ def _compile_node(  # noqa: PLR0915
                 ast, source.schema, Dict([(source.identity, source.relation)])
             )
             return Ok(plan)
+        case nodes.GroupBy():
+            # GroupBy is a descriptor node consumed by Agg/AggColumns.
+            # At this stage we keep the compiled source unchanged and let
+            # the parent aggregation node emit the actual GROUP BY query.
+            return Ok(CompiledPlan(src_ast, schema, empty))
 
         case nodes.Agg() as agg_node:
             match node.inner:
@@ -263,9 +268,6 @@ def _compile_node(  # noqa: PLR0915
                 node.suffix,
             )
             return Ok(CompiledPlan(merge(ast, other.ast), new_schema, other.sources))
-        case nodes.GroupBy():
-            msg = "GroupBy node should have been handled by its parent Agg or AggColumns node"
-            return Err(CompilationError(msg))
 
 
 def _substitute(ast: exp.Selectable, subs: dict[str, exp.Selectable]) -> exp.Selectable:
