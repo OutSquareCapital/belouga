@@ -9,6 +9,9 @@ import pytest
 import belugas as bl
 
 if TYPE_CHECKING:
+    from _duckdb._typing import (  # pyright: ignore[reportMissingModuleSource]
+        StrIntoPyType,
+    )
     from pyochain import Dict
 
 
@@ -304,3 +307,47 @@ def test_uuid(cast_schema: Dict[str, bl.DataType]) -> None:
 
 def test_number(cast_schema: Dict[str, bl.DataType]) -> None:
     assert isinstance(cast_schema["num"], bl.Number)
+
+
+CANDIDATES: tuple[StrIntoPyType, ...] = (
+    "bigint",
+    "bit",
+    "bignum",
+    "blob",
+    "boolean",
+    "date",
+    "double",
+    "float",
+    "geometry",
+    "hugeint",
+    "integer",
+    "interval",
+    "smallint",
+    "null",
+    "time with time zone",
+    "time",
+    "time_ns",
+    "timestamp_ms",
+    "timestamp_ns",
+    "timestamp_s",
+    "timestamp with time zone",
+    "timestamp",
+    "tinyint",
+    "ubigint",
+    "uhugeint",
+    "uinteger",
+    "usmallint",
+    "utinyint",
+    "uuid",
+    "varchar",
+    "variant",
+    "json",
+)
+
+
+@pytest.mark.parametrize("dtype", CANDIDATES)
+def test_from_str(dtype: StrIntoPyType) -> None:
+    parsed = duckdb.type(dtype)
+    from_str = bl.DataType.from_str(dtype).__class__.__name__
+    from_duckdb = bl.DataType.from_duckdb(parsed).__class__.__name__
+    assert from_str == from_duckdb
