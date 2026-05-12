@@ -205,7 +205,9 @@ def _render_polars_plan(value: IntoPlLazyFrame) -> RenderableType:
     _ = plan_text.highlight_words(_POLARS_EXPRS, style=expr_style)
     _ = plan_text.highlight_regex(r'"[^"\n]*"', style="bold green")
 
-    return Panel(plan_text, title="Polars Query Plan", border_style="bright_blue")
+    return Panel(
+        plan_text, title="Polars Query Plan", border_style="bright_blue", expand=False
+    )
 
 
 def expr_tree(node: exp.Expr) -> RenderableType:
