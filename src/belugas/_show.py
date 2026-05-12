@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, override
 import duckdb
 from pygments import token
 from pygments.lexers.sql import SqlLexer  # pyright: ignore[reportMissingTypeStubs]
-from pyochain import Dict, Iter, Seq, Set, Some, Vec
+from pyochain import Dict, Iter, Set, Some, Vec
 from rich.console import Console
 from rich.syntax import Syntax
 from sqlglot import exp
@@ -169,7 +169,7 @@ def node_tree(node: BaseNode) -> RenderableType:
 
     def _add_to_tree(field: Field[Any]) -> None:  # pyright: ignore[reportExplicitAny]
         name = field.name
-        value = _node_field_value(node, name)
+        value: object = getattr(node, name)  # pyright: ignore[reportAny]
         match value:
             case BaseNode():
                 branch = tree.add(Text("↑", style="bold bright_black"))
@@ -272,46 +272,3 @@ def expr_tree(node: exp.Expr) -> RenderableType:
     tree = Tree(_expr_header(node))
     Iter(node.args.items()).for_each_star(_add_arg)
     return tree
-
-
-def node_structure(node: object, level: int = 0) -> str:
-    from ._plan.nodes import BaseNode
-
-    indent = "\n" + ("  " * (level + 1))
-    delim = f",{indent}"
-
-    def _is_nested_node(node: BaseNode, name: str) -> bool:
-        value: object = getattr(node, name)  # pyright: ignore[reportAny]
-        return isinstance(value, BaseNode)
-
-    match node:
-        case BaseNode():
-            node_fields = Seq(fields(node))
-            is_leaf = node_fields.all(
-                lambda field: not _is_nested_node(node, field.name)
-            )
-
-            if is_leaf:
-                indent = ""
-                delim = ", "
-
-            items = (
-                node_fields
-                .iter()
-                .filter(lambda field: field.name != "inner")
-                .chain(node_fields.iter().filter(lambda field: field.name == "inner"))
-                .map(lambda field: _field_to_s(node, field.name, level + 1))
-                .join(delim)
-            )
-            return f"{node.__class__.__name__}({indent}{items})"
-        case _:
-            return repr(node)
-
-
-def _field_to_s(node: BaseNode, name: str, level: int) -> str:
-    value = _node_field_value(node, name)
-    return f"{name}={node_structure(value, level)}"
-
-
-def _node_field_value(node: BaseNode, name: str) -> object:
-    return getattr(node, name)  # pyright: ignore[reportAny]

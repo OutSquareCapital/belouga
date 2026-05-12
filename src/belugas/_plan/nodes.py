@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field, fields
 from typing import TYPE_CHECKING, override
+
+from pyochain import NONE
 
 from ..typing import FileGlob, PathOrBuffer
 
@@ -44,14 +46,50 @@ class BaseNode:
 
     @override
     def __repr__(self) -> str:
-        from .._show import node_structure
-
         return node_structure(self)
 
     def __rich__(self) -> RenderableType:  # noqa: PLW3201
         from .._show import node_tree
 
         return node_tree(self)
+
+
+def node_structure(node: object, level: int = 0) -> str:
+
+    indent = "\n" + ("  " * (level + 1))
+    delim = f",{indent}"
+
+    def _is_nested_node(node: BaseNode, name: str) -> bool:
+        value: object = getattr(node, name)  # pyright: ignore[reportAny]
+        return isinstance(value, BaseNode)
+
+    match node:
+        case BaseNode():
+            node_fields = Seq(fields(node))
+            is_leaf = node_fields.all(
+                lambda field: not _is_nested_node(node, field.name)
+            )
+
+            if is_leaf:
+                indent = ""
+                delim = ", "
+
+            items = (
+                node_fields
+                .iter()
+                .filter(lambda field: field.name != "inner")
+                .chain(node_fields.iter().filter(lambda field: field.name == "inner"))
+                .map(lambda field: _field_to_s(node, field.name, level + 1))
+                .join(delim)
+            )
+            return f"{node.__class__.__name__}({indent}{items})"
+        case _:
+            return repr(node)
+
+
+def _field_to_s(node: BaseNode, name: str, level: int) -> str:
+    value: object = getattr(node, name)  # pyright: ignore[reportAny]
+    return f"{name}={node_structure(value, level)}"
 
 
 @dataclass(slots=True, repr=False)
@@ -65,6 +103,7 @@ class BaseScan(BaseNode):
 class ScanInMemory[T: IntoRel](BaseScan):
     data: T | None
     orient: Orientation = "col"
+    projected_columns: Option[Seq[str]] = field(default_factory=lambda: NONE)
 
 
 @dataclass(slots=True, repr=False)
