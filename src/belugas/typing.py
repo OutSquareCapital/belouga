@@ -43,6 +43,7 @@ if TYPE_CHECKING:
         StrIntoPyType,
         StrIntoPyType as DuckStrIntoPyType,
     )
+    from duckdb import DuckDBPyRelation
     from pyochain import Dict
     from rich.console import ConsoleRenderable
 
@@ -248,7 +249,7 @@ type SeqIntoVals = Sequence[Mapping[str, PythonLiteral]] | NestedSeq | LitSeq | 
 
 type IntoValues = Mapping[str, LitSeq] | SeqIntoVals
 """Types that can be converted into a `values` relation (either an expression, a mapping, or a sequence)."""
-type IntoRel = IntoValues | IntoArrow | IntoPolars
+type IntoRel = IntoValues | IntoArrow | IntoPolars | DuckDBPyRelation
 """"Types that can be converted into a relation (either a frame or values)."""
 type IntoExprColumn = str | ExprLike
 """Inputs that can convert into a `col` expression."""
