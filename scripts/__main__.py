@@ -152,6 +152,18 @@ def bench(
     run_benchmark(runs)
 
 
+@app.command()
+def bench_dtypes(
+    runs: Annotated[
+        int, typer.Option("--runs", "-r", help="Number of runs per benchmark")
+    ] = 250,
+) -> None:
+    """Run the benchmarks comparing belugas and polars implementations."""
+    from ._benchmark_dtypes import main
+
+    main(runs)
+
+
 def _run_ruff(*, check_only: bool, dest: Path) -> None:
 
     import subprocess
