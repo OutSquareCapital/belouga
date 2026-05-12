@@ -132,6 +132,10 @@ def node_tree(node: BaseNode) -> RenderableType:
 
     def _attach(branch: Tree, value: object) -> None:
         match value:
+            case duckdb.DuckDBPyRelation():
+                header = Text("DuckDB Relation", style="bold white")
+                qry_plan = Text(value.explain(), style="bold cyan")
+                _ = branch.add(header.append("\n").append(qry_plan), style="bold cyan")
             case IntoPlLazyFrame():
                 _ = branch.add(_render_polars_plan(value))
             case FrameLike():
