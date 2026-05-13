@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 import polars as pl
 from polars.testing import assert_frame_equal
-from pyochain import Dict, Iter, Seq
+from pyochain import Dict, Iter, Range, Seq
 from rich import print
 from rich.progress import Progress
 from rich.table import Table
@@ -19,11 +19,11 @@ N_COLS = 25
 N_GROUPS = 10
 
 
-COLS: Seq[str] = Iter(range(N_COLS)).map(lambda i: f"c{i}").collect()
+COLS: Seq[str] = Range(0, N_COLS).iter().map(lambda i: f"c{i}").collect()
 
 _DATA: dict[str, list[int]] = {
     "c0": list(range(N_GROUPS)),
-    **Iter(range(1, N_COLS)).map(lambda i: (f"c{i}", [1] * N_GROUPS)).collect(Dict),
+    **Range(1, N_COLS).iter().map(lambda i: (f"c{i}", [1] * N_GROUPS)).collect(Dict),
 }
 _RHS_DATA: dict[str, list[int]] = {
     "c0": list(range(5)),
@@ -41,7 +41,8 @@ _PIVOT_DATA: dict[str, list[int] | list[str]] = {
 }
 _EXPLODE_DATA = {
     "id": tuple(range(N_GROUPS)),
-    **Iter(range(1, N_COLS))
+    **Range(1, N_COLS)
+    .iter()
     .map(
         lambda i: (
             f"c{i}",
@@ -170,7 +171,8 @@ def _get_table() -> Table:
 
 def _get_timing(runs: int, fn: BenchFn[Frame]) -> float:
     return (
-        Iter(range(runs))
+        Range(0, runs)
+        .iter()
         .map(lambda _: timeit.timeit(lambda: fn().collect_schema(), number=1) * 1000)
         .into(statistics.median)
     )

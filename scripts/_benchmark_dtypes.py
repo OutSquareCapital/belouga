@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, NamedTuple
 
 import duckdb
 from duckdb import sqltypes
-from pyochain import Iter, Seq, Vec
+from pyochain import Range, Seq, Vec
 from rich.console import Console
 from rich.progress import Progress
 from rich.table import Table
@@ -95,7 +95,7 @@ def _compute_results(table: Table, n: int) -> None:
             _ = fn(dtype)
             return (time.perf_counter() - t0) * 1e6
 
-        return Iter(range(n)).map(lambda _: _once()).into(statistics.median)
+        return Range(0, n).iter().map(lambda _: _once()).into(statistics.median)
 
     with Progress() as progress:
         task = progress.add_task(

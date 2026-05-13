@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from functools import partial
 from typing import TYPE_CHECKING, Self, override
 
-from pyochain import NONE, Err, Iter, Null, Ok, Option, Result, Set, Some
+from pyochain import NONE, Err, Iter, Null, Ok, Option, Range, Result, Set, Some
 from pyochain.traits import PyoCollection
 from sqlglot import exp
 
@@ -663,7 +663,7 @@ class Expr(Fns):
                     Some("forward") | Some("backward") as strat,
                     Some(lim),
                 ):
-                    iterator = Iter(range(1, lim + 1))
+                    iterator = Range(1, lim + 1).iter()
                     match strat.value:
                         case "forward":
                             exprs: Iter[Expr] = iterator.map(self.shift)

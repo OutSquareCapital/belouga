@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Self, cast
 
 import duckdb
 from duckdb import DuckDBPyConnection, DuckDBPyRelation
-from pyochain import Dict, Iter, Option, Seq, Some
+from pyochain import Dict, Iter, Option, Range, Seq, Some
 
 from .._core import BelugasConversionError
 from ..datatypes import DataType
@@ -109,7 +109,7 @@ def from_numpy(data: AnyArray, orient: Orientation = "col") -> ScanResult:
 
             axis, arr_getter = _array_strategy()
             names_nb: int = arr.shape[axis]  # pyright: ignore[reportAny]
-            cols = Iter(range(names_nb)).map(_named).collect()
+            cols = Range(0, names_nb).iter().map(_named).collect()
             return from_query(_named_array(cols))
 
 
