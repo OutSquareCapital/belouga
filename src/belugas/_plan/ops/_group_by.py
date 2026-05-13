@@ -8,7 +8,7 @@ from sqlglot import exp
 
 from ..._expr import Expr
 from ..._funcs import col
-from .._deferred import as_relation
+from .._common import as_relation
 from .._resolve import ResolvedExpr, lookup_type, resolve_all
 
 if TYPE_CHECKING:

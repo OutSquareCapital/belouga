@@ -1,32 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
-
-from pyochain import NONE, Option, Seq
 from sqlglot import exp
 
 from .._core import Tables
-
-if TYPE_CHECKING:
-    from ..typing import Schema
-
-
-@dataclass(slots=True)
-class ProjectionSpec:
-    Exprs: Seq[exp.Expr]
-    distinct: bool = False
-    windowed_source: bool = False
-
-
-@dataclass(slots=True)
-class DeferredDelta:
-    schema: Option[Schema] = field(default_factory=lambda: NONE)
-    projection: Option[ProjectionSpec] = field(default_factory=lambda: NONE)
-    where: Option[exp.Expr] = field(default_factory=lambda: NONE)
-    order_by: Seq[exp.Expr] = field(default_factory=Seq[exp.Expr].new)
-    limit: Option[exp.Expr] = field(default_factory=lambda: NONE)
-    offset: Option[exp.Expr] = field(default_factory=lambda: NONE)
 
 
 def as_relation(

@@ -9,7 +9,7 @@ from ..._core import Tables
 from ..._expr import Expr
 from ..._funcs import col, lit
 from ...utils import try_seq
-from .._deferred import as_relation
+from .._common import as_relation
 
 if TYPE_CHECKING:
     from ...typing import TryIter, TrySeq, UniqueKeepStrategy

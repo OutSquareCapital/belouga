@@ -6,7 +6,7 @@ from sqlglot import exp
 from ..._core import Tables
 from ..._expr import Expr
 from ..._funcs import col, lit
-from .._deferred import as_relation
+from .._common import as_relation
 
 MAX_I64 = 9_223_372_036_854_775_807
 

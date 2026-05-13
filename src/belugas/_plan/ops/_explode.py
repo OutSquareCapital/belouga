@@ -9,7 +9,7 @@ from sqlglot import exp
 
 from ..._core import Tables
 from ..._funcs import col, lit, unnest
-from .._deferred import as_relation
+from .._common import as_relation
 from .._resolve import resolve_all
 
 if TYPE_CHECKING:

@@ -9,7 +9,7 @@ from sqlglot import exp
 from ... import datatypes as dt
 from ..._funcs import col, unnest as unnest_fn
 from ...utils import try_iter
-from .._deferred import as_relation
+from .._common import as_relation
 
 if TYPE_CHECKING:
     from ...typing import IntoExprColumn, Schema, TryIter

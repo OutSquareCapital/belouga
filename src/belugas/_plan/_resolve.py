@@ -18,10 +18,9 @@ from belugas.typing import (
 )
 
 from .._core import Marker
-from .._funcs import row_number
 from ..utils import try_iter
 from . import nodes, scans
-from ._deferred import DeferredDelta, ProjectionSpec, as_relation
+from ._common import as_relation
 from ._optimize import optimize_nodes
 
 if TYPE_CHECKING:
@@ -36,12 +35,6 @@ class CompiledPlan(NamedTuple):
 
 
 type Pending = Vec[nodes.DeferredNode]
-
-
-@dataclass(slots=True)
-class DeferredState:
-    plan: CompiledPlan
-    delta: DeferredDelta
 
 
 def compile_plan(node: nodes.Node, *, optimize: bool = True) -> CompiledPlan:
@@ -279,175 +272,169 @@ def _resolve_scan(node: nodes.Scan) -> scans.ScanResult:
 
 
 def _apply_deferred(plan: CompiledPlan, pending: Pending) -> CompiledPlan:
-    def _apply(state: DeferredState, node: nodes.DeferredNode) -> DeferredState:
-        current = state.plan
-        delta = state.delta
+    def _apply(current: CompiledPlan, node: nodes.DeferredNode) -> CompiledPlan:
+        from . import ops
 
-        if _should_flush_before(delta, node):
-            current = CompiledPlan(
-                _materialize_delta(current.ast, delta), current.schema, current.sources
-            )
-            delta = DeferredDelta()
-
-        node_delta = _compile_deferred(node, current.schema)
-        next_schema = node_delta.schema.unwrap_or(current.schema)
-        next_plan = CompiledPlan(current.ast, next_schema, current.sources)
-        return DeferredState(next_plan, _merge_delta(delta, node_delta))
-
-    final_state = pending.iter().fold(DeferredState(plan, DeferredDelta()), _apply)
-    return CompiledPlan(
-        _materialize_delta(final_state.plan.ast, final_state.delta),
-        final_state.plan.schema,
-        final_state.plan.sources,
-    )
-
-
-def _should_flush_before(delta: DeferredDelta, node: nodes.DeferredNode) -> bool:
-    has_projection = delta.projection.is_some()
-    has_order = delta.order_by.length() > 0
-    has_limit = delta.limit.is_some() or delta.offset.is_some()
-
-    match node:
-        case nodes.Filter() | nodes.DropRows() | nodes.Sort():
-            return has_projection or has_order or has_limit
-        case nodes.Limit():
-            return has_limit
-        case (
-            nodes.Select()
-            | nodes.SelectAll()
-            | nodes.WithColumns()
-            | nodes.Drop()
-            | nodes.Rename()
-            | nodes.Cast()
-            | nodes.WithRowIndex()
-        ):
-            return has_projection or has_limit
-        case _:
-            return False
-
-
-def _compile_deferred(node: nodes.DeferredNode, schema: Schema) -> DeferredDelta:
-    from . import ops
-
-    match node:
-        case nodes.Select():
-            return ops.select(schema, node.exprs, node.more_exprs, node.named)
-        case nodes.SelectAll():
-            return ops.select_all(schema, node.func)
-        case nodes.WithColumns():
-            return ops.with_columns(schema, node.exprs, node.more_exprs, node.named)
-        case nodes.Filter():
-            return ops.filter(
-                node.predicates,
-                node.more_predicates,
-                node.constraints,
-            )
-        case nodes.Sort():
-            return ops.sort(
-                node.by,
-                node.more_by,
-                node.descending,
-                node.nulls_last,
-            )
-        case nodes.Limit():
-            return ops.limit(node.n)
-        case nodes.Drop():
-            return ops.drop(schema, node.columns, node.more_columns)
-        case nodes.DropRows():
-            return ops.drop_rows(schema, node.subset, node.fn)
-        case nodes.Rename():
-            return ops.rename(schema, node.mapping)
-        case nodes.Cast():
-            return ops.cast(schema, node.dtypes)
-        case nodes.WithRowIndex():
-            return ops.with_row_index(schema, node.name, node.order_by)
-        case _:
-            return DeferredDelta()
-
-
-def _merge_delta(current: DeferredDelta, incoming: DeferredDelta) -> DeferredDelta:
-    from .._expr import Expr
-
-    where = current.where
-    if incoming.where.is_some():
-        where = where.map_or(
-            incoming.where,
-            lambda current_where: Some(
-                Expr(current_where).and_(Expr(incoming.where.unwrap())).inner
-            ),
-        )
-
-    return DeferredDelta(
-        schema=incoming.schema.or_(current.schema),
-        projection=incoming.projection.or_(current.projection),
-        where=where,
-        order_by=(
-            incoming.order_by if incoming.order_by.length() > 0 else current.order_by
-        ),
-        limit=incoming.limit.or_(current.limit),
-        offset=incoming.offset.or_(current.offset),
-    )
-
-
-def _materialize_delta(
-    base_ast: exp.Selectable, delta: DeferredDelta
-) -> exp.Selectable:
-    if _is_empty_delta(delta):
-        return base_ast
-
-    source = as_relation(base_ast)
-    select_source = delta.projection.map_or(
-        source,
-        lambda spec: _projection_source(source, spec),
-    )
-    ast = delta.projection.map_or(
-        exp.select(exp.Star()).from_(select_source, copy=False),
-        lambda spec: exp.select(*spec.Exprs).from_(select_source, copy=False),
-    )
-    ast = (
-        delta.projection
-        .filter(lambda spec: spec.distinct)
-        .map(lambda _spec: ast.distinct())
-        .unwrap_or(ast)
-    )
-    ast = delta.where.map(lambda where: ast.where(where, copy=False)).unwrap_or(ast)
-    ast = delta.order_by.then(
-        lambda order_by: ast.order_by(*order_by, copy=False)
-    ).unwrap_or(ast)
-    ast = delta.limit.map(lambda limit: ast.limit(limit, copy=False)).unwrap_or(ast)
-    return delta.offset.map(lambda offset: ast.offset(offset, copy=False)).unwrap_or(
-        ast
-    )
-
-
-def _is_empty_delta(delta: DeferredDelta) -> bool:
-    return (
-        delta.schema.is_none()
-        and delta.projection.is_none()
-        and delta.where.is_none()
-        and delta.order_by.length() == 0
-        and delta.limit.is_none()
-        and delta.offset.is_none()
-    )
-
-
-def _projection_source(
-    source: exp.Table | exp.Subquery,
-    spec: ProjectionSpec,
-) -> exp.Table | exp.Subquery:
-    match spec.windowed_source:
-        case True:
-            return (
-                exp
-                .select(
-                    row_number().window().sub(1).alias(Marker.TEMP).inner,
-                    exp.Star(),
+        match node:
+            case nodes.Select():
+                ast, schema = ops.select(
+                    current.ast,
+                    current.schema,
+                    node.exprs,
+                    node.more_exprs,
+                    node.named,
                 )
-                .from_(source, copy=False)
-                .subquery(Marker.TEMP, copy=False)
-            )
-        case _:
-            return source
+                return CompiledPlan(ast, schema, current.sources)
+            case nodes.SelectAll():
+                ast, schema = ops.select_all(current.ast, current.schema, node.func)
+                return CompiledPlan(ast, schema, current.sources)
+            case nodes.WithColumns():
+                ast, schema = ops.with_columns(
+                    current.ast,
+                    current.schema,
+                    node.exprs,
+                    node.more_exprs,
+                    node.named,
+                )
+                return CompiledPlan(ast, schema, current.sources)
+            case nodes.Filter():
+                condition = ops.filter(
+                    node.predicates,
+                    node.more_predicates,
+                    node.constraints,
+                )
+                ast = _apply_where(current.ast, condition)
+                return CompiledPlan(ast, current.schema, current.sources)
+            case nodes.Sort():
+                order_exprs = ops.sort(
+                    node.by,
+                    node.more_by,
+                    node.descending,
+                    node.nulls_last,
+                )
+                ast = _apply_order(current.ast, order_exprs)
+                return CompiledPlan(ast, current.schema, current.sources)
+            case nodes.Limit():
+                limit_expr = ops.limit(node.n)
+                ast = _apply_limit(current.ast, limit_expr)
+                return CompiledPlan(ast, current.schema, current.sources)
+            case nodes.Drop():
+                ast, schema = ops.drop(
+                    current.ast,
+                    current.schema,
+                    node.columns,
+                    node.more_columns,
+                )
+                return CompiledPlan(ast, schema, current.sources)
+            case nodes.DropRows():
+                condition = ops.drop_rows(
+                    current.schema,
+                    node.subset,
+                    node.fn,
+                )
+                ast = _apply_where(current.ast, condition)
+                return CompiledPlan(ast, current.schema, current.sources)
+            case nodes.Rename():
+                ast, schema = ops.rename(current.ast, current.schema, node.mapping)
+                return CompiledPlan(ast, schema, current.sources)
+            case nodes.Cast():
+                ast, schema = ops.cast(current.ast, current.schema, node.dtypes)
+                return CompiledPlan(ast, schema, current.sources)
+            case nodes.WithRowIndex():
+                ast, schema = ops.with_row_index(
+                    current.ast,
+                    current.schema,
+                    node.name,
+                    node.order_by,
+                )
+                return CompiledPlan(ast, schema, current.sources)
+            case _:
+                return current
+
+    return pending.iter().fold(plan, _apply)
+
+
+def _apply_where(ast: exp.Selectable, condition: exp.Expr) -> exp.Selectable:
+    if isinstance(ast, exp.Select) and _can_inline_filter(ast):
+        current_where = ast.args.get("where")
+        existing_condition = (
+            current_where.args.get("this")
+            if isinstance(current_where, exp.Where)
+            else None
+        )
+        if isinstance(existing_condition, exp.Expr):
+            from .._expr import Expr
+
+            condition = Expr(existing_condition).and_(Expr(condition)).inner
+        ast.set("where", exp.Where(this=condition))
+        return ast
+
+    return (
+        exp
+        .select(exp.Star())
+        .from_(as_relation(ast), copy=False)
+        .where(condition, copy=False)
+    )
+
+
+def _apply_order(ast: exp.Selectable, order_exprs: Seq[exp.Expr]) -> exp.Selectable:
+    if isinstance(ast, exp.Select) and _can_inline_order(ast):
+        ast.set("order", exp.Order(expressions=list(order_exprs)))
+        return ast
+
+    return (
+        exp
+        .select(exp.Star())
+        .from_(as_relation(ast), copy=False)
+        .order_by(*order_exprs, copy=False)
+    )
+
+
+def _apply_limit(ast: exp.Selectable, limit_expr: exp.Expr) -> exp.Selectable:
+    if isinstance(ast, exp.Select) and _can_inline_limit(ast):
+        ast.set("limit", exp.Limit(expression=limit_expr))
+        return ast
+
+    return (
+        exp
+        .select(exp.Star())
+        .from_(as_relation(ast), copy=False)
+        .limit(limit_expr, copy=False)
+    )
+
+
+def _is_passthrough_select(ast: exp.Selectable) -> bool:
+    if not isinstance(ast, exp.Select):
+        return False
+    if len(ast.expressions) != 1:
+        return False
+    if not isinstance(ast.expressions[0], exp.Star):
+        return False
+    if ast.args.get("group") is not None:
+        return False
+    if ast.args.get("having") is not None:
+        return False
+    return ast.args.get("distinct") is None
+
+
+def _can_inline_filter(ast: exp.Selectable) -> bool:
+    return (
+        _is_passthrough_select(ast)
+        and ast.args.get("limit") is None
+        and ast.args.get("offset") is None
+    )
+
+
+def _can_inline_order(ast: exp.Selectable) -> bool:
+    return (
+        _is_passthrough_select(ast)
+        and ast.args.get("limit") is None
+        and ast.args.get("offset") is None
+    )
+
+
+def _can_inline_limit(ast: exp.Selectable) -> bool:
+    return _is_passthrough_select(ast)
 
 
 def lookup_type(inner: exp.Expr, schema: Schema) -> exp.DataType:

@@ -7,9 +7,10 @@ from pyochain import Err, Iter, Ok, Result, Seq
 
 from ..._expr import Expr
 from ...utils import try_iter
-from .._deferred import DeferredDelta
 
 if TYPE_CHECKING:
+    from sqlglot import exp
+
     from ...typing import IntoExpr, TryIter, TrySeq
 
 
@@ -18,9 +19,9 @@ def sort(
     more_by: Iterable[IntoExpr],
     descending: TrySeq[bool],
     nulls_last: TrySeq[bool],
-) -> DeferredDelta:
+) -> Seq[exp.Expr]:
 
-    order_exprs = (
+    return (
         try_iter(by)
         .chain(more_by)
         .map(lambda v: Expr.new(v, as_col=True))
@@ -36,7 +37,6 @@ def sort(
         )
         .collect()
     )
-    return DeferredDelta(order_by=order_exprs)
 
 
 def check_by_arg(
