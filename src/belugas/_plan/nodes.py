@@ -53,6 +53,14 @@ class BaseNode:
 
         return node_tree(self)
 
+    def depth(self) -> int:
+        """Returns the depth of the node in the plan tree."""
+        match self:
+            case LogicalNode():
+                return self.inner.depth() + 1
+            case _:
+                return 0
+
 
 def node_structure(node: object, level: int = 0) -> str:
 
