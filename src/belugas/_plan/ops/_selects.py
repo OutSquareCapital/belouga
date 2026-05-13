@@ -73,7 +73,7 @@ def with_columns(
     )
     source = as_relation(src_ast)
     return exp.select(*updates.into(_resolved)).from_(
-        _into_windowed(source, projections), copy=False
+        projections.into(_into_windowed, source), copy=False
     ), _with_columns_schema(schema, projections)
 
 
@@ -170,7 +170,7 @@ def select(
     match projections.then_some():
         case Some(projs):
             new_schema = _select_schema(schema, projs)
-            rel = _into_windowed(as_relation(src_ast), projs)
+            rel = _into_windowed(projs, as_relation(src_ast))
             select_exprs = (
                 projs
                 .iter()
@@ -210,28 +210,23 @@ def _select_schema(schema: Schema, projections: Seq[ResolvedExpr]) -> Schema:
     )
 
 
-def _is_windowed_projection(cols: PyoIterable[ResolvedExpr]) -> bool:
+def _into_windowed(
+    cols: PyoIterable[ResolvedExpr], source: exp.Table | exp.Subquery
+) -> exp.Expr:
     def _is_windowed(p: ResolvedExpr) -> bool:
         return p.name != Marker.TEMP and p.expr.inner.pipe(find_all, exp.Column).any(
             lambda col: col.parts[-1].name == Marker.TEMP
         )
 
-    return cols.any(_is_windowed)
-
-
-def _into_windowed(
-    source: exp.Table | exp.Subquery, cols: PyoIterable[ResolvedExpr]
-) -> exp.Expr:
-    if not _is_windowed_projection(cols):
-        return source
-
-    row_nb = row_number().window().sub(1).alias(Marker.TEMP).inner
-    return (
-        exp
-        .select(row_nb, exp.Star())
-        .from_(source, copy=False)
-        .subquery(Tables.SRC.name, copy=False)
-    )
+    if cols.any(_is_windowed):
+        row_nb = row_number().window().sub(1).alias(Marker.TEMP).inner
+        return (
+            exp
+            .select(row_nb, exp.Star())
+            .from_(source, copy=False)
+            .subquery(Tables.SRC.name, copy=False)
+        )
+    return source
 
 
 def _should_broadcast_agg(

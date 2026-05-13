@@ -1,5 +1,5 @@
 from ._explode import explode
-from ._filters import drop, drop_rows, filter, limit
+from ._filters import drop, drop_rows, filter
 from ._group_by import agg, agg_columns, group_by_all
 from ._joins import join, join_asof, join_cross
 from ._pivots import pivot, unpivot
@@ -29,7 +29,6 @@ __all__ = [
     "join",
     "join_asof",
     "join_cross",
-    "limit",
     "pivot",
     "rename",
     "select",

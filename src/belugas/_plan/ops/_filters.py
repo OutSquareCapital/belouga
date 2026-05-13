@@ -36,9 +36,7 @@ def filter(
 
 
 def drop_rows(
-    schema: Schema,
-    subset: TryIter[str],
-    fn: Callable[[Expr], Expr],
+    schema: Schema, subset: TryIter[str], fn: Callable[[Expr], Expr]
 ) -> exp.Expr:
     return (
         Option(subset)
@@ -47,10 +45,6 @@ def drop_rows(
         .map(lambda name: col(name).pipe(fn))
         .into(lambda predicates: filter(predicates, (), {}))
     )
-
-
-def limit(n: int) -> exp.Expr:
-    return exp.Literal.number(n)
 
 
 def drop(

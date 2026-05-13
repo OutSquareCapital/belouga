@@ -19,7 +19,7 @@ def sort(
     more_by: Iterable[IntoExpr],
     descending: TrySeq[bool],
     nulls_last: TrySeq[bool],
-) -> Seq[exp.Expr]:
+) -> Iter[exp.Expr]:
 
     return (
         try_iter(by)
@@ -35,7 +35,6 @@ def sort(
         .map_star(
             lambda expr, desc, nls: expr.order_by(descending=desc, nulls_last=nls).inner
         )
-        .collect()
     )
 
 

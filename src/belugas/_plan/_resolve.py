@@ -39,10 +39,6 @@ def compile_plan(node: nodes.Node, *, optimize: bool = True) -> CompiledPlan:
     return _compile_tree(root)
 
 
-class CompilationError(Exception):
-    pass
-
-
 def _compile_tree(node: nodes.Node) -> CompiledPlan:
     match node:
         case nodes.LogicalNode():
@@ -64,6 +60,10 @@ def _compile_tree(node: nodes.Node) -> CompiledPlan:
             return CompiledPlan(
                 ast, source.schema, Dict([(source.identity, source.relation)])
             )
+
+
+class CompilationError(Exception):
+    pass
 
 
 def _resolve_scan(node: nodes.Scan) -> scans.ScanResult:
@@ -112,19 +112,22 @@ def _compile_node(  # noqa: PLR0915
             )
             return Ok(plan)
         case nodes.GroupBy():
+            # GroupBy is a descriptor node consumed by Agg/AggColumns.
+            # At this stage we keep the compiled source unchanged and let
+            # the parent aggregation node emit the actual GROUP BY query.
             return Ok(CompiledPlan(src_ast, schema, empty))
         case nodes.Agg() as agg_node:
             match node.inner:
-                case nodes.GroupBy() as group_by:
+                case nodes.GroupBy():
                     ast, new_schema = ops.agg(
                         src_ast,
                         schema,
-                        group_by.keys,
+                        node.inner.keys,
                         agg_node.exprs,
                         agg_node.more_exprs,
                         agg_node.named,
-                        group_by.strategy,
-                        drop_null_keys=group_by.drop_null_keys,
+                        node.inner.strategy,
+                        drop_null_keys=node.inner.drop_null_keys,
                     )
                     return Ok(CompiledPlan(ast, new_schema, empty))
                 case _:
@@ -132,13 +135,13 @@ def _compile_node(  # noqa: PLR0915
                     return Err(CompilationError(msg))
         case nodes.AggColumns() as agg_cols:
             match node.inner:
-                case nodes.GroupBy() as group_by:
+                case nodes.GroupBy():
                     ast, new_schema = ops.agg_columns(
                         src_ast,
                         schema,
-                        group_by.keys,
+                        node.inner.keys,
                         agg_cols.func,
-                        drop_null_keys=group_by.drop_null_keys,
+                        drop_null_keys=node.inner.drop_null_keys,
                     )
                     return Ok(CompiledPlan(ast, new_schema, empty))
                 case _:
@@ -183,7 +186,7 @@ def _compile_node(  # noqa: PLR0915
             ast = _into_select(src_ast).order_by(*order_exprs, copy=False)
             return Ok(CompiledPlan(ast, schema, empty))
         case nodes.Limit():
-            ast = _into_select(src_ast).limit(ops.limit(node.n), copy=False)
+            ast = _into_select(src_ast).limit(exp.Literal.number(node.n), copy=False)
             return Ok(CompiledPlan(ast, schema, empty))
         case nodes.Slice():
             ast = ops.slice(src_ast, node.length, node.offset).unwrap()
