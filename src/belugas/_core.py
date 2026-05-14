@@ -34,12 +34,12 @@ SQL representation:
         super().__init__(msg)
 
 
-class Tables:
-    SRC: exp.Table = exp.to_table("src")
-    LHS: exp.Table = exp.to_table("lhs")
-    RHS: exp.Table = exp.to_table("rhs")
-    STATS: exp.Table = exp.to_table("stats")
-    EXPLODE: exp.Table = exp.to_table("_explode_src")
+class Tables(StrEnum):
+    """Internal naming conventions for subqueries in the physical plan."""
+
+    SRC = auto()
+    LHS = auto()
+    RHS = auto()
 
 
 class Marker(StrEnum):

@@ -10,7 +10,6 @@ from ..._core import Tables
 from ..._expr import Expr
 from ..._funcs import col
 from ...utils import try_iter, try_seq
-from .._common import as_relation
 
 if TYPE_CHECKING:
     from ...typing import PivotAgg, PythonLiteral, Schema, TryIter
@@ -101,9 +100,8 @@ def pivot(  # noqa: PLR0913, PLR0914, PLR0917
     pivot_node = exp.Pivot(
         expressions=pivot_exprs, fields=[pivot_field], group=group, columns=pivot_cols
     )
-
-    alias = exp.TableAlias(this=exp.to_identifier(Tables.SRC.name))
-    table = exp.Subquery(this=ast, alias=alias, pivots=[pivot_node])
+    table = ast.subquery(Tables.SRC, copy=False)
+    table.set("pivots", [pivot_node])
 
     selected = (
         pivoted_cols
@@ -123,10 +121,7 @@ def pivot(  # noqa: PLR0913, PLR0914, PLR0917
     unknown = exp.DType.UNKNOWN.into_expr()
 
     if multi:
-        subq = exp.Subquery(
-            this=ordered,
-            alias=exp.TableAlias(this=exp.to_identifier("_pivot")),
-        )
+        subq = ordered.subquery(alias="_pivot", copy=False)
 
         def _idx_expr(name: str) -> exp.Expr:
             return exp.column(name)
@@ -259,7 +254,7 @@ def unpivot(  # noqa: PLR0913, PLR0917
     into = exp.UnpivotColumns(this=variable_name, expressions=[value_name])
     pivot = (
         ast
-        .pipe(as_relation)
+        .subquery(Tables.SRC, copy=False)
         .pipe(
             lambda e: exp.Pivot(
                 this=e, expressions=unpivot_cols, unpivot=True, into=into

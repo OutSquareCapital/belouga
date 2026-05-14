@@ -9,7 +9,6 @@ from ..._core import Tables
 from ..._expr import Expr
 from ..._funcs import col, lit
 from ...utils import try_seq
-from .._common import as_relation
 
 if TYPE_CHECKING:
     from ...typing import TryIter, TrySeq, UniqueKeepStrategy
@@ -26,7 +25,10 @@ def unique(
             return Ok(_none_on_all(ast))
         case ("any", _, Null()) | ("first" | "last", Some(_), Null()):
             return Ok(
-                exp.select(exp.Star()).from_(as_relation(ast), copy=False).distinct()
+                exp
+                .select(exp.Star())
+                .from_(ast.subquery(Tables.SRC, copy=False), copy=False)
+                .distinct()
             )
         case ("none", _, Some(subset_names)):
             res = _none_on_subset(ast, subset_names)
@@ -59,18 +61,18 @@ def _none_on_subset(ast: exp.Select | exp.Union, subset_names: Seq[str]) -> exp.
     rhs = (
         exp
         .select(*subset_exprs)
-        .from_(as_relation(ast, copy_source=True), copy=False)
+        .from_(ast.subquery(Tables.SRC, copy=True), copy=False)
         .group_by(*subset_exprs)
         .having(lit(1).count().eq(1).inner)
-        .subquery(Tables.RHS.name, copy=False)
+        .subquery(Tables.RHS, copy=False)
     )
     condition = (
         subset_names
         .iter()
         .map(
             lambda name: exp.NullSafeEQ(
-                this=col(name, table=Tables.LHS.name).inner,
-                expression=col(name, table=Tables.RHS.name).inner,
+                this=col(name, table=Tables.LHS).inner,
+                expression=col(name, table=Tables.RHS).inner,
             )
         )
         .map(Expr)
@@ -80,7 +82,7 @@ def _none_on_subset(ast: exp.Select | exp.Union, subset_names: Seq[str]) -> exp.
     return (
         exp
         .select("lhs.*")
-        .from_(as_relation(ast, Tables.LHS.name), copy=False)
+        .from_(ast.subquery(Tables.LHS, copy=False), copy=False)
         .join(rhs, on=condition, join_type="semi")
     )
 
@@ -89,7 +91,7 @@ def _none_on_all(ast: exp.Select | exp.Union) -> exp.Select:
     return (
         exp
         .select(exp.Star())
-        .from_(as_relation(ast), copy=False)
+        .from_(ast.subquery(Tables.SRC, copy=False), copy=False)
         .group_by("ALL")
         .having(lit(1).count().eq(1).inner)
     )
@@ -120,7 +122,7 @@ def _distinct_on(
     return (
         exp
         .select(exp.Star())
-        .from_(as_relation(ast), copy=False)
+        .from_(ast.subquery(Tables.SRC, copy=False), copy=False)
         .distinct(*subset_names)
         .order_by(*order_exprs)
     )

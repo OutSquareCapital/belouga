@@ -8,7 +8,6 @@ from sqlglot import exp
 
 from ..._core import Marker, Tables
 from ..._funcs import col, row_number
-from .._common import as_relation
 from .._resolve import (
     ResolvedExpr,
     find_all,
@@ -81,7 +80,7 @@ def with_columns(
             new_ast = source.select(star, *added, append=False, copy=False)
             return new_ast, new_schema
         case _:
-            source = as_relation(src_ast)
+            source = src_ast.subquery(Tables.SRC, copy=False)
             source = _into_windowed(source) if has_windowed else source
             new_ast = exp.select(*updates.into(_resolved)).from_(source, copy=False)
             return new_ast, new_schema
@@ -110,7 +109,9 @@ def rename(
         .map_star(lambda name, dtype: (mapping.get(name, name), dtype))
         .collect(Dict)
     )
-    return exp.select(*exprs).from_(as_relation(src_ast), copy=False), new_schema
+    return exp.select(*exprs).from_(
+        src_ast.subquery(Tables.SRC, copy=False), copy=False
+    ), new_schema
 
 
 def with_row_index(
@@ -124,7 +125,9 @@ def with_row_index(
         .collect(Dict)
     )
     return (
-        exp.select(row_nb, exp.Star()).from_(as_relation(src_ast), copy=False),
+        exp.select(row_nb, exp.Star()).from_(
+            src_ast.subquery(Tables.SRC, copy=False), copy=False
+        ),
         new_schema,
     )
 
@@ -133,8 +136,8 @@ def union(
     lhs_ast: exp.Select | exp.Union, rhs_ast: exp.Select | exp.Union
 ) -> exp.Union:
     slct = exp.select(exp.Star()).from_
-    lhs = slct(as_relation(lhs_ast, Tables.LHS.name), copy=False)
-    rhs = slct(as_relation(rhs_ast, Tables.RHS.name), copy=False)
+    lhs = slct(lhs_ast.subquery(Tables.LHS, copy=False), copy=False)
+    rhs = slct(rhs_ast.subquery(Tables.RHS, copy=False), copy=False)
     return exp.union(lhs, rhs)
 
 
@@ -202,7 +205,7 @@ def select(
                         return ast.distinct(copy=False), new_schema
                     return ast, new_schema
                 case _:
-                    rel = as_relation(src_ast).pipe(
+                    rel = src_ast.subquery(Tables.SRC, copy=False).pipe(
                         lambda r: _into_windowed(r) if has_windowed else r
                     )
                     if projs.all(lambda resolved: resolved.has_distinct):
@@ -217,7 +220,9 @@ def select(
                 Marker.TEMP: exp.DType.NULL.into_expr()
             })
             return (
-                exp.select(exp.null().as_(Marker.TEMP)).from_(as_relation(src_ast)),
+                exp.select(exp.null().as_(Marker.TEMP)).from_(
+                    src_ast.subquery(Tables.SRC, copy=False), copy=False
+                ),
                 new_schema,
             )
 
@@ -246,14 +251,14 @@ def _is_windowed(p: ResolvedExpr) -> bool:
     )
 
 
-def _into_windowed(source: exp.Table | exp.Subquery) -> exp.Expr:
+def _into_windowed(source: exp.Expr) -> exp.Expr:
 
     row_nb = row_number().window().sub(1).alias(Marker.TEMP).inner
     return (
         exp
         .select(row_nb, exp.Star())
         .from_(source, copy=False)
-        .subquery(Tables.SRC.name, copy=False)
+        .subquery(Tables.SRC, copy=False)
     )
 
 

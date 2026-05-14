@@ -9,7 +9,6 @@ from sqlglot import exp
 
 from ..._core import Tables
 from ..._funcs import col, lit, unnest
-from .._common import as_relation
 from .._resolve import resolve_all
 
 if TYPE_CHECKING:
@@ -48,13 +47,13 @@ def explode(
     rhs = (
         exp
         .select(*transformer(nested=False))
-        .from_(as_relation(src_ast, Tables.EXPLODE.name, copy_source=True), copy=False)
+        .from_(src_ast.subquery(Tables.SRC, copy=False), copy=False)
         .where(cond.not_().inner, copy=False)
     )
     return (
         exp
         .select(*transformer(nested=True))
-        .from_(as_relation(src_ast, Tables.EXPLODE.name, copy_source=True), copy=False)
+        .from_(src_ast.subquery(Tables.SRC, copy=False), copy=False)
         .where(cond.inner, copy=False)
         .pipe(exp.union, rhs, copy=False)
     )

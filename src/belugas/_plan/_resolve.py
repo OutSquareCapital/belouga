@@ -17,10 +17,9 @@ from belugas.typing import (
     NPArrayLike,
 )
 
-from .._core import Marker
+from .._core import Marker, Tables
 from ..utils import try_iter
 from . import nodes, scans
-from ._common import as_relation
 from ._optimize import optimize_nodes
 
 if TYPE_CHECKING:
@@ -325,7 +324,7 @@ def _apply_filter_clause(
             return (
                 exp
                 .select(exp.Star())
-                .from_(as_relation(src_ast), copy=False)
+                .from_(src_ast.subquery(Tables.SRC, copy=False))
                 .where(predicate, copy=False)
             )
         case _:
@@ -351,7 +350,9 @@ def _into_select(src_ast: exp.Select | exp.Union) -> exp.Select:
         case exp.Select():
             return src_ast
         case _:
-            return exp.select(exp.Star()).from_(as_relation(src_ast), copy=False)
+            return exp.select(exp.Star()).from_(
+                src_ast.subquery(Tables.SRC, copy=False)
+            )
 
 
 def lookup_type(inner: exp.Expr, schema: Schema) -> exp.DataType:

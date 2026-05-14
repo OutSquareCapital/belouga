@@ -10,7 +10,6 @@ from ..._core import Tables
 from ..._expr import Expr
 from ..._funcs import col
 from ...utils import try_seq
-from .._common import as_relation
 
 if TYPE_CHECKING:
     from pyochain.traits import PyoCollection
@@ -41,8 +40,12 @@ def join(  # noqa: PLR0913, PLR0917
     return (
         exp
         .select(*exprs)
-        .from_(as_relation(lhs_ast, Tables.LHS.name), copy=False)
-        .join(as_relation(rhs_ast, Tables.RHS.name), on=condition, join_type=join_type),
+        .from_(lhs_ast.subquery(Tables.LHS, copy=False), copy=False)
+        .join(
+            rhs_ast.subquery(Tables.RHS, copy=False),
+            on=condition,
+            join_type=join_type,
+        ),
         builder.join_schema(schema, other, join_keys, how),
     )
 
@@ -115,8 +118,12 @@ def join_asof(  # noqa: PLR0913, PLR0917
     return (
         exp
         .select(*exprs)
-        .from_(as_relation(lhs_ast, Tables.LHS.name), copy=False)
-        .join(as_relation(rhs_ast, Tables.RHS.name), on=by_cond, join_type="asof left"),
+        .from_(lhs_ast.subquery(Tables.LHS, copy=False), copy=False)
+        .join(
+            rhs_ast.subquery(Tables.RHS, copy=False),
+            on=by_cond,
+            join_type="asof left",
+        ),
         new_schema,
     )
 
@@ -133,8 +140,8 @@ def join_cross(
     ast = (
         exp
         .select(*exprs)
-        .from_(as_relation(lhs_ast, Tables.LHS.name), copy=False)
-        .join(as_relation(rhs_ast, Tables.RHS.name), join_type="cross")
+        .from_(lhs_ast.subquery(Tables.LHS, copy=False), copy=False)
+        .join(rhs_ast.subquery(Tables.RHS, copy=False), join_type="cross")
     )
     new_schema = builder.join_schema_cross(schema, other)
     return ast, new_schema
@@ -152,11 +159,11 @@ class JoinBuilder:
     @staticmethod
     def lhs(name: str) -> Expr:
 
-        return col(name, table=Tables.LHS.name)
+        return col(name, table=Tables.LHS)
 
     @staticmethod
     def rhs(name: str) -> Expr:
-        return col(name, table=Tables.RHS.name)
+        return col(name, table=Tables.RHS)
 
     def for_inner_left(self, name: str) -> Option[Expr]:
         match (name in self.left, name in self.right):

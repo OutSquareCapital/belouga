@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING
 from pyochain import Dict, Iter, Seq, Set, Vec
 from sqlglot import exp
 
+from ..._core import Tables
 from ..._expr import Expr
 from ..._funcs import col
-from .._common import as_relation
 from .._resolve import ResolvedExpr, lookup_type, resolve_all
 
 if TYPE_CHECKING:
@@ -41,7 +41,7 @@ def group_by_all(
     return (
         exp
         .select(*select_exprs)
-        .from_(as_relation(ast), copy=False)
+        .from_(ast.subquery(Tables.SRC, copy=False), copy=False)
         .group_by("ALL", copy=False),
         out_schema,
     )
@@ -120,7 +120,9 @@ def agg(  # noqa: PLR0913, PLR0917
         (key_glots, key_schema.items().iter().collect(Dict)),
         _acc,
     )
-    ast = exp.select(*select_exprs).from_(as_relation(ast), copy=False)
+    ast = exp.select(*select_exprs).from_(
+        ast.subquery(Tables.SRC, copy=False), copy=False
+    )
     if drop_null_keys:
         null_cond = keys.iter().map(lambda k: k.is_not_null()).reduce(Expr.and_).inner
         ast = ast.where(null_cond, copy=False)

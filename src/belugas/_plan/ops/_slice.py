@@ -6,7 +6,6 @@ from sqlglot import exp
 from ..._core import Tables
 from ..._expr import Expr
 from ..._funcs import col, lit
-from .._common import as_relation
 
 MAX_I64 = 9_223_372_036_854_775_807
 
@@ -23,7 +22,7 @@ def slice(
             return Ok(
                 exp
                 .select(exp.Star())
-                .from_(as_relation(ast), copy=False)
+                .from_(ast.subquery(Tables.SRC, copy=False), copy=False)
                 .limit(exp.Literal.number(len_val.unwrap_or(MAX_I64)), copy=False)
                 .offset(exp.Literal.number(offset), copy=False)
             )
@@ -31,19 +30,20 @@ def slice(
             return Ok(
                 exp
                 .select(exp.Star())
-                .from_(as_relation(ast), copy=False)
+                .from_(ast.subquery(Tables.SRC, copy=False), copy=False)
                 .limit(exp.Literal.number(0), copy=False)
             )
         case (Some(length), offset):
             slice_len_expr = col("slice_len")
             stats = exp.select(lit(1).count().alias("slice_len").inner).from_(
-                as_relation(ast, copy_source=True), copy=False
+                ast.subquery(Tables.SRC, copy=True), copy=False
             )
             start_expr = slice_len_expr.add(offset).greatest(0).inner
+            table = exp.to_table("stats")
             return Ok(
                 exp
                 .select(exp.Star())
-                .from_(as_relation(ast), copy=False)
+                .from_(ast.subquery(Tables.SRC, copy=False), copy=False)
                 .with_("stats", as_=stats, copy=False)
                 .limit(
                     exp
@@ -56,25 +56,22 @@ def slice(
                         .greatest(0)
                         .inner
                     )
-                    .from_(Tables.STATS, copy=False)
+                    .from_(table, copy=False)
                     .subquery(copy=False)
                 )
                 .offset(
-                    exp
-                    .select(start_expr)
-                    .from_(Tables.STATS, copy=False)
-                    .subquery(copy=False)
+                    exp.select(start_expr).from_(table, copy=False).subquery(copy=False)
                 )
             )
         case (_, offset):
             return Ok(
                 exp
                 .select(exp.Star())
-                .from_(as_relation(ast), copy=False)
+                .from_(ast.subquery(Tables.SRC, copy=False), copy=False)
                 .offset(
                     exp
                     .select(lit(1).count().inner)
-                    .from_(as_relation(ast, copy_source=True), copy=False)
+                    .from_(ast.subquery(Tables.SRC, copy=True), copy=False)
                     .subquery(copy=False)
                     .pipe(Expr)
                     .add(offset)

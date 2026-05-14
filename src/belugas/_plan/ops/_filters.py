@@ -6,10 +6,9 @@ from typing import TYPE_CHECKING
 from pyochain import Iter, Option
 from sqlglot import exp
 
-from ..._core import into_expr
+from ..._core import Tables, into_expr
 from ..._funcs import all, col
 from ...utils import try_iter
-from .._common import as_relation
 
 if TYPE_CHECKING:
     from ..._expr import Expr
@@ -61,6 +60,8 @@ def drop(
 
     selected = try_iter(columns).chain(more_columns).map(_process).into(all).inner
     return (
-        exp.select(selected).from_(as_relation(src_ast), copy=False),
+        exp.select(selected).from_(
+            src_ast.subquery(Tables.SRC, copy=False), copy=False
+        ),
         schema,
     )
