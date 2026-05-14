@@ -145,11 +145,22 @@ def bench(
     runs: Annotated[
         int, typer.Option("--runs", "-r", help="Number of runs per benchmark")
     ] = 250,
+    names: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--names",
+            "-n",
+            help="Names of benchmarks to run (default: all)",
+            show_default=False,
+        ),
+    ] = None,
 ) -> None:
     """Run the benchmarks comparing belugas and polars implementations."""
+    from pyochain import Option
+
     from ._benchmark import run_benchmark
 
-    run_benchmark(runs)
+    run_benchmark(runs, Option(names))
 
 
 @app.command()
