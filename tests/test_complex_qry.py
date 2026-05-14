@@ -14,7 +14,7 @@ bl_amount = bl.col("amount")
 pl_salary = pl.col("salary")
 pl_order_id = pl.col("order_id")
 pl_amount = pl.col("amount")
-_EMPLOYEES = bl.LazyFrame({
+_EMPLOYEES = pl.DataFrame({
     "id": [1, 2, 3, 4, 5, 6, 7, 8],
     "name": ["Alice", "Bob", "Charlie", "David", "Eve", "Frank", "Grace", "Heidi"],
     "department": [
@@ -42,15 +42,15 @@ _EMPLOYEES = bl.LazyFrame({
     "is_active": [True, True, False, True, True, True, False, True],
     "score": [8.5, 7.0, 9.5, 6.5, 8.0, 7.5, 7.8, 8.2],
     "manager_id": [None, 1, 1, 2, 1, None, 6, 1],
-})
+}).pipe(bl.from_arrow)
 
-_ORDERS = bl.LazyFrame({
+_ORDERS = pl.DataFrame({
     "order_id": [101, 102, 103, 104, 105, 106, 107, 108],
     "employee_id": [1, 2, 1, 3, 2, 4, 1, 5],
     "amount": [1200.0, 800.0, 450.0, 2300.0, 950.0, 300.0, 1800.0, 600.0],
     "region": ["North", "South", "North", "East", "South", "West", "North", "East"],
     "category": ["A", "B", "A", "C", "B", "A", "C", "B"],
-})
+}).pipe(bl.from_arrow)
 _EMPLOYEES_LF = _EMPLOYEES.collect().lazy()
 _ORDERS_LF = _ORDERS.collect().lazy()
 
@@ -199,7 +199,7 @@ def test_frame_explode_then_reaggregate() -> None:
 
 
 def test_expr_list_explode_in_agg() -> None:
-    data = bl.LazyFrame({
+    data = pl.DataFrame({
         "grp": ["a", "a", "b"],
         "vals": [[1, 2], [2, 3], [4, 5]],
         "arr": [[10, 20], [20, 30], [40, 50]],
@@ -218,6 +218,7 @@ def test_expr_list_explode_in_agg() -> None:
         )
         .sort("grp", "vals"),
         data
+        .pipe(bl.from_arrow)
         .group_by("grp")
         .agg(
             bl.col("vals").list.sort().list.explode(),

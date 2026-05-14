@@ -15,7 +15,7 @@ pl_text = pl.col("text")
 pl_text_short = pl.col("text_short")
 pl_dt_str = pl.col("dt_str")
 
-_LF = bl.LazyFrame({
+_LF = pl.DataFrame({
     "text": [
         "  Hello World suffix  ",
         "  foo bar baz suffix  ",
@@ -111,7 +111,7 @@ _LF = bl.LazyFrame({
     "json_path": ["$.a", "$.a", "$.a", "$.a"],
     "numbers": ["123.456", "456.789", "789.123", "1234.567"],
     "signed_numbers": ["-1", "+7", "-12345", None],
-})
+}).pipe(bl.from_arrow)
 
 
 def test_to_uppercase() -> None:
