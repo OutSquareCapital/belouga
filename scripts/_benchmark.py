@@ -15,10 +15,12 @@ import belugas as bl
 
 type BenchFn = Callable[[], bl.LazyFrame]
 N_COLS = 500
+N_UNNEST_COLS = 250
 N_GROUPS = Range(0, 10)
 
 
 COLS: Seq[str] = Range(0, N_COLS).iter().map(lambda i: f"c{i}").collect()
+UNNEST_COLS: Seq[str] = Range(0, N_UNNEST_COLS).iter().map(lambda i: f"s{i}").collect()
 
 _DATA = pl.DataFrame({
     "c0": N_GROUPS,
@@ -33,7 +35,18 @@ _RHS_DATA = pl.DataFrame({
     "l": Range(10, 15),
     "m": Range(15, 20),
 })
-_STRUCT_DATA = pl.DataFrame({"s": [{"x": 1, "y": 2}]})
+_STRUCT_DATA = pl.DataFrame(
+    UNNEST_COLS
+    .iter()
+    .enumerate()
+    .map_star(
+        lambda i, name: (
+            name,
+            [{f"{name}_left": i, f"{name}_right": i}],
+        )
+    )
+    .collect(dict)
+)
 _ASOF_L_DATA = pl.DataFrame({"key": [1, 2, 3], "val": [10, 20, 30]})
 _ASOF_R_DATA = pl.DataFrame({"key": [1, 2, 3], "rval": [100, 200, 300]})
 _PIVOT_DATA = pl.DataFrame({
@@ -104,7 +117,7 @@ BENCHS = Dict[str, BenchFn].from_ref({
     "group_by": lambda: BASE.group_by("c0").agg(AGG),
     "join": lambda: BASE.join(RHS, on="c0", how="left"),
     "drop": lambda: BASE.drop(COLS),
-    "unnest": lambda: STRUCT_BL.unnest("s"),
+    "unnest": lambda: STRUCT_BL.unnest(UNNEST_COLS),
     "join_asof": lambda: ASOF_L_BL.join_asof(ASOF_R_BL, on="key"),
     "pivot": lambda: PIVOT_BL.pivot(
         on="col", on_columns=["a", "b"], index="idx", values="val"
@@ -134,7 +147,7 @@ def _run_all(
     def _process_benchmark(name: str, bl_t: float) -> None:
         table.add_row(name, f"{bl_t:.4f}")
 
-    descr = "[cyan]Running benchmarks..."
+    descr = f"[cyan]Running benchmarks on {runs} runs per test..."
 
     tracker = benchmarks.items().into(
         progress.track, benchmarks.length(), description=descr
@@ -142,7 +155,6 @@ def _run_all(
     return (
         Iter(tracker)
         .map_star(_run_bench)
-        .iter()
         .sort(key=operator.itemgetter(1))
         .iter()
         .for_each_star(_process_benchmark)
@@ -168,6 +180,6 @@ def _get_timing(runs: int, fn: BenchFn) -> float:
     return (
         Range(0, runs)
         .iter()
-        .map(lambda _: timeit.timeit(lambda: fn().query.logical, number=1) * 1000)
+        .map(lambda _: timeit.timeit(fn().query.logical, number=1) * 1000)
         .into(statistics.median)
     )
