@@ -147,3 +147,18 @@ def test_struct_inline() -> None:
         .length()
     )
     assert selects_nb == 1
+
+
+def test_row_index_keep_same_select() -> None:
+    """A new `row_index` should just be added to the original `SELECT`."""
+    lf = bl.LazyFrame({"a": [1, 1, 2], "b": [1, 2, 2], "c": [1, 2, 3]})
+    selects_nb = (
+        lf
+        .with_row_index(order_by="c")
+        .with_row_index(order_by="c")
+        .with_row_index(order_by="c")
+        .query.logical()
+        .pipe(lambda e: Seq(e.find_all(exp.Select)))
+        .length()
+    )
+    assert selects_nb == 1

@@ -112,8 +112,8 @@ def rename(schema: Schema, mapping: Mapping[str, str]) -> tuple[Iter[exp.Expr], 
 
 
 def with_row_index(
-    src_ast: exp.Select, schema: Schema, name: str, order_by: TryIter[str]
-) -> tuple[exp.Select, Schema]:
+    schema: Schema, name: str, order_by: TryIter[str]
+) -> tuple[exp.Expr, Schema]:
     row_nb = row_number().window(order_by=order_by).sub(1).alias(name).inner
     new_schema = (
         Iter
@@ -121,12 +121,7 @@ def with_row_index(
         .chain(schema.items())
         .collect(Dict)
     )
-    return (
-        exp.select(row_nb, exp.Star()).from_(
-            src_ast.subquery(Tables.SRC, copy=False), copy=False
-        ),
-        new_schema,
-    )
+    return row_nb, new_schema
 
 
 def union(lhs_ast: exp.Select, rhs_ast: exp.Select) -> exp.Select:

@@ -234,10 +234,9 @@ def _compile_tree(  # noqa: PLR0915
             ast, new_schema = ops.cast(src_ast, schema, node.dtypes)
             return Ok(CompiledPlan(ast, new_schema, empty))
         case nodes.WithRowIndex():
-            ast, new_schema = ops.with_row_index(
-                src_ast, schema, node.name, node.order_by
-            )
-            return Ok(CompiledPlan(ast, new_schema, empty))
+            row_nb, new_schema = ops.with_row_index(schema, node.name, node.order_by)
+            src_ast.selects.insert(0, row_nb)
+            return Ok(CompiledPlan(src_ast, new_schema, empty))
         case nodes.GroupByAll():
             exprs, new_schema = ops.group_by_all(
                 schema, node.exprs, node.more_exprs, node.named
