@@ -1,10 +1,14 @@
 [project]
-    dependencies    = ["duckdb>=1.5.2", "pyochain>=0.12.0", "sqlglot[c]>=30.7.0"]
-    description     = "Polars syntax for SQL"
-    name            = "belugas"
-    readme          = "README.md"
+    dependencies = [
+        "duckdb==1.5.3dev24",
+        "pyochain>=0.12.0",
+        "sqlglot[c]>=30.7.0",
+    ]
+    description = "Polars syntax for SQL"
+    name = "belugas"
+    readme = "README.md"
     requires-python = ">=3.13"
-    version         = "0.1.0"
+    version = "0.1.0"
 
 [dependency-groups]
     dev = [
