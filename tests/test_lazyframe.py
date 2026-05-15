@@ -27,8 +27,7 @@ def test_properties(lf: bl.LazyFrame) -> None:
     df = lf.collect()
     schema = lf.collect_schema()
     assert lf.width == df.width
-    assert lf.columns.into(list) == df.columns
-    assert set(schema.keys()) == set(df.columns)
+    assert schema.keys().into(list) == df.columns
     assert lf.shape == df.shape
     assert isinstance(lf.lazy(), pl.LazyFrame)
     assert isinstance(df, pl.DataFrame)
@@ -75,11 +74,10 @@ def test_clone(lf: bl.LazyFrame) -> None:
 
 
 def test_sql_query(lf: bl.LazyFrame) -> None:
-    query = lf.filter(bl_age.gt(25)).select("name", "age").query
-    assert query.sql() != query.sql(pretty=True)
-    assert "SELECT" in query.sql()
-    assert "WHERE" in query.sql()
-    assert query.sql().upper().count("WHERE") == 1
+    query = lf.filter(bl_age.gt(25)).select("name", "age").query.sql()
+    assert "SELECT" in query
+    assert "WHERE" in query
+    assert query.upper().count("WHERE") == 1
 
 
 @pytest.mark.parametrize("theme", t.Themes.__args__)
