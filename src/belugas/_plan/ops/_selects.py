@@ -61,30 +61,30 @@ def with_columns(
         .collect(Dict)
     )
     new_schema = _with_columns_schema(schema, projections)
-    match src_ast:
-        case source if can_inline_select(source) and not has_windowed:
-            replaced = list[exp.Expr]()
-            added = Vec[exp.Expr].new()
-            (
-                updates
-                .items()
-                .iter()
-                .for_each_star(
-                    lambda name, expr: (
-                        replaced.append(expr.inner)
-                        if name in schema
-                        else added.append(expr.inner)
-                    )
+    if can_inline_select(src_ast) and not has_windowed:
+        replaced = list[exp.Expr]()
+        added = Vec[exp.Expr].new()
+        (
+            updates
+            .items()
+            .iter()
+            .for_each_star(
+                lambda name, expr: (
+                    replaced.append(expr.inner)
+                    if name in schema
+                    else added.append(expr.inner)
                 )
             )
-            star = exp.Star(replace=replaced) if replaced else exp.Star()
-            new_ast = source.select(star, *added, append=False, copy=False)
-            return new_ast, new_schema
-        case _:
-            source = src_ast.subquery(Tables.SRC, copy=False)
-            source = _into_windowed(source) if has_windowed else source
-            new_ast = exp.select(*updates.into(_resolved)).from_(source, copy=False)
-            return new_ast, new_schema
+        )
+        star = exp.Star(replace=replaced) if replaced else exp.Star()
+        new_ast = src_ast.select(star, *added, append=False, copy=False)
+    else:
+        source = src_ast.subquery(Tables.SRC, copy=False)
+        source = _into_windowed(source) if has_windowed else source
+        new_ast = (
+            updates.into(_resolved).unpack_into(exp.select).from_(source, copy=False)
+        )
+    return new_ast, new_schema
 
 
 def _with_columns_schema(schema: Schema, projections: Seq[ResolvedExpr]) -> Schema:
@@ -229,7 +229,6 @@ def _is_windowed(p: ResolvedExpr) -> bool:
 
 
 def _into_windowed(source: exp.Expr) -> exp.Expr:
-
     row_nb = row_number().window().sub(1).alias(Marker.TEMP).inner
     return (
         exp
