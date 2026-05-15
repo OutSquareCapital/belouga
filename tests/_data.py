@@ -107,6 +107,23 @@ _SCHEMA = {
 _DF = pl.DataFrame(_DATA, schema_overrides=_SCHEMA).pipe(duckdb.from_arrow)
 _DF_PQL = bl.LazyFrame(_DF)
 _LF_PL = _DF.pl(lazy=True)
+LF_TEST = pl.DataFrame({
+    "id": [1, 2, 3, 4, 5],
+    "name": ["Alice", "Bob", "Charlie", "David", "Eve"],
+    "sex": ["F", "M", "M", "M", "F"],
+    "age": [25, 30, 35, 28, 22],
+    "salary": [50000.0, 60000.0, 75000.0, 55000.0, 45000.0],
+    "department": [
+        "Engineering",
+        "Sales",
+        "Engineering",
+        "Sales",
+        "Engineering",
+    ],
+    "is_active": [True, True, False, True, True],
+    "value": [10.0, None, 30.0, None, 50.0],
+    "category": ["A", "B", None, "A", "B"],
+}).pipe(bl.from_arrow)
 
 
 def sample_lf() -> pl.LazyFrame:
