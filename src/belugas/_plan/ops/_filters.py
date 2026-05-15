@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 from pyochain import Iter, Option
 from sqlglot import exp
 
-from ..._core import Tables, into_expr
-from ..._funcs import all, col
+from ..._core import into_expr
+from ..._funcs import col
 from ...utils import try_iter
 
 if TYPE_CHECKING:
@@ -46,11 +46,10 @@ def drop_rows(
 
 
 def drop(
-    src_ast: exp.Select,
     schema: Schema,
     columns: TryIter[IntoExprColumn],
     more_columns: Iterable[IntoExprColumn],
-) -> tuple[exp.Select, Schema]:
+) -> tuple[exp.Star, Schema]:
 
     def _process(e: IntoExprColumn) -> exp.Expr:
         expr = into_expr(e, as_col=True)
@@ -58,10 +57,6 @@ def drop(
         _ = schema.pop(name)
         return expr
 
-    selected = try_iter(columns).chain(more_columns).map(_process).into(all).inner
-    return (
-        exp.select(selected).from_(
-            src_ast.subquery(Tables.SRC, copy=False), copy=False
-        ),
-        schema,
-    )
+    selected = try_iter(columns).chain(more_columns).map(_process).collect(list)
+
+    return exp.Star(except_=selected), schema

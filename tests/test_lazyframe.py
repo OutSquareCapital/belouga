@@ -3,7 +3,7 @@ from __future__ import annotations
 import duckdb
 import polars as pl
 import pytest
-from pyochain import ResultUnwrapError
+from pyochain import ResultUnwrapError, Seq
 from sqlglot import exp
 
 import belugas as bl
@@ -370,6 +370,22 @@ def test_fill_null_with_value(lf: bl.LazyFrame) -> None:
         lf.lazy().select("value", "age").fill_null(0),
         lf.select("value", "age").fill_null(0),
     )
+
+
+def test_drop_inline(lf: bl.LazyFrame) -> None:
+    """This should inline the original `SELECT *` from the scan."""
+    selects_nb = (
+        lf
+        .drop("name")
+        .select(bl.all())
+        .drop("age")
+        .select(bl.all())
+        .drop("salary")
+        .query.logical()
+        .pipe(lambda e: Seq(e.find_all(exp.Select)))
+        .length()
+    )
+    assert selects_nb == 3
 
 
 @pytest.mark.parametrize("strategy", t.FillNullStrategy.__args__)

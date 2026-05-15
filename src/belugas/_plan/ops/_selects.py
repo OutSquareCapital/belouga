@@ -10,6 +10,7 @@ from ..._core import Marker, Tables
 from ..._funcs import col, row_number
 from .._resolve import (
     ResolvedExpr,
+    can_inline_select,
     find_all,
     has_window_ancestor,
     lookup_type,
@@ -61,7 +62,7 @@ def with_columns(
     )
     new_schema = _with_columns_schema(schema, projections)
     match src_ast:
-        case source if _is_inline_select(source) and not has_windowed:
+        case source if can_inline_select(source) and not has_windowed:
             replaced = list[exp.Expr]()
             added = Vec[exp.Expr].new()
             (
@@ -193,9 +194,7 @@ def select(
                 .collect()
             )
             match src_ast:
-                case exp.Select() as source if (
-                    _is_inline_select(source) and not has_windowed
-                ):
+                case source if can_inline_select(source) and not has_windowed:
                     ast = source.select(*select_exprs, append=False, copy=False)
                     if projs.all(lambda resolved: resolved.has_distinct):
                         return ast.distinct(copy=False), new_schema
@@ -230,15 +229,6 @@ def _select_schema(schema: Schema, projections: Seq[ResolvedExpr]) -> Schema:
         .map(lambda proj: (proj.name, lookup_type(proj.expr.inner, schema)))
         .collect(Dict)
     )
-
-
-def _is_inline_select(select: exp.Select) -> bool:
-    exprs = select.expressions
-    match exprs:
-        case [exp.Star()]:
-            return True
-        case _:
-            return False
 
 
 def _is_windowed(p: ResolvedExpr) -> bool:

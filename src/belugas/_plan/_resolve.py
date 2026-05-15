@@ -69,9 +69,9 @@ def _compile_scan(node: nodes.Node) -> CompiledPlan:
     match node:
         case nodes.LogicalNode():
             compiled_src = _compile_scan(node.inner)
-            compiled_node = _compile_tree(
-                compiled_src.ast, compiled_src.schema, node
-            ).unwrap_or_else((_ for _ in ()).throw)
+            compiled_node = compiled_src.ast.pipe(
+                _compile_tree, compiled_src.schema, node
+            ).unwrap()
             sources = (
                 compiled_src.sources
                 .items()
@@ -211,7 +211,8 @@ def _compile_tree(  # noqa: PLR0915
             ast = ops.slice(src_ast, node.length, node.offset).unwrap()
             return Ok(CompiledPlan(ast, schema, empty))
         case nodes.Drop():
-            ast, new_schema = ops.drop(src_ast, schema, node.columns, node.more_columns)
+            expr, new_schema = ops.drop(schema, node.columns, node.more_columns)
+            ast = _maybe_inline(expr, ast=src_ast)
             return Ok(CompiledPlan(ast, new_schema, empty))
         case nodes.DropRows():
             ast = _apply_filter_clause(
@@ -316,8 +317,9 @@ def _compile_tree(  # noqa: PLR0915
 
 
 def _apply_filter_clause(src_ast: exp.Select, predicate: exp.Expr) -> exp.Select:
-    exprs: list[exp.Expr] = src_ast.expressions
-    has_window = Iter(exprs).find_map(lambda expr: Option(expr.find(exp.Window)))
+    has_window = Iter(src_ast.selects).find_map(
+        lambda expr: Option(expr.find(exp.Window))
+    )
     match has_window:
         case Some(_):
             return (
@@ -332,6 +334,20 @@ def _apply_filter_clause(src_ast: exp.Select, predicate: exp.Expr) -> exp.Select
                     return src_ast.having(predicate, copy=False)
                 case _:
                     return src_ast.where(predicate, copy=False)
+
+
+def _maybe_inline(*exprs: exp.Expr, ast: exp.Select) -> exp.Select:
+    if can_inline_select(ast):
+        return ast.select(*exprs, copy=False, append=False)
+    return exp.select(*exprs).from_(ast.subquery(Tables.SRC, copy=False), copy=False)
+
+
+def can_inline_select(select: exp.Select) -> bool:
+    match select.selects:
+        case [exp.Star()]:
+            return True
+        case _:
+            return False
 
 
 def lookup_type(inner: exp.Expr, schema: Schema) -> exp.DataType:
