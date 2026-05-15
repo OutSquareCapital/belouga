@@ -176,6 +176,8 @@ def test_sort_no_nulls_handling() -> None:
 def test_sort_limit() -> None:
     """Guard the `sort(...).limit(...)` query plan against implicit null ordering bugs.
 
+    See https://github.com/duckdb/duckdb-python/issues/460
+
     `belugas` used to generate `NULLS FIRST` implicitly when no null ordering was requested.
 
     On Arrow-backed relations, DuckDB optimized `ORDER BY ... LIMIT ...`
@@ -214,6 +216,8 @@ def test_sort_errors(lf: bl.LazyFrame) -> None:
 
 def test_limit(lf: bl.LazyFrame) -> None:
     r"""Affected by the buggy `lazy` duckdb to polars conversions.
+
+    See https://github.com/duckdb/duckdb-python/issues/460
 
     If we use `lf.lazy().sort("id")` instead of `lf.collect().lazy().sort("id")`, we get a panic from polars.
 

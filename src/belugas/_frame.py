@@ -102,6 +102,8 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Warning:
             There's currently a known bug for the interaction between `polars.LazyFrame` and `DuckDB`.
 
+            See https://github.com/duckdb/duckdb-python/issues/460
+
             `belugas.LazyFrame.lazy()` produces a Polars `LazyFrame` backed by a **`PYTHON SCAN`** (via `duckdb/polars_io.py`).
             Certain Polars operations that internally generate a `dynamic_predicate` optimization node cause a **panic** when collected.
 
