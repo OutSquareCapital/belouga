@@ -101,27 +101,6 @@ def test_from_pl_dataframe() -> None:
     assert_eq(bl.from_arrow(PL_DF).collect(), PL_DF)
 
 
-@pytest.mark.skip(reason="TODO, need investigation.")
-def test_from_arrow_sort_limit() -> None:
-    """Reused `arrow` data sources don't seem to work well with our current query execution.
-
-    `belugas` generate empty result, but ONLY with this specific setup.
-    """
-    df = pl.DataFrame({"x": [3, 1, 2]})
-    assert_eq(
-        df.lazy().sort("x").limit(1).collect(),
-        bl.from_arrow(df).sort("x").limit(1).collect(),
-    )
-
-
-def test_from_dict_sort_limit_control() -> None:
-    data = {"x": [3, 1, 2]}
-    assert_eq(
-        pl.DataFrame(data).lazy().sort("x").limit(1).collect(),
-        bl.from_dict(data).sort("x").limit(1).collect(),
-    )
-
-
 def test_from_dict(data: TestData) -> None:
     assert_eq(bl.LazyFrame(data).collect(), pl.DataFrame(data, orient="col"))
     assert_eq(bl.from_dict(data).collect(), pl.from_dict(data))

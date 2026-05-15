@@ -173,6 +173,37 @@ def test_sort_no_nulls_handling() -> None:
     )
 
 
+def test_sort_limit() -> None:
+    """Guard the `sort(...).limit(...)` query plan against implicit null ordering bugs.
+
+    `belugas` used to generate `NULLS FIRST` implicitly when no null ordering was requested.
+
+    On Arrow-backed relations, DuckDB optimized `ORDER BY ... LIMIT ...`
+
+    into a `TOP_N` plan that pushed the optional filter `x IS NULL OR Dynamic Filter(x)` into `ARROW_SCAN`,
+
+    which incorrectly yielded an empty result for this query shape.
+
+    Native relations created through our Python conversions (e.g. `from_dict`) did not expose the same bad behavior,
+    but the generated SQL was still wrong.
+
+    This test keeps both backends covered,
+    so the default `sort` semantics stay aligned with Polars regardless of the scan source.
+    """
+    from polars.testing import assert_frame_equal
+
+    data = {"x": [3, 1, 2]}
+    df = pl.DataFrame(data)
+    df_sorted = df.lazy().sort("x").limit(1).collect()
+    assert_frame_equal(
+        df_sorted, bl.from_arrow(df).sort("x").limit(1).collect(), check_dtypes=False
+    )
+
+    assert_frame_equal(
+        df_sorted, bl.from_dict(data).sort("x").limit(1).collect(), check_dtypes=False
+    )
+
+
 def test_sort_errors(lf: bl.LazyFrame) -> None:
     with pytest.raises(ValueError, match="length of `descending`"):
         _ = lf.sort("age", "salary", descending=[True]).collect()
@@ -182,7 +213,19 @@ def test_sort_errors(lf: bl.LazyFrame) -> None:
 
 
 def test_limit(lf: bl.LazyFrame) -> None:
-    """Affected by the buggy `lazy` duckdb to polars conversions."""
+    r"""Affected by the buggy `lazy` duckdb to polars conversions.
+
+    If we use `lf.lazy().sort("id")` instead of `lf.collect().lazy().sort("id")`, we get a panic from polars.
+
+    Since it's a panic and not an handled exception, we can't catch it with `pytest.raises`.
+
+    Output:
+        thread '<unnamed>' (14872) panicked at crates\polars-plan\src\plans\conversion\dsl_to_ir\expr_to_ir.rs:639:13:
+        internal error: entered unreachable code
+        note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+        --- PyO3 is resuming a panic after fetching a PanicException from Python. ---
+        .... # stack trace from pytest
+    """
     assert_lf_eq(lf.collect().lazy().sort("id").limit(3), lf.sort("id").limit(3))
 
 
@@ -405,6 +448,7 @@ def test_top_bottom_k(
 def test_top_bottom_k_single(
     lf: bl.LazyFrame, k: int, by: list[str] | str, reverse: bool | list[bool]
 ) -> None:
+    """Since internally this passes trough `sort` and `limit`, it's also affected by the buggy polars-duckdb conversions."""
     assert_lf_eq(
         lf.collect().lazy().top_k(k, by=by, reverse=reverse),
         lf.top_k(k, by=by, reverse=reverse),
