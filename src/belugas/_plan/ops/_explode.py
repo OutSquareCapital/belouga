@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from functools import partial
 from typing import TYPE_CHECKING, NamedTuple
 
 from pyochain import Dict, Iter
@@ -40,25 +39,11 @@ def explode(
         .into(_get_target, is_single_explode=is_single_explode)
     )
 
-    cond = target.is_not_null().and_(target.list.length().gt(0))
-    transformer = partial(
-        transform, schema, to_explode, target, is_single=is_single_explode
-    )
-    rhs = (
-        exp
-        .select(*transformer(nested=False))
+    return (
+        transform(schema, to_explode, target, is_single=is_single_explode)
+        .unpack_into(exp.select)
         .from_(src_ast.subquery(Tables.SRC, copy=False), copy=False)
-        .where(cond.not_().inner, copy=False)
     )
-    unioned = (
-        exp
-        .select(*transformer(nested=True))
-        .from_(src_ast.subquery(Tables.SRC, copy=False), copy=False)
-        .where(cond.inner, copy=False)
-        .pipe(exp.union, rhs, copy=False)
-        .subquery(Tables.SRC, copy=False)
-    )
-    return exp.select(exp.Star()).from_(unioned)
 
 
 def _get_target(exprs: Iter[IndexedExpr], *, is_single_explode: bool) -> Expr:
@@ -80,20 +65,15 @@ def transform(
     target: Expr,
     *,
     is_single: bool,
-    nested: bool,
 ) -> Iter[exp.Expr]:
 
-    def _project_col(name: str, replace: Expr) -> Expr:
-        match (nested, name in to_explode):
-            case (True, True):
-                if is_single:
-                    return replace.alias(name)
-                field = to_explode.get_item(name).unwrap().idx
-                return replace.struct.extract(field).alias(name)
-            case (False, True):
-                return lit(None).alias(name)
-            case _:
-                return col(name)
+    def _project_col(name: str) -> Expr:
+        if name in to_explode:
+            if is_single:
+                return replace.alias(name)
+            field = to_explode.get_item(name).unwrap().idx
+            return replace.struct.extract(field).alias(name)
+        return col(name)
 
-    replace = unnest(target) if nested else lit(None)
-    return columns.iter().map(lambda name: _project_col(name, replace).inner)
+    replace = unnest(target)
+    return columns.iter().map(lambda name: _project_col(name).inner)

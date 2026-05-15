@@ -319,23 +319,22 @@ def _compile_tree(  # noqa: PLR0915
 
 
 def _apply_filter_clause(src_ast: exp.Select, predicate: exp.Expr) -> exp.Select:
-    has_window = Iter(src_ast.selects).find_map(
-        lambda expr: Option(expr.find(exp.Window))
-    )
-    match has_window:
-        case Some(_):
+    match src_ast.args.get("group"):
+        case exp.Group():
+            return src_ast.having(predicate, copy=False)
+        case _ if (
+            src_ast.args.get("limit") is not None
+            or src_ast.args.get("offset") is not None
+            or not Iter(src_ast.selects).all(_is_passthrough_projection)
+        ):
             return (
                 exp
-                .select(exp.Star())
+                .select(exp.Star(), copy=False)
                 .from_(src_ast.subquery(Tables.SRC, copy=False))
                 .where(predicate, copy=False)
             )
         case _:
-            match src_ast.args.get("group"):
-                case exp.Group():
-                    return src_ast.having(predicate, copy=False)
-                case _:
-                    return src_ast.where(predicate, copy=False)
+            return src_ast.where(predicate, copy=False)
 
 
 def _maybe_inline(*exprs: exp.Expr, ast: exp.Select) -> exp.Select:
@@ -344,12 +343,25 @@ def _maybe_inline(*exprs: exp.Expr, ast: exp.Select) -> exp.Select:
     return exp.select(*exprs).from_(ast.subquery(Tables.SRC, copy=False), copy=False)
 
 
+# TODO: we should factorise those two funcs and check if we can do it more efficiently
 def can_inline_select(select: exp.Select) -> bool:
     match select.selects:
         case [exp.Star()]:
             return True
         case _:
             return False
+
+
+def _is_passthrough_projection(expr: exp.Expr) -> bool:
+    match expr:
+        case exp.Star():
+            return True
+        case _:
+            match expr.unalias():
+                case exp.Column() as col:
+                    return expr.output_name == col.output_name
+                case _:
+                    return False
 
 
 def lookup_type(inner: exp.Expr, schema: Schema) -> exp.DataType:
