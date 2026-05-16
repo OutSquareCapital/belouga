@@ -11,7 +11,7 @@ from ._funcs import lit
 
 try:
     from pygments import token
-    from pygments.lexers.sql import SqlLexer  # pyright: ignore[reportMissingTypeStubs]
+    from pygments.lexers.sql import SqlLexer
     from pyochain import Dict, Iter, Set, Some, Vec
     from rich.console import Console
     from rich.pretty import Pretty
@@ -28,7 +28,7 @@ from .typing import FrameLike, IntoPlLazyFrame, RichRenderable
 
 if TYPE_CHECKING:
     from pygments.token import (
-        _TokenType as TokenType,  # pyright: ignore[reportPrivateUsage]
+        _TokenType as TokenType,
     )
     from rich.console import RenderableType
 
@@ -79,7 +79,8 @@ _POLARS_EXPRS = {"col", "when", ">", "<", ">=", "<=", "=="}
 
 class DuckDbSqlLexer(SqlLexer):
     @override
-    def get_tokens_unprocessed(self, text: str) -> Iter[ProcessedToken]:  # pyright: ignore[reportIncompatibleMethodOverride]
+    # pyrefly: ignore [bad-override]
+    def get_tokens_unprocessed(self, text: str) -> Iter[ProcessedToken]:
         duck_tokens = Dict(duckdb.tokenize(text))
         process = partial(_process_token, duck_tokens)
         return Iter(super().get_tokens_unprocessed(text)).map_star(process)
@@ -214,7 +215,7 @@ def node_tree(node: BaseNode) -> RenderableType:
                     item_branch = branch.add(Text(repr(key), style="bright_black"))
                     _attach(item_branch, item)
 
-                _ = Iter(value.items()).for_each_star(_add_map_item)  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+                _ = Iter(value.items()).for_each_star(_add_map_item)
             case Iterable() as items if not isinstance(items, str | bytes | bytearray):
                 if not items:
                     _ = branch.add(Pretty(items, expand_all=True))
@@ -228,9 +229,9 @@ def node_tree(node: BaseNode) -> RenderableType:
             case _:
                 _ = branch.add(Pretty(value, expand_all=True))
 
-    def _add_to_tree(field: Field[Any]) -> None:  # pyright: ignore[reportExplicitAny]
+    def _add_to_tree(field: Field[Any]) -> None:
         name = field.name
-        value: object = getattr(node, name)  # pyright: ignore[reportAny]
+        value: object = getattr(node, name)
         match value:
             case BaseNode():
                 branch = tree.add(Text("↑", style="bold bright_black"))
@@ -284,7 +285,7 @@ def expr_tree(node: exp.Expr) -> RenderableType:
             case _:
                 return Text(name, style="bold magenta")
 
-    def _handle_mapping(branch: Tree, items: Mapping[Any, object]) -> None:  # pyright: ignore[reportExplicitAny]
+    def _handle_mapping(branch: Tree, items: Mapping[Any, object]) -> None:
 
         def _add_map_item(key: object, item: object) -> None:
             item_branch = branch.add(Text(repr(key), style=elem_style))
@@ -295,7 +296,7 @@ def expr_tree(node: exp.Expr) -> RenderableType:
 
         Iter(items.items()).for_each_star(_add_map_item)
 
-    def _handle_iterable(branch: Tree, items: Iterable[Any]) -> None:  # pyright: ignore[reportExplicitAny]
+    def _handle_iterable(branch: Tree, items: Iterable[Any]) -> None:
 
         def _add_iter_item(index: int, item: object) -> None:
             item_branch = branch.add(Text(f"[{index}]", style=elem_style))
@@ -312,7 +313,7 @@ def expr_tree(node: exp.Expr) -> RenderableType:
             case exp.Expr():
                 _ = branch.add(expr_tree(value))
             case Mapping():
-                _handle_mapping(branch, value)  # pyright: ignore[reportUnknownArgumentType]
+                _handle_mapping(branch, value)
             case Iterable() if not isinstance(value, str | bytes | bytearray):
                 _handle_iterable(branch, value)
             case _:

@@ -369,7 +369,8 @@ class Expr(Fns):
         return self.__truediv__(other)
 
     @override
-    def __eq__(self, other: IntoExpr) -> Self:  # pyright: ignore[reportIncompatibleMethodOverride]
+    # pyrefly: ignore [bad-override]
+    def __eq__(self, other: IntoExpr) -> Self:
         return self._binop(exp.EQ, other)
 
     def eq(self, other: IntoExpr) -> Self:
@@ -424,7 +425,8 @@ class Expr(Fns):
         return self.__mul__(other)
 
     @override
-    def __ne__(self, other: IntoExpr) -> Self:  # pyright: ignore[reportIncompatibleMethodOverride]
+    # pyrefly: ignore [bad-override]
+    def __ne__(self, other: IntoExpr) -> Self:
         return self._binop(exp.NEQ, other)
 
     def ne(self, other: IntoExpr) -> Self:
@@ -685,7 +687,7 @@ class Expr(Fns):
                 case (Some(val), Null(), Null()):
                     return Ok(self.coalesce(val))
                 case (_, Some(strat), Null()):
-                    return Ok(self.pipe(_FILL_STRATEGY[strat]))  # pyright: ignore[reportArgumentType]
+                    return Ok(self.pipe(_FILL_STRATEGY[strat]))
                 case _:
                     msg = "must specify either a fill `value` or `strategy`"
                     return Err(ValueError(msg))
@@ -799,6 +801,7 @@ class Expr(Fns):
             case "none":
                 return self.gt(lower_bound).and_(self.lt(upper_bound))
 
+    # pyrefly: ignore [bad-return]
     def clip(self, lower_bound: IntoExpr = None, upper_bound: IntoExpr = None) -> Self:
         match (lower_bound, upper_bound):
             case (None, None):

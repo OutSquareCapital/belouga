@@ -18,16 +18,13 @@ def _run_qry() -> str:
     from pyochain import Dict
     from sqlglot.parsers.duckdb import DuckDBParser
 
-    original = Dict(DuckDBParser.FUNCTIONS)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType, reportUnknownVariableType]
-    _check_no_overlap(original)  # pyright: ignore[reportUnknownArgumentType]
+    original = Dict(DuckDBParser.FUNCTIONS)
+    _check_no_overlap(original)
     import belugas as bl
     from belugas._sqlglot_patch import DUCKDB_FUNCTIONS  # noqa: PLC2701
 
     from ._utils import set_pl_config
-    from .fn_generator._query import (
-        DuckCols,  # pyright: ignore[reportPrivateLocalImportUsage]
-        _filters,  # pyright: ignore[reportPrivateUsage]
-    )
+    from .fn_generator._query import DuckCols, _filters
 
     set_pl_config()
     function_name = pl.col("function_name")
@@ -152,7 +149,7 @@ def _check_no_overlap(original: Mapping[str, object]) -> None:
     from pyochain import Iter, Some
 
     from belugas._sqlglot_patch import (  # noqa: PLC2701
-        _missing_from_glot,  # pyright: ignore[reportPrivateUsage]
+        _missing_from_glot,
     )
 
     res = (

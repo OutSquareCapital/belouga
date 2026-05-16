@@ -64,7 +64,7 @@ class OverBuilder:
 
     def handle_distinct(self, *, distinct: bool) -> Self:
         match (distinct, self.expr.find(exp.Func)):
-            case (True, exp.Func(this=arg)):  # pyright: ignore[reportAny]
+            case (True, exp.Func(this=arg)):
                 expr = self.expr.copy()
                 expr.set("this", exp.Distinct(expressions=[arg]))
                 return self.__class__(expr)

@@ -25,7 +25,7 @@ def unnest(
             _ = new_schema.insert(field_name, field_dtype)
             return col(name).struct.field(name=field_name).alias(field_name).inner
 
-        match name in targets, raw.this:  # pyright: ignore[reportAny]
+        match name in targets, raw.this:
             case (True, exp.DType.STRUCT):
                 return (
                     dt

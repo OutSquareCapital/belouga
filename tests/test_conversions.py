@@ -17,7 +17,7 @@ DATA = Path("tests", "data", "foo")
 CSV = DATA.with_suffix(".csv")
 JSON = DATA.with_suffix(".json")
 PARQUET = DATA.with_suffix(".parquet")
-type TestData = dict[str, Any]  # pyright: ignore[reportExplicitAny]
+type TestData = dict[str, Any]
 
 
 @pytest.fixture
@@ -147,7 +147,7 @@ def test_from_numpy_4d(orient: t.Orientation) -> None:
     expected = arr4d if orient == "row" else arr4d.T
     assert_eq(
         bl.from_numpy(arr4d, orient).collect(),
-        pl.DataFrame(expected.tolist(), orient=orient),  # pyright: ignore[reportAny]
+        pl.DataFrame(expected.tolist(), orient=orient),
     )
 
 

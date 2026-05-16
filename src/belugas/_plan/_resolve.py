@@ -81,7 +81,7 @@ def _compile_scan(node: nodes.Node) -> CompiledPlan:
             )
             return CompiledPlan(compiled_node.ast, compiled_node.schema, sources)
         case nodes.BaseScan():
-            source = _resolve_scan(node).set_alias()  # pyright: ignore[reportArgumentType]
+            source = _resolve_scan(node).set_alias()
             ast = exp.select(exp.Star()).from_(exp.to_table(source.identity))
             return CompiledPlan(
                 ast, source.schema, Dict([(source.identity, source.relation)])
@@ -517,7 +517,7 @@ def _resolve(val: IntoExpr, schema: Schema) -> Iter[ResolvedExpr]:
                                     )
                             return _expand_columns(val, base_names, base_names)
                         case _ as columns_node:
-                            base_names = _get_inner_node(columns_node.this)  # pyright: ignore[reportAny]
+                            base_names = _get_inner_node(columns_node.this)
                             return _expand_columns(val, base_names, base_names)
         case _:
             return (
@@ -580,10 +580,10 @@ def extract_root_name(node: exp.Expr) -> str:
         case exp.Window():
             return _window_root_name(node)
         case exp.Expr():
-            match node.this:  # pyright: ignore[reportAny]
+            match node.this:
                 case exp.Expr() as inner:
                     return extract_root_name(inner)
-                case _:  # pyright: ignore[reportAny]
+                case _:
                     return Marker.LITERAL
 
 
@@ -595,12 +595,12 @@ def _case_root_name(node: exp.Case) -> str:
                     return extract_root_name(then_val)
                 case _:
                     return Marker.LITERAL
-        case _:  # pyright: ignore[reportAny]
+        case _:
             return Marker.LITERAL
 
 
 def _func_root_name(node: exp.Func) -> str:
-    match node.this:  # pyright: ignore[reportAny]
+    match node.this:
         case exp.Expr() as inner:
             name = extract_root_name(inner)
             match name:
@@ -608,12 +608,12 @@ def _func_root_name(node: exp.Func) -> str:
                     return _root_col_name(node)
                 case _:
                     return name
-        case _:  # pyright: ignore[reportAny]
+        case _:
             return _root_col_name(node)
 
 
 def _window_root_name(node: exp.Window) -> str:
-    name = extract_root_name(node.this)  # pyright: ignore[reportAny]
+    name = extract_root_name(node.this)
     if name in {Marker.LITERAL, Marker.TEMP}:
         return _root_col_name(node)
     return name

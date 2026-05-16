@@ -20,10 +20,10 @@ if TYPE_CHECKING:
     from os import PathLike
     from pathlib import Path
 
-    from _duckdb._enums import (  # pyright: ignore[reportMissingModuleSource]
+    from _duckdb._enums import (
         CSVLineTerminator,
     )
-    from _duckdb._typing import (  # pyright: ignore[reportMissingModuleSource]  # pyright: ignore[reportMissingModuleSource]
+    from _duckdb._typing import (
         BlobLiteral as DuckBlobLit,
         ColumnsTypes,
         CsvCompression,
@@ -145,42 +145,42 @@ class FrameLike(Protocol):
     """Credits to `narwhals` for the Protocols definitions."""
 
     @property
-    def columns(self) -> Any: ...  # pyright: ignore[reportAny, reportExplicitAny]
-    def join(self, *args: Any, **kwargs: Any) -> Any: ...  # pyright: ignore[reportExplicitAny, reportAny]
+    def columns(self) -> Any: ...
+    def join(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
 @runtime_checkable
 class IntoArrowStream(FrameLike, Protocol):
     """Protocol for objects that can be converted into an Arrow table."""
 
-    def __arrow_c_stream__(self, requested_schema: object | None = None) -> Any: ...  # pyright: ignore[reportExplicitAny, reportAny]
+    def __arrow_c_stream__(self, requested_schema: object | None = None) -> Any: ...
 
 
 @runtime_checkable
 class IntoArrowArray(FrameLike, Protocol):
     """Protocol for objects that can be converted into an Arrow table."""
 
-    def __arrow_c_array__(self, requested_schema: object | None = None) -> Any: ...  # pyright: ignore[reportExplicitAny, reportAny]
+    def __arrow_c_array__(self, requested_schema: object | None = None) -> Any: ...
 
 
 class _PolarsFrame(FrameLike, Protocol):
     """Base Protocol for Polars DataFrame and LazyFrame."""
 
-    def lazy(self, *args: Any, **kwargs: Any) -> IntoPlLazyFrame: ...  # pyright: ignore[reportExplicitAny, reportAny]
+    def lazy(self, *args: Any, **kwargs: Any) -> IntoPlLazyFrame: ...
 
 
 @runtime_checkable
 class IntoPlLazyFrame(_PolarsFrame, Protocol):
     """Protocol for `polars::LazyFrame`."""
 
-    def explain(self, *args: Any, **kwargs: Any) -> str: ...  # pyright: ignore[reportExplicitAny, reportAny]
+    def explain(self, *args: Any, **kwargs: Any) -> str: ...
 
     def collect_batches(
         self,
-        *args: Any,  # pyright: ignore[reportExplicitAny, reportAny]
-        **kwargs: Any,  # pyright: ignore[reportExplicitAny, reportAny]
+        *args: Any,
+        **kwargs: Any,
     ) -> Iterator[IntoArrowStream]: ...
-    def collect(self, *args: Any, **kwargs: Any) -> IntoPlDataFrame: ...  # pyright: ignore[reportExplicitAny, reportAny]
+    def collect(self, *args: Any, **kwargs: Any) -> IntoPlDataFrame: ...
 
 
 @runtime_checkable
@@ -196,13 +196,13 @@ class NPProtocol(Protocol):
     """Base Protocol for numpy objects."""
 
     @property
-    def dtype(self) -> Any: ...  # pyright: ignore[reportExplicitAny, reportAny]
+    def dtype(self) -> Any: ...
     @property
     def ndim(self) -> int: ...
-    def __array__(self, *args: Any, **kwargs: Any) -> Any: ...  # pyright: ignore[reportExplicitAny, reportAny]
-    def __array_wrap__(self, *args: Any, **kwargs: Any) -> Any: ...  # pyright: ignore[reportExplicitAny, reportAny]
+    def __array__(self, *args: Any, **kwargs: Any) -> Any: ...
+    def __array_wrap__(self, *args: Any, **kwargs: Any) -> Any: ...
     @property
-    def __array_interface__(self) -> dict[str, Any]: ...  # pyright: ignore[reportExplicitAny]
+    def __array_interface__(self) -> dict[str, Any]: ...
     @property
     def __array_priority__(self) -> float: ...
 
@@ -219,9 +219,9 @@ class NPArrayLike[S: tuple[Any, ...], D](NPProtocol, Protocol):
     def __len__(self) -> int: ...
     def __contains__(self, value: object, /) -> bool: ...
     def __iter__(self) -> Iterator[D]: ...
-    def __array_finalize__(self, *args: Any, **kwargs: Any) -> None: ...  # pyright: ignore[reportExplicitAny, reportAny]
-    def __getitem__(self, *args: Any, **kwargs: Any) -> Any: ...  # pyright: ignore[reportExplicitAny, reportAny]
-    def __setitem__(self, *args: Any, **kwargs: Any) -> None: ...  # pyright: ignore[reportExplicitAny, reportAny]
+    def __array_finalize__(self, *args: Any, **kwargs: Any) -> None: ...
+    def __getitem__(self, *args: Any, **kwargs: Any) -> Any: ...
+    def __setitem__(self, *args: Any, **kwargs: Any) -> None: ...
     @property
     def shape(self) -> S: ...
     @property
@@ -230,7 +230,7 @@ class NPArrayLike[S: tuple[Any, ...], D](NPProtocol, Protocol):
     def T(self) -> Self: ...  # noqa: N802
 
 
-type AnyArray = NPArrayLike[Any, Any]  # pyright: ignore[reportExplicitAny]
+type AnyArray = NPArrayLike[Any, Any]
 
 
 type IntoDict[K, V] = Mapping[K, V] | Iterable[tuple[K, V]]

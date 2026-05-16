@@ -19,11 +19,11 @@ from .utils import try_iter
 if TYPE_CHECKING:
     import polars as pl
     from _duckdb import ExplainType
-    from _duckdb._enums import (  # pyright: ignore[reportMissingModuleSource]
+    from _duckdb._enums import (
         ExplainTypeLiteral,
         RenderModeLiteral,
     )
-    from _duckdb._typing import (  # pyright: ignore[reportMissingModuleSource]
+    from _duckdb._typing import (
         CsvCompression,
         ParquetFieldsOptions,
     )
@@ -906,7 +906,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
             .drop(Marker.TEMP)
         )
 
-    def fetch_all(self) -> Vec[tuple[Any, ...]]:  # pyright: ignore[reportExplicitAny]
+    def fetch_all(self) -> Vec[tuple[Any, ...]]:
         return Vec.from_ref(self._collect().relation.fetchall())
 
     def show(

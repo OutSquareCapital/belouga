@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
-from enum import Enum as PyEnum
+from enum import Enum as PyEnum, StrEnum as PyStrEnum
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -26,7 +26,7 @@ from pyochain import Dict, Iter, Seq, Vec
 from sqlglot import exp
 
 if TYPE_CHECKING:
-    from _duckdb._typing import (  # pyright: ignore[reportMissingModuleSource]
+    from _duckdb._typing import (
         IntoPyType,
         StrIntoPyType,
     )
@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 class ClassInstMethod[**P, R]:
     """Decorator that allows a method to be called from the class OR instance."""
 
-    func: Callable[Concatenate[Any, P], R]  # pyright: ignore[reportExplicitAny]
+    func: Callable[Concatenate[Any, P], R]
 
     @overload
     def __get__(self, instance: None, type_: type) -> Callable[P, R]: ...
@@ -183,7 +183,7 @@ class DataType(ABC):
             - Parse ``BIGINT[]`` → ``ARRAY<BIGINT>`` (no values) → normalize to ``List(Int64)``
             - Parse ``BIGINT[2]`` → ``ARRAY<BIGINT>[2]`` (has values=2) → keep as ``Array(Int64, size=2)``
         """
-        dt_enum: exp.DType = dtype.this  # pyright: ignore[reportAny]
+        dt_enum: exp.DType = dtype.this
         match dt_enum:
             case exp.DType.ARRAY if not dtype.args.get("values"):
                 return List.__from_raw__(dtype)
@@ -483,12 +483,12 @@ class Decimal(NumericType, ComplexDataType):
     @property
     def precision(self) -> int:
         """Get the precision of the decimal type."""
-        return int(self.raw.expressions[0].this.this)  # pyright: ignore[reportAny]
+        return int(self.raw.expressions[0].this.this)
 
     @property
     def scale(self) -> int:
         """Get the scale of the decimal type."""
-        return int(self.raw.expressions[1].this.this)  # pyright: ignore[reportAny]
+        return int(self.raw.expressions[1].this.this)
 
 
 @final
@@ -616,16 +616,16 @@ class BitString(StringType):
 class Enum(StringType, ComplexDataType):
     """Enum data type with configurable categories."""
 
-    def __init__(self, categories: Iterable[str] | type[PyEnum]) -> None:
+    def __init__(self, categories: Iterable[str] | type[PyStrEnum]) -> None:
         """Initialize an Enum data type with the specified categories.
 
         Args:
-            categories (Iterable[str] | type[PyEnum]): The categories of the enum type, either as an iterable of strings or a Python Enum class.
+            categories (Iterable[str] | type[PyStrEnum]): The categories of the enum type, either as an iterable of strings or a Python `StrEnum` class.
 
         """
         match categories:
-            case type():
-                values: Iter[str] = Iter(categories).map(lambda i: i.value)  # pyright: ignore[reportAny]
+            case type() if issubclass(categories, PyStrEnum):
+                values = Iter(categories).map(lambda i: i.value)
             case Iterable():
                 values = Iter(categories)
         exprs = values.map(exp.Literal.string).collect(list)
@@ -647,9 +647,7 @@ class Enum(StringType, ComplexDataType):
     def categories(self) -> Seq[str]:
         """Get the categories of the enum type."""
         exprs: list[exp.Expr] = self.raw.expressions
-        return (
-            Iter(exprs).map(lambda lit: lit.this).collect()  # pyright: ignore[reportAny]
-        )
+        return Iter(exprs).map(lambda lit: lit.this).collect()
 
 
 def _into_enum(exprs: list[exp.Literal]) -> exp.DataType:
@@ -689,7 +687,7 @@ class Union(NestedType, ComplexDataType):
         """Get the fields of the union type."""
         return (
             Iter(self.raw.expressions)
-            .map(lambda col_def: self.from_sql(col_def.kind))  # pyright: ignore[reportAny]
+            .map(lambda col_def: self.from_sql(col_def.kind))
             .collect()
         )
 
@@ -726,12 +724,12 @@ class Map(NestedType, ComplexDataType):
     @property
     def key(self) -> DataType:
         """Get the key type of the map."""
-        return self.from_sql(self.raw.expressions[0])  # pyright: ignore[reportAny]
+        return self.from_sql(self.raw.expressions[0])
 
     @property
     def value(self) -> DataType:
         """Get the value type of the map."""
-        return self.from_sql(self.raw.expressions[1])  # pyright: ignore[reportAny]
+        return self.from_sql(self.raw.expressions[1])
 
 
 def _into_map(exprs: list[exp.DataType]) -> exp.DataType:
@@ -796,9 +794,8 @@ def extract_struct_fields(dtype: exp.DataType) -> Iter[tuple[str, exp.DataType]]
         Iter[tuple[str, exp.DataType]]: An `Iterator` over the field names and types of the struct type.
     """
     exprs: list[exp.ColumnDef] = dtype.expressions
-    return (  # pyright: ignore[reportReturnType]
-        Iter(exprs).map(lambda col_def: (col_def.this.this, col_def.kind))  # pyright: ignore[reportAny]
-    )
+    # pyrefly: ignore [bad-return]
+    return Iter(exprs).map(lambda col_def: (col_def.this.this, col_def.kind))
 
 
 def _into_struct_field(name: str, col: DataType) -> exp.ColumnDef:
@@ -848,13 +845,13 @@ class Array(NestedType, ComplexDataType):
     @property
     def inner(self) -> DataType:
         """Get the inner type of the array."""
-        return self.from_sql(self.raw.expressions[0])  # pyright: ignore[reportAny]
+        return self.from_sql(self.raw.expressions[0])
 
     @property
     def shape(self) -> int:
         """Get the number of dimensions of the array."""
         values: exp.Values | None = self.raw.args.get("values")
-        return int(values[0].this) if values else 1  # pyright: ignore[reportAny]
+        return int(values[0].this) if values else 1
 
 
 @final
@@ -880,7 +877,7 @@ class List(NestedType, ComplexDataType):
     @property
     def inner(self) -> DataType:
         """Get the inner type of the list."""
-        return self.from_sql(self.raw.expressions[0])  # pyright: ignore[reportAny]
+        return self.from_sql(self.raw.expressions[0])
 
 
 # Raw type aliases for the unparsed children of each DuckDB type, used in the Cast namespace to convert from the raw DuckDBPyType.children to more specific structures for each type.

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Self, final, overload, override
 
 from pyochain import Seq
@@ -19,13 +20,15 @@ if TYPE_CHECKING:
 
 
 @final
+@dataclass(slots=True, repr=False)
 class Selector(Expr):
     """Column selector based on dtype predicates."""
 
-    aliaser: MultiAliasMapper  # pyright: ignore[reportIncompatibleVariableOverride]
-    __slots__ = ()
+    # pyrefly: ignore [bad-override-mutable-attribute]
+    aliaser: MultiAliasMapper
 
     @override
+    # pyrefly: ignore [bad-override]
     def _cls(self, value: exp.Expr) -> Expr:
         return Expr(value, self.aliaser)
 

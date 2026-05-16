@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import duckdb
 import pytest
@@ -9,7 +9,7 @@ import pytest
 import belugas as bl
 
 if TYPE_CHECKING:
-    from _duckdb._typing import (  # pyright: ignore[reportMissingModuleSource]
+    from _duckdb._typing import (
         StrIntoPyType,
     )
     from pyochain import Dict
@@ -194,7 +194,7 @@ def test_bool_str(cast_schema: Dict[str, bl.DataType]) -> None:
 
 
 def test_decimal(cast_schema: Dict[str, bl.DataType]) -> None:
-    dec: bl.Decimal = cast_schema["dec"]  # pyright: ignore[reportAssignmentType]
+    dec = cast(bl.Decimal, cast_schema["dec"])
     assert isinstance(dec, bl.Decimal)
     assert dec.precision == 10
     assert dec.scale == 2
@@ -213,7 +213,7 @@ def test_temporal(cast_schema: Dict[str, bl.DataType]) -> None:
 
 
 def test_list(cast_schema: Dict[str, bl.DataType]) -> None:
-    lst: bl.List = cast_schema["lst"]  # pyright: ignore[reportAssignmentType]
+    lst = cast(bl.List, cast_schema["lst"])
     assert isinstance(lst, bl.List)
     assert isinstance(lst.inner, bl.UInt16)
     assert bl.List.is_nested()
@@ -226,12 +226,12 @@ def test_list_from_sql_dtype() -> None:
 
 
 def test_array(cast_schema: Dict[str, bl.DataType]) -> None:
-    arr_1d: bl.Array = cast_schema["arr_1d"]  # pyright: ignore[reportAssignmentType]
+    arr_1d = cast(bl.Array, cast_schema["arr_1d"])
     assert isinstance(arr_1d, bl.Array)
     assert isinstance(arr_1d.inner, bl.UInt16)
     assert arr_1d.shape == 2
 
-    arr_2d: bl.Array = cast_schema["arr_2d"]  # pyright: ignore[reportAssignmentType]
+    arr_2d = cast(bl.Array, cast_schema["arr_2d"])
     assert isinstance(arr_2d, bl.Array)
     assert arr_2d.shape == 2
     assert bl.Array.is_nested()
@@ -242,24 +242,24 @@ def test_binary(cast_schema: Dict[str, bl.DataType]) -> None:
 
 
 def test_enum(cast_schema: Dict[str, bl.DataType]) -> None:
-    enumerated: bl.Enum = cast_schema["enumerated"]  # pyright: ignore[reportAssignmentType]
+    enumerated = cast(bl.Enum, cast_schema["enumerated"])
     assert isinstance(enumerated, bl.Enum)
     assert tuple(enumerated.categories) == ("A", "B", "C")
 
-    enumerated_enum: bl.Enum = cast_schema["enumerated_enum"]  # pyright: ignore[reportAssignmentType]
+    enumerated_enum = cast(bl.Enum, cast_schema["enumerated_enum"])
     assert isinstance(enumerated_enum, bl.Enum)
     assert tuple(enumerated_enum.categories) == ("A", "B", "C")
 
 
 def test_map(cast_schema: Dict[str, bl.DataType]) -> None:
-    mapped: bl.Map = cast_schema["mapped"]  # pyright: ignore[reportAssignmentType]
+    mapped = cast(bl.Map, cast_schema["mapped"])
     assert isinstance(mapped, bl.Map)
     assert isinstance(mapped.key, bl.String)
     assert isinstance(mapped.value, bl.Int32)
 
 
 def test_struct(cast_schema: Dict[str, bl.DataType]) -> None:
-    struct: bl.Struct = cast_schema["structured"]  # pyright: ignore[reportAssignmentType]
+    struct = cast(bl.Struct, cast_schema["structured"])
     assert isinstance(struct, bl.Struct)
     assert isinstance(struct.fields["a"], bl.Int32)
     assert isinstance(struct.fields["b"], bl.String)
@@ -268,7 +268,7 @@ def test_struct(cast_schema: Dict[str, bl.DataType]) -> None:
 
 
 def test_union(cast_schema: Dict[str, bl.DataType]) -> None:
-    unioned: bl.Union = cast_schema["unioned"]  # pyright: ignore[reportAssignmentType]
+    unioned = cast(bl.Union, cast_schema["unioned"])
     assert isinstance(unioned, bl.Union)
     assert isinstance(unioned.fields[0], bl.Int32)
     assert isinstance(unioned.fields[1], bl.String)
@@ -280,19 +280,19 @@ def test_time_tz(cast_schema: Dict[str, bl.DataType]) -> None:
 
 
 def test_datetime_all_time_units(cast_schema: Dict[str, bl.DataType]) -> None:
-    datetime_s: bl.Datetime = cast_schema["datetime_s"]  # pyright: ignore[reportAssignmentType]
+    datetime_s = cast(bl.Datetime, cast_schema["datetime_s"])
     assert isinstance(datetime_s, bl.Datetime)
     assert datetime_s.time_unit == "s"
 
-    datetime_ms: bl.Datetime = cast_schema["datetime_ms"]  # pyright: ignore[reportAssignmentType]
+    datetime_ms = cast(bl.Datetime, cast_schema["datetime_ms"])
     assert isinstance(datetime_ms, bl.Datetime)
     assert datetime_ms.time_unit == "ms"
 
-    datetime_us: bl.Datetime = cast_schema["datetime_us"]  # pyright: ignore[reportAssignmentType]
+    datetime_us = cast(bl.Datetime, cast_schema["datetime_us"])
     assert isinstance(datetime_us, bl.Datetime)
     assert datetime_us.time_unit in {"us", "ns"}
 
-    datetime_ns: bl.Datetime = cast_schema["datetime_ns"]  # pyright: ignore[reportAssignmentType]
+    datetime_ns = cast(bl.Datetime, cast_schema["datetime_ns"])
     assert isinstance(datetime_ns, bl.Datetime)
     assert datetime_ns.time_unit == "ns"
 

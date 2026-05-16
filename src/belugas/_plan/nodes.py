@@ -68,7 +68,7 @@ def node_structure(node: object, level: int = 0) -> str:
     delim = f",{indent}"
 
     def _is_nested_node(node: BaseNode, name: str) -> bool:
-        value: object = getattr(node, name)  # pyright: ignore[reportAny]
+        value: object = getattr(node, name)
         return isinstance(value, BaseNode)
 
     match node:
@@ -96,7 +96,7 @@ def node_structure(node: object, level: int = 0) -> str:
 
 
 def _field_to_s(node: BaseNode, name: str, level: int) -> str:
-    value: object = getattr(node, name)  # pyright: ignore[reportAny]
+    value: object = getattr(node, name)
     return f"{name}={node_structure(value, level)}"
 
 

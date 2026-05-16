@@ -67,7 +67,7 @@ CASES: Seq[DuckDBPyType] = Seq((
 
 VARIANTS: Seq[Variant] = Seq((
     Variant("impl", bl.DataType.from_duckdb),
-    Variant("baseline (from_str)", lambda dtype: bl.DataType.from_str(str(dtype))),  # pyright: ignore[reportUnknownLambdaType, reportUnknownArgumentType]
+    Variant("baseline (from_str)", lambda dtype: bl.DataType.from_str(str(dtype))),
 ))
 
 

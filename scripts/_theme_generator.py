@@ -6,7 +6,7 @@ from pyochain import Iter
 
 
 def generate_themes(caller: Path) -> tuple[int, Path]:
-    from pygments.styles._mapping import (  # pyright: ignore[reportMissingTypeStubs]  # noqa: PLC2701
+    from pygments.styles._mapping import (  # noqa: PLC2701
         STYLES,
     )
 

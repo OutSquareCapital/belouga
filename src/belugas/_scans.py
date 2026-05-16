@@ -12,10 +12,8 @@ from .typing import CSVOptions, JsonOptions, ParquetOptions
 
 if TYPE_CHECKING:
     import pandas as pd
-    from _duckdb._enums import (  # pyright: ignore[reportMissingModuleSource]
-        CSVLineTerminator,
-    )
-    from _duckdb._typing import (  # pyright: ignore[reportMissingModuleSource]
+    from _duckdb._enums import CSVLineTerminator
+    from _duckdb._typing import (
         ColumnsTypes,
         CsvCompression,
         CsvEncoding,
@@ -65,7 +63,7 @@ def from_numpy(
 def from_dict(
     mapping: IntoDict[str, PythonLiteral], connection: Conn = None
 ) -> LazyFrame:
-    return _from_node(nodes.ScanInMemory(Option(connection), mapping))  # pyright: ignore[reportUnknownArgumentType, reportArgumentType]
+    return _from_node(nodes.ScanInMemory(Option(connection), mapping))
 
 
 def from_dicts(
@@ -266,5 +264,5 @@ def _from_node(scan: nodes.Scan) -> LazyFrame:
         LazyFrame
     """
     out = LazyFrame.__new__(LazyFrame)
-    out._inner = scan  # pyright: ignore[reportPrivateUsage]
+    out._inner = scan
     return out

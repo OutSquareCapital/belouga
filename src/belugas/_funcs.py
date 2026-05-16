@@ -78,6 +78,7 @@ def unnest(
 
 @final
 class Col:
+    # pyrefly: ignore [implicit-any-attribute]
     __slots__ = ()
 
     def __call__(self, name: str, table: str | None = None) -> Expr:

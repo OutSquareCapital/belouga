@@ -70,5 +70,5 @@ class LazyGroupBy:
 
 def _from_node(scan: nodes.Agg | nodes.AggColumns) -> LazyFrame:
     out = LazyFrame.__new__(LazyFrame)
-    out._inner = scan  # pyright: ignore[reportPrivateUsage]
+    out._inner = scan
     return out

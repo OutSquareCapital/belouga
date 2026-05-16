@@ -10,13 +10,13 @@ from pyochain import Iter
 from rich.console import Console
 from rich.table import Table
 
-from .fn_generator._query import _filters  # pyright: ignore[reportPrivateUsage]
+from .fn_generator._query import _filters
 from .fn_generator._schemas import DuckCols
 
 CONSOLE = Console()
 
 
-def _df_to_iter(df: pl.DataFrame) -> Iter[tuple[Any, ...]]:  # pyright: ignore[reportExplicitAny]
+def _df_to_iter(df: pl.DataFrame) -> Iter[tuple[Any, ...]]:
     return Iter(df.iter_rows())
 
 
@@ -47,9 +47,9 @@ def _analyze_by_categories(lf: pl.LazyFrame) -> None:
 
     total = df.get_column("count").sum()
     df.head(20).pipe(_df_to_iter).for_each_star(
-        lambda cat, count: table.add_row(  # pyright: ignore[reportAny]
+        lambda cat, count: table.add_row(
             cat or "NULL",
-            str(count),  # pyright: ignore[reportAny]
+            str(count),
             f"{count / total * 100:.1f}%",
         )
     )
@@ -81,7 +81,7 @@ def _analyze_multi_category(lf: pl.LazyFrame) -> None:
     table.add_column("Count", justify="right", style="green")
 
     df.pipe(_df_to_iter).for_each_star(
-        lambda name, cats, n: table.add_row(name, ", ".join(cats), str(n))  # pyright: ignore[reportAny]
+        lambda name, cats, n: table.add_row(name, ", ".join(cats), str(n))
     )
 
     CONSOLE.print(table)

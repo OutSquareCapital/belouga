@@ -72,7 +72,7 @@ def run_query(
         raise BelugasConversionError(e, query) from e
 
 
-def from_dict(data: IntoDict[str, Any]) -> ScanResult:  # pyright: ignore[reportExplicitAny]
+def from_dict(data: IntoDict[str, Any]) -> ScanResult:
     data = Dict(data)
 
     raw_vals = data.items().iter().map_star(_to_expr).collect(tuple)
@@ -92,9 +92,9 @@ def from_numpy(data: AnyArray, orient: Orientation = "col") -> ScanResult:
             def _array_strategy() -> tuple[int, Callable[[int], AnyArray]]:
                 match (arr.ndim, orient):
                     case (2, _) | (_, "row"):
-                        return 1, lambda j: arr[:, j]  # pyright: ignore[reportAny]
+                        return 1, lambda j: arr[:, j]
                     case _:
-                        return 0, lambda j: arr[j]  # pyright: ignore[reportAny]
+                        return 0, lambda j: arr[j]
 
             def _named_array(names: Seq[str]) -> DuckDBPyRelation:
                 vals = (
@@ -108,7 +108,7 @@ def from_numpy(data: AnyArray, orient: Orientation = "col") -> ScanResult:
                 return duckdb.values(vals).select(*names.iter().map(_unnest))
 
             axis, arr_getter = _array_strategy()
-            names_nb: int = arr.shape[axis]  # pyright: ignore[reportAny]
+            names_nb: int = arr.shape[axis]
             cols = Range(0, names_nb).iter().map(_named).collect()
             return from_query(_named_array(cols))
 
@@ -141,9 +141,9 @@ def from_arrow(
 def from_records(data: SeqIntoVals, orient: Orientation = "col") -> ScanResult:
     match data[0]:
         case Mapping():
-            vals = cast(Sequence[Mapping[str, Any]], data)  # pyright: ignore[reportExplicitAny]
+            vals = cast(Sequence[Mapping[str, Any]], data)
             return from_dicts(vals)
-        case Sequence() as value if not isinstance(value, str | bytes | bytearray):  # pyright: ignore[reportUnknownVariableType]
+        case Sequence() as value if not isinstance(value, str | bytes | bytearray):
             vals = cast(NestedSeq, data)
             match orient:
                 case "col":

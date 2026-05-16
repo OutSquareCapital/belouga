@@ -12,7 +12,7 @@ from ._dtypes import Categories, DuckDbTypes
 CONVERTER = Iter(DuckDbTypes).map(lambda t: (t, t.into_py())).collect(dict)
 """DuckDB type -> Python type hint mapping."""
 
-DK_FUNC_KEYS = pl.LazyFrame({"glot_name": tuple(DuckDBParser.FUNCTIONS)})  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
+DK_FUNC_KEYS = pl.LazyFrame({"glot_name": tuple(DuckDBParser.FUNCTIONS)})
 """DuckDBParser.FUNCTIONS keys as a single-column LazyFrame."""
 
 SHADOWERS = (

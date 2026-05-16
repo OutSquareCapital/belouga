@@ -170,8 +170,8 @@ def _missing_from_glot() -> FuncRegistery:
         "LIST_APPLY": exp.Transform.from_arg_list,
         "LIST_CAT": _bind_dialect(parser.build_array_concat),
         "LIST_INDEXOF": exp.ArrayPosition.from_arg_list,
-        "LIST_INTERSECT": lambda args: exp.ArrayIntersect(expressions=args),  # pyright: ignore[reportUnknownLambdaType, reportUnknownArgumentType]
-        "LIST_PACK": lambda args: exp.Array(expressions=args),  # pyright: ignore[reportUnknownLambdaType, reportUnknownArgumentType]
+        "LIST_INTERSECT": lambda args: exp.ArrayIntersect(expressions=args),
+        "LIST_PACK": lambda args: exp.Array(expressions=args),
         "LIST_POSITION": exp.ArrayPosition.from_arg_list,
         "LIST_REDUCE": exp.Reduce.from_arg_list,
         "LIST_SLICE": exp.ArraySlice.from_arg_list,
@@ -184,7 +184,7 @@ def _missing_from_glot() -> FuncRegistery:
     }
 
 
-DUCKDB_FUNCTIONS: FuncRegistery = DuckDBParser.FUNCTIONS | {  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]$
+DUCKDB_FUNCTIONS: FuncRegistery = DuckDBParser.FUNCTIONS | {
     **_patched_from_global(),
     **_patched_from_duckdb(),
     **_missing_from_glot(),
@@ -203,14 +203,12 @@ def _add_to_meta(
     return Iter(exprs).map(lambda e: (e, {"returns": dtype})).collect(dict)
 
 
-DuckDB.EXPRESSION_METADATA |= {  # pyright: ignore[reportUnknownMemberType]
+DuckDB.EXPRESSION_METADATA |= {
     # Ranking/window functions are not typed in DuckDB's metadata, so Window(this=...) can
     # propagate UNKNOWN through downstream schema inference.
     **_add_to_meta(
         exp.DenseRank, exp.Ntile, exp.Rank, exp.RowNumber, dtype=exp.DType.BIGINT
     ),
     **_add_to_meta(exp.CumeDist, exp.PercentRank, dtype=exp.DType.DOUBLE),
-    exp.ArrayDistinct: {
-        "annotator": lambda self, e: self._annotate_by_args(e, "this")  # pyright: ignore[reportUnknownMemberType, reportUnknownLambdaType]
-    },
+    exp.ArrayDistinct: {"annotator": lambda self, e: self._annotate_by_args(e, "this")},
 }

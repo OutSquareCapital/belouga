@@ -103,7 +103,7 @@ def test_any_horizontal() -> None:
 def test_any(ignore_nulls: bool) -> None:
     assert_eq(
         bl.any("a", "b", ignore_nulls=ignore_nulls),
-        pl.any("a", "b", ignore_nulls=ignore_nulls),  # pyright: ignore[reportArgumentType]
+        pl.any("a", "b", ignore_nulls=ignore_nulls),
     )
 
 

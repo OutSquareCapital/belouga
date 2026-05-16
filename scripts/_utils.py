@@ -157,7 +157,7 @@ class Typing(KwordEnum):
     ANY = ty.Any.__name__
     LITERAL = ty.Literal.__name__
     SELF = ty.Self.__name__
-    UNION = ty.Union.__name__  # pyright: ignore[reportDeprecated]
+    UNION = ty.Union.__name__
     SUPPORTS_INT = ty.SupportsInt.__name__
     OVERLOAD = ty.overload.__name__
     CLASSVAR = ty.ClassVar.__name__

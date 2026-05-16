@@ -8,7 +8,7 @@ from belugas import meta
 
 
 def _get_fn(name: str) -> Callable[..., bl.LazyFrame]:
-    return getattr(meta, name)  # pyright: ignore[reportAny]
+    return getattr(meta, name)
 
 
 _META_FNS: Seq[Callable[[], bl.LazyFrame]] = (

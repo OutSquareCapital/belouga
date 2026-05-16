@@ -16,8 +16,8 @@ from rich import print
 from rich.text import Text
 
 from ..fn_generator._dtypes import DuckDbTypes, FuncTypes
-from ..fn_generator._main import _try_scan  # pyright: ignore[reportPrivateUsage]
-from ..fn_generator._query import _to_param_names  # pyright: ignore[reportPrivateUsage]
+from ..fn_generator._main import _try_scan
+from ..fn_generator._query import _to_param_names
 from ..fn_generator._rules import CONVERTER
 
 
@@ -117,7 +117,7 @@ def run_pipeline(caller: Path, source: Path) -> str:
         _try_scan(source, regenerate=False)
         .pipe(_query)
         .collect()
-        .map_rows(lambda x: MetaFnInfo.from_row(*x), return_dtype=pl.Object)  # pyright: ignore[reportAny]
+        .map_rows(lambda x: MetaFnInfo.from_row(*x), return_dtype=pl.Object)
         .pipe(lambda df: Iter[MetaFnInfo](df.to_series()))
         .collect()
         .inspect(

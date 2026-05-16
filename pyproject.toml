@@ -93,20 +93,8 @@
     reportMissingSuperCall = false
     typeCheckingMode       = "all"
 [tool.pyrefly]
+    preset                    = "strict"
     search-path               = ["."]
     strict-callable-subtyping = true
-
-    [tool.pyrefly.errors]
-        implicit-abstract-class      = "error"
-        implicit-any                 = "error"
-        implicitly-defined-attribute = "error"
-        missing-override-decorator   = "error"
-        missing-source               = "error"
-        not-required-key-access      = "error"
-        open-unpacking               = "error"
-        unannotated-attribute        = "error"
-        unannotated-parameter        = "error"
-        unannotated-return           = "error"
-        unused-ignore                = "error"
 [tool.pytest.ini_options]
     testpaths = ["tests"]

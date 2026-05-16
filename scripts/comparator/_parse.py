@@ -2,7 +2,7 @@ import ast
 import re
 from collections.abc import Callable
 
-from pyochain import NONE, Dict, Iter, Option, Seq, Some
+from pyochain import NONE, Dict, Iter, Null, Seq, Some
 
 from .._utils import Builtins, CollectionsABC, Pql, Pyochain, Typing
 from ._rules import CONTAINER_SUPERTYPES, TYPE_SUPERTYPES, ContainerType
@@ -11,6 +11,7 @@ GENERIC_SYMBOL_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]*$")
 
 SELF_PATTERN = re.compile(r"\b(Self|Expr|LazyFrame)\b")
 
+type Option[T] = Some[T] | Null[T]
 
 _SINGLE_PARAM_ALIASES: Dict[str, str] = Dict.from_kwargs(
     TryIter="Iterable[{arg}] | {arg}",
@@ -90,9 +91,9 @@ def _generic_accepts(target: ast.Subscript, reference: ast.Subscript) -> bool:
         .and_then(
             lambda target_base: _type_name(reference.value).map(
                 lambda reference_base: _generic_base_accepts(
-                    target_base,  # pyright: ignore[reportArgumentType]
+                    target_base,
                     _into_seq_args(target.slice),
-                    reference_base,  # pyright: ignore[reportArgumentType]
+                    reference_base,
                     _into_seq_args(reference.slice),
                 )
             )

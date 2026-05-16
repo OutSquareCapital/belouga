@@ -25,7 +25,7 @@ class Fns(NamedTuple):
         return self.bl_fn(*args, **kwargs), self.pl_fn(*args, **kwargs)
 
 
-def into_ids(fns: Seq[tuple[Callable[..., Any], Callable[..., Any]]]) -> Iter[str]:  # pyright: ignore[reportExplicitAny]
+def into_ids(fns: Seq[tuple[Callable[..., Any], Callable[..., Any]]]) -> Iter[str]:
     return fns.iter().map_star(lambda f1, _f2: f1.__name__)
 
 

@@ -101,7 +101,7 @@ class ClassComparison:
         def _module_public_names() -> Set[str]:
             match cls:
                 case ModuleType() as mod:
-                    return Set(mod.__all__)  # pyright: ignore[reportAny]
+                    return Set(mod.__all__)
                 case _:
                     return Set(dir(cls))
 
