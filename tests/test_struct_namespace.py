@@ -32,7 +32,7 @@ def test_with_fields() -> None:
     )
 
 
-skip_field = pytest.mark.skip(
+skip_field = pytest.mark.xfail(
     reason="Field overwrite is currently not supported in Belugas"
 )
 

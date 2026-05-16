@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import polars as pl
+import pytest
 
 import belugas as bl
 
@@ -351,4 +352,32 @@ def test_multi_join_with_aggregation() -> None:
             bl_salary.mean().alias("avg_seller_salary"),
         )
         .sort("region", "category"),
+    )
+
+
+@pytest.mark.xfail(
+    reason="TODO: Aggregation followed by window function is not yet supported."
+)
+def test_agg_then_window() -> None:
+    assert_lf_eq(
+        _EMPLOYEES_LF
+        .group_by("department")
+        .agg(
+            pl.col("salary").implode().alias("salaries"),
+        )
+        .sort("department")
+        .explode("salaries")
+        .with_columns(
+            pl.col("salaries").mean().over("department").max().alias("max_list_mean")
+        ),
+        _EMPLOYEES
+        .group_by("department")
+        .agg(
+            bl.col("salary").implode().alias("salaries"),
+        )
+        .sort("department")
+        .explode("salaries")
+        .with_columns(
+            bl.col("salaries").mean().over("department").max().alias("max_list_mean")
+        ),
     )

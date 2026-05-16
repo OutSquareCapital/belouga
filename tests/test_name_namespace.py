@@ -38,7 +38,7 @@ def test_name_case_transform() -> None:
     )
 
 
-case_skip = pytest.mark.skip(
+case_skip = pytest.mark.xfail(
     reason="This test is currently failing due to an issue with column name traduction to polars dataframe/pandas"
 )
 
