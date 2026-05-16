@@ -28,8 +28,8 @@ def unnest(
         match name in targets, raw.this:  # pyright: ignore[reportAny]
             case (True, exp.DType.STRUCT):
                 return (
-                    dt.Struct
-                    .fields_from_raw(raw)
+                    dt
+                    .extract_struct_fields(raw)
                     .map_star(_project_field)
                     .into(exprs.extend)
                 )
