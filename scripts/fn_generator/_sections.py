@@ -33,8 +33,8 @@ def build_file(fns: Seq[FunctionInfo], path: Path) -> str:
     ) -> str:
         params = Option(type_params).map(lambda tp: f"[{tp}]").unwrap_or("")
         return f'''
+@dataclass(slots=True, repr=False)
 class {name}{params}({base}):
-    __slots__ : ClassVar[Iterable[str]] = ()
     """{doc}"""
     {funcs.into(_body)}
 '''
@@ -72,6 +72,7 @@ from __future__ import annotations
 {From(DateTime).import_(DateTime.DATE, DateTime.DATETIME, DateTime.TIME, DateTime.TIMEDELTA)}
 {From(Typing).import_(Typing.SELF, Typing.TYPE_CHECKING, Typing.CLASSVAR)}
 from decimal import Decimal
+from dataclasses import dataclass
 from ._core import ExprHandler, NameSpaceHandler, anon, anon_agg, func
 
 if TYPE_CHECKING:

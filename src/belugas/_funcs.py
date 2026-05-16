@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, final
 
 from pyochain import Iter, Option
 from sqlglot import exp
 
-from ._core import Marker, into_expr, into_expr_list
+from ._core import Marker, func, into_expr, into_expr_list
 from ._expr import Expr
 from .utils import try_iter
 
@@ -75,6 +76,40 @@ def unnest(
     """
     expr = exp.Explode(this=into_expr(col), max_depth=max_depth, recursive=recursive)
     return Expr(expr)
+
+
+def generate_series(
+    start: IntoExprColumn | datetime | int,
+    stop: IntoExprColumn | datetime | int | None = None,
+    step: IntoExprColumn | int | timedelta | None = None,
+) -> Expr:
+    """Creates a list of values between `start` and `stop`.
+
+    The stop parameter is inclusive.
+
+    **SQL name**: *generate_series*
+
+    Note:
+        `arange` is exposed as an alias. They both result in the same `Expr`.
+
+    Args:
+        start (IntoExprColumn | datetime | int): `BIGINT | TIMESTAMP | TIMESTAMP WITH TIME ZONE` expression representing the start of the series.
+        stop (IntoExprColumn | datetime | int | None): `BIGINT | TIMESTAMP | TIMESTAMP WITH TIME ZONE` expression representing the end of the series.
+        step (IntoExprColumn | int | timedelta | None): `BIGINT | INTERVAL` expression representing the step size.
+
+    Examples:
+        ```sql
+        generate_series(2, 5, 3)
+        ```
+    Results in: `[2, 5]`
+
+    Returns:
+        Expr: An expression representing the generated series.
+    """
+    return Expr(func("GENERATE_SERIES", start, stop, step))
+
+
+arange = generate_series
 
 
 @final

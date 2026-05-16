@@ -9,18 +9,18 @@ Each summary cell is relative to Polars.
 
 | Class                 | Coverage                                                                                     | Belugas Total | Compared | Matched | Missing | Mismatched | Belugas Only |
 |-----------------------|----------------------------------------------------------------------------------------------|---------------|----------|---------|---------|------------|--------------|
-| LazyFrame             | <span style="color: #f39c12;">███</span><span style="color: #bdc3c7;">░░░░░░░</span> (38.8%) | 62            | 55       | 31      | 25      | 24         | 7            |
-| Expr                  | <span style="color: #f39c12;">███</span><span style="color: #bdc3c7;">░░░░░░░</span> (39.3%) | 327           | 128      | 84      | 86      | 44         | 199          |
+| LazyFrame             | <span style="color: #f39c12;">███</span><span style="color: #bdc3c7;">░░░░░░░</span> (35.0%) | 63            | 55       | 28      | 25      | 27         | 8            |
+| Expr                  | <span style="color: #f39c12;">███</span><span style="color: #bdc3c7;">░░░░░░░</span> (39.3%) | 329           | 128      | 84      | 86      | 44         | 201          |
 | LazyGroupBy           | <span style="color: #27ae60;">██████</span><span style="color: #bdc3c7;">░░░░</span> (62.5%) | 12            | 12       | 10      | 4       | 2          | 0            |
 | ExprStringNameSpace   | <span style="color: #f39c12;">███</span><span style="color: #bdc3c7;">░░░░░░░</span> (31.2%) | 122           | 38       | 15      | 10      | 23         | 84           |
-| ExprListNameSpace     | <span style="color: #f39c12;">████</span><span style="color: #bdc3c7;">░░░░░░</span> (41.9%) | 91            | 28       | 18      | 15      | 10         | 63           |
+| ExprListNameSpace     | <span style="color: #f39c12;">████</span><span style="color: #bdc3c7;">░░░░░░</span> (41.9%) | 90            | 28       | 18      | 15      | 10         | 62           |
 | ExprStructNameSpace   | <span style="color: #f39c12;">████</span><span style="color: #bdc3c7;">░░░░░░</span> (40.0%) | 16            | 3        | 2       | 2       | 1          | 13           |
 | ExprNameNameSpace     | <span style="color: #27ae60;">██████</span><span style="color: #bdc3c7;">░░░░</span> (60.0%) | 8             | 7        | 6       | 3       | 1          | 1            |
 | ExprArrayNameSpace    | <span style="color: #f39c12;">████</span><span style="color: #bdc3c7;">░░░░░░</span> (45.2%) | 70            | 26       | 14      | 5       | 12         | 44           |
 | ExprDateTimeNameSpace | <span style="color: #f39c12;">████</span><span style="color: #bdc3c7;">░░░░░░</span> (46.7%) | 79            | 27       | 21      | 18      | 6          | 52           |
-| ModuleFunctions       | <span style="color: #e74c3c;">█</span><span style="color: #bdc3c7;">░░░░░░░░░</span> (16.0%) | 77            | 63       | 27      | 106     | 36         | 14           |
+| ModuleFunctions       | <span style="color: #e74c3c;">█</span><span style="color: #bdc3c7;">░░░░░░░░░</span> (16.6%) | 80            | 65       | 28      | 104     | 37         | 15           |
 | selectors             | <span style="color: #f39c12;">█████</span><span style="color: #bdc3c7;">░░░░░</span> (54.3%) | 23            | 23       | 19      | 12      | 4          | 0            |
-| DataType              | <span style="color: #f39c12;">█████</span><span style="color: #bdc3c7;">░░░░░</span> (53.3%) | 11            | 9        | 8       | 6       | 1          | 2            |
+| DataType              | <span style="color: #f39c12;">█████</span><span style="color: #bdc3c7;">░░░░░</span> (53.3%) | 14            | 10       | 8       | 5       | 2          | 4            |
 | Schema                | <span style="color: #e74c3c;"></span><span style="color: #bdc3c7;">░░░░░░░░░░</span> (0.0%)  | 0             | 0        | 0       | 19      | 0          | 0            |
 
 ## LazyFrame
@@ -78,8 +78,11 @@ Each summary cell is relative to Polars.
 - `update`
   - **Polars**: (other: LazyFrame, on: str | Sequence[str] | None, how: Literal['left', 'inner', 'full'], left_on: str | Sequence[str] | None, right_on: str | Sequence[str] | None, include_nulls: bool, maintain_order: MaintainOrderJoin | None) -> LazyFrame
 
-### [!] Signature Mismatches (24)
+### [!] Signature Mismatches (27)
 
+- `bottom_k`
+  - **Polars**: (k: int, by: IntoExpr | Iterable[IntoExpr], `reverse: bool | Sequence[bool]`) -> LazyFrame
+  - **belugas**: (k: int, by: TryIter[IntoExpr], `reverse: DescConds`) -> Self
 - `cast`
   - **Polars**: (`dtypes: Mapping[ColumnNameOrSelector | PolarsDataType, PolarsDataType | PythonDataType] | PolarsDataType | pl.DataTypeExpr | Schema`, `strict: bool`) -> LazyFrame
   - **belugas**: (`dtypes: Mapping[str, dt.DataType] | dt.DataType`) -> Self
@@ -121,7 +124,7 @@ Each summary cell is relative to Polars.
   - **belugas**: (other: Self, left_on: str | None, right_on: str | None, on: str | None, `by_left: TryIter[str]`, `by_right: TryIter[str]`, `by: TryIter[str]`, strategy: AsofJoinStrategy, suffix: str) -> Self
 - `pivot`
   - **Polars**: (`on: ColumnNameOrSelector | Sequence[ColumnNameOrSelector]`, `on_columns: Sequence[Any] | pl.Series | pl.DataFrame`, `index: ColumnNameOrSelector | Sequence[ColumnNameOrSelector] | None`, `values: ColumnNameOrSelector | Sequence[ColumnNameOrSelector] | None`, `aggregate_function: PivotAgg | Expr | None`, maintain_order: bool, separator: str, `column_naming: Literal['auto', 'combine']`) -> LazyFrame
-  - **belugas**: (`on: TryIter[str]`, on_columns: Sequence[PythonLiteral], `index: TryIter[str]`, `values: TryIter[str]`, aggregate_function: PivotAgg, maintain_order: bool, separator: str) -> Self
+  - **belugas**: (`on: TryIter[str]`, `on_columns: TryIter[PythonLiteral]`, `index: TryIter[str]`, `values: TryIter[str]`, aggregate_function: PivotAgg, maintain_order: bool, separator: str) -> Self
 - `quantile`
   - **Polars**: (`quantile: float | Expr`, interpolation: QuantileMethod) -> LazyFrame
   - **belugas**: (quantile: float) -> Self
@@ -140,6 +143,12 @@ Each summary cell is relative to Polars.
 - `sink_parquet`
   - **Polars**: (`path: str | Path | IO[bytes] | PartitionBy`, `compression: str`, `compression_level: int | None`, `statistics: bool | str | dict[str, bool]`, row_group_size: int | None, `data_page_size: int | None`, `maintain_order: bool`, `storage_options: StorageOptionsDict | None`, `credential_provider: CredentialProviderFunction | Literal['auto'] | None`, `retries: int | None`, `sync_on_close: SyncOnCloseMethod | None`, `metadata: ParquetMetadata | None`, `arrow_schema: ArrowSchemaExportable | None`, `mkdir: bool`, `lazy: bool`, `engine: EngineType`, `optimizations: QueryOptFlags`, `_sinked_paths_callback: SinkedPathsCallback | None`) -> LazyFrame | None
   - **belugas**: (path: str | Path, `compression: ParquetCompression | None`, `field_ids: ParquetFieldsOptions | None`, `row_group_size_bytes: str | int | None`, row_group_size: int | None, `overwrite: bool | None`, `per_thread_output: bool | None`, `use_tmp_file: bool | None`, `partition_by: list[str] | None`, `write_partition_columns: bool | None`, `append: bool | None`, `filename_pattern: str | None`, `file_size_bytes: str | int | None`) -> None
+- `sort`
+  - **Polars**: (by: IntoExpr | Iterable[IntoExpr], *more_by: IntoExpr, `descending: bool | Sequence[bool]`, nulls_last: bool | Sequence[bool], maintain_order: bool, multithreaded: bool) -> LazyFrame
+  - **belugas**: (by: TryIter[IntoExpr], *more_by: IntoExpr, `descending: DescConds`, nulls_last: TrySeq[bool]) -> Self
+- `top_k`
+  - **Polars**: (k: int, by: IntoExpr | Iterable[IntoExpr], `reverse: bool | Sequence[bool]`) -> LazyFrame
+  - **belugas**: (k: int, by: TryIter[IntoExpr], `reverse: DescConds`) -> Self
 - `unique`
   - **Polars**: (`subset: IntoExpr | Collection[IntoExpr] | None`, keep: UniqueKeepStrategy, `maintain_order: bool`) -> LazyFrame
   - **belugas**: (`subset: TryIter[str] | None`, keep: UniqueKeepStrategy, `order_by: TrySeq[str]`) -> Self
@@ -153,14 +162,15 @@ Each summary cell is relative to Polars.
   - **Polars**: (name: str, `offset: int`) -> LazyFrame
   - **belugas**: (name: str, `order_by: TryIter[str]`) -> Self
 
-### [+] Extra Methods (belugas-only) (7)
+### [+] Extra Methods (belugas-only) (8)
 
 - `fetch_all`
 - `group_by_all`
+- `height`
 - `inner`
 - `join_cross`
+- `query`
 - `shape`
-- `sql_query`
 - `union`
 
 ## Expr
@@ -475,7 +485,7 @@ Each summary cell is relative to Polars.
   - **Polars**: (`other: Any`) -> Expr
   - **belugas**: (`right: IntoExprColumn | bytes | bytearray | memoryview | int`) -> Self
 
-### [+] Extra Methods (belugas-only) (199)
+### [+] Extra Methods (belugas-only) (201)
 
 - `acos`
 - `acosh`
@@ -600,6 +610,7 @@ Each summary cell is relative to Polars.
 - `obj_description`
 - `octet_length`
 - `order_by`
+- `parse_delta_filter_logline`
 - `parse_duckdb_log_message`
 - `percent_rank`
 - `power`
@@ -675,6 +686,7 @@ Each summary cell is relative to Polars.
 - `wavg`
 - `weighted_avg`
 - `window`
+- `write_blob`
 - `write_log`
 
 ## LazyGroupBy
@@ -951,7 +963,7 @@ Each summary cell is relative to Polars.
   - **Polars**: (`maintain_order: bool`) -> Expr
   - **belugas**: () -> Expr
 
-### [+] Extra Methods (belugas-only) (63)
+### [+] Extra Methods (belugas-only) (62)
 
 - `aggr`
 - `aggregate`
@@ -978,7 +990,6 @@ Each summary cell is relative to Polars.
 - `entropy`
 - `extract`
 - `flatten`
-- `generate_series`
 - `grade_up`
 - `has`
 - `has_all`
@@ -1063,7 +1074,7 @@ Each summary cell is relative to Polars.
 
 - `map`
   - **Polars**: (`function: Callable[[str], str]`) -> Expr
-  - **belugas**: (`function: Aliaser`) -> Expr
+  - **belugas**: (`function: AliasFn`) -> Expr
 
 ### [+] Extra Methods (belugas-only) (1)
 
@@ -1289,7 +1300,7 @@ Each summary cell is relative to Polars.
 
 ## ModuleFunctions
 
-### [x] Missing Methods (106)
+### [x] Missing Methods (104)
 
 - `BaseExtension`
   - **Polars**: (name: str, storage: PolarsDataType, metadata: str | None) -> None
@@ -1305,8 +1316,6 @@ Each summary cell is relative to Polars.
   - **Polars**: (name: str, dtype: PolarsDataType) -> None
 - `Float16`
   - **Polars**: ()
-- `Null`
-  - **Polars**: ()
 - `Object`
   - **Polars**: ()
 - `ScanCastOptions`
@@ -1317,8 +1326,6 @@ Each summary cell is relative to Polars.
   - **Polars**: ()
 - `align_frames`
   - **Polars**: (*frames: FrameType | Iterable[FrameType], on: str | Expr | Sequence[str] | Sequence[Expr] | Sequence[str | Expr], how: JoinStrategy, select: str | Expr | Sequence[str | Expr] | None, descending: bool | Sequence[bool]) -> list[FrameType]
-- `arange`
-  - **Polars**: (start: int | IntoExprColumn, end: int | IntoExprColumn | None, step: int, dtype: PolarsIntegerType | DataTypeExpr, eager: bool) -> Expr | Series
 - `arg_sort_by`
   - **Polars**: (exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr, descending: bool | Sequence[bool], nulls_last: bool | Sequence[bool], multithreaded: bool, maintain_order: bool) -> Expr
 - `arg_where`
@@ -1504,7 +1511,7 @@ Each summary cell is relative to Polars.
 - `zeros`
   - **Polars**: (n: int | Expr, dtype: PolarsDataType, eager: bool) -> Expr | Series
 
-### [!] Signature Mismatches (36)
+### [!] Signature Mismatches (37)
 
 - `Array`
   - **Polars**: (`inner: PolarsDataType | PythonDataType`, `shape: int | tuple[int, ...] | None`, `width: int | None`) -> None
@@ -1523,10 +1530,10 @@ Each summary cell is relative to Polars.
   - **belugas**: (`categories: Iterable[str] | type[PyEnum]`) -> None
 - `Expr`
   - **Polars**: ()
-  - **belugas**: (`_inner: T`, `meta: ExprMeta`) -> None
+  - **belugas**: (`_inner: T`, `aliaser: AliasMapper`) -> None
 - `LazyFrame`
   - **Polars**: (`data: FrameInitTypes | None`, `schema: SchemaDefinition | None`, `schema_overrides: SchemaDict | None`, `strict: bool`, `orient: Orientation | None`, `infer_schema_length: int | None`, `nan_to_null: bool`, `height: int | None`) -> None
-  - **belugas**: (`data: IntoRel | Self`, orient: Orientation) -> None
+  - **belugas**: (`data: IntoRel | Self`, orient: Orientation, `connection: DuckDBPyConnection | None`) -> None
 - `List`
   - **Polars**: (`inner: PolarsDataType | PythonDataType`) -> None
   - **belugas**: (`inner: DataType`) -> None
@@ -1539,6 +1546,9 @@ Each summary cell is relative to Polars.
 - `approx_n_unique`
   - **Polars**: (`*columns: str`) -> Expr
   - **belugas**: (`cols: TryIter[str]`, *more_cols: str) -> Expr
+- `arange`
+  - **Polars**: (start: int | IntoExprColumn, `end: int | IntoExprColumn | None`, step: int, `dtype: PolarsIntegerType | DataTypeExpr`, `eager: bool`) -> Expr | Series
+  - **belugas**: (`start: IntoExprColumn | datetime | int`, `stop: IntoExprColumn | datetime | int | None`, `step: IntoExprColumn | int | timedelta | None`) -> Expr
 - `arctan2`
   - **Polars**: (`y: str | Expr`, `x: str | Expr`) -> Expr
   - **belugas**: (`y: IntoExprColumn | float`, `x: IntoExprColumn | float`) -> Expr
@@ -1559,22 +1569,22 @@ Each summary cell is relative to Polars.
   - **belugas**: (`cols: TryIter[str]`, *more_cols: str) -> Expr
 - `from_arrow`
   - **Polars**: (`data: RecordBatch | Iterable[pa.RecordBatch | pa.Table] | ArrowArrayExportable | ArrowStreamExportable`, `schema: SchemaDefinition | None`, `schema_overrides: SchemaDict | None`, `rechunk: bool`) -> DataFrame | Series
-  - **belugas**: (`df: IntoArrow`, `connection: DuckDBPyConnection | None`) -> LazyFrame
+  - **belugas**: (`df: IntoArrow`, `connection: Conn`) -> LazyFrame
 - `from_dict`
   - **Polars**: (`data: Mapping[str, Sequence[object] | Mapping[str, Sequence[object]] | Series]`, `schema: SchemaDefinition | None`, `schema_overrides: SchemaDict | None`, `strict: bool`) -> DataFrame
-  - **belugas**: (`mapping: IntoDict[str, PythonLiteral]`) -> LazyFrame
+  - **belugas**: (`mapping: IntoDict[str, PythonLiteral]`, `connection: Conn`) -> LazyFrame
 - `from_dicts`
   - **Polars**: (`data: Iterable[Mapping[str, Any]]`, `schema: SchemaDefinition | None`, `schema_overrides: SchemaDict | None`, `strict: bool`, `infer_schema_length: int | None`) -> DataFrame
-  - **belugas**: (data: Sequence[Mapping[str, PythonLiteral]]) -> LazyFrame
+  - **belugas**: (data: Sequence[Mapping[str, PythonLiteral]], `connection: Conn`) -> LazyFrame
 - `from_numpy`
   - **Polars**: (`data: ndarray[Any, Any]`, `schema: SchemaDefinition | None`, `schema_overrides: SchemaDict | None`, `orient: Orientation | None`) -> DataFrame
-  - **belugas**: (`arr: AnyArray`, orient: Orientation) -> LazyFrame
+  - **belugas**: (`arr: AnyArray`, orient: Orientation, `connection: Conn`) -> LazyFrame
 - `from_pandas`
   - **Polars**: (`data: Series[Any] | pd.Index[Any] | pd.DatetimeIndex`, `schema_overrides: SchemaDict | None`, `rechunk: bool`, `nan_to_null: bool`, `include_index: bool`) -> DataFrame | Series
-  - **belugas**: (`df: DataFrame`, `connection: DuckDBPyConnection | None`) -> LazyFrame
+  - **belugas**: (`df: DataFrame`, `connection: Conn`) -> LazyFrame
 - `from_records`
   - **Polars**: (`data: Sequence[Any]`, `schema: SchemaDefinition | None`, `schema_overrides: SchemaDict | None`, `strict: bool`, `orient: Orientation | None`, `infer_schema_length: int | None`) -> DataFrame
-  - **belugas**: (`data: SeqIntoVals`, orient: Orientation) -> LazyFrame
+  - **belugas**: (`data: SeqIntoVals`, orient: Orientation, `connection: Conn`) -> LazyFrame
 - `last`
   - **Polars**: (`*columns: str`) -> Expr
   - **belugas**: (`cols: TryIter[str]`, *more_cols: str) -> Expr
@@ -1601,10 +1611,10 @@ Each summary cell is relative to Polars.
   - **belugas**: (`cols: TryIter[str]`, *more_cols: str) -> Expr
 - `scan_csv`
   - **Polars**: (`source: str | Path | IO[str] | IO[bytes] | bytes | list[str] | list[Path] | list[IO[str]] | list[IO[bytes]] | list[bytes]`, `has_header: bool`, `separator: str`, `comment_prefix: str | None`, `quote_char: str | None`, `skip_rows: int`, `skip_lines: int`, `schema: SchemaDict | None`, `schema_overrides: SchemaDict | Sequence[PolarsDataType] | None`, `null_values: str | Sequence[str] | dict[str, str] | None`, `missing_utf8_is_empty_string: bool`, ignore_errors: bool, `cache: bool | None`, `with_column_names: Callable[[list[str]], list[str]] | None`, `infer_schema: bool`, `infer_schema_length: int | None`, `n_rows: int | None`, encoding: CsvEncoding, `low_memory: bool`, `rechunk: bool`, `skip_rows_after_header: int`, `row_index_name: str | None`, `row_index_offset: int`, `try_parse_dates: bool`, `eol_char: str`, `new_columns: Sequence[str] | None`, `raise_if_empty: bool`, `truncate_ragged_lines: bool`, `decimal_comma: bool`, `glob: bool`, `storage_options: StorageOptionsDict | None`, `credential_provider: CredentialProviderFunction | Literal['auto'] | None`, `retries: int | None`, `file_cache_ttl: int | None`, `include_file_paths: str | None`, `missing_columns: Literal['insert', 'raise'] | None`) -> LazyFrame
-  - **belugas**: (`path_or_buffer: PathOrBuffer`, `header: bool | int | None`, `compression: CsvCompression | None`, `sep: str | None`, `delimiter: str | None`, `files_to_sniff: int | None`, `comment: str | None`, `thousands: str | None`, `dtype: IntoFields | None`, `na_values: str | list[str] | None`, `skiprows: int | None`, `quotechar: str | None`, `escapechar: str | None`, `encoding: CsvEncoding | None`, `parallel: bool | None`, `date_format: str | None`, `timestamp_format: str | None`, `sample_size: int | None`, `auto_detect: bool | int | None`, `all_varchar: bool | None`, `normalize_names: bool | None`, `null_padding: bool | None`, `names: list[str] | None`, `lineterminator: CSVLineTerminator | None`, `columns: ColumnsTypes | None`, `auto_type_candidates: list[StrIntoPyType] | None`, `max_line_size: int | None`, `ignore_errors: bool | None`, `store_rejects: bool | None`, `rejects_table: str | None`, `rejects_scan: str | None`, `rejects_limit: int | None`, `force_not_null: list[str] | None`, `buffer_size: int | None`, `decimal: str | None`, `allow_quoted_nulls: bool | None`, `filename: bool | str | None`, `hive_partitioning: bool | None`, `union_by_name: bool | None`, `hive_types: HiveTypes | None`, `hive_types_autocast: bool | None`, `strict_mode: bool | None`, `connection: DuckDBPyConnection | None`) -> LazyFrame
+  - **belugas**: (`path_or_buffer: PathOrBuffer`, `header: bool | int | None`, `compression: CsvCompression | None`, `sep: str | None`, `delimiter: str | None`, `files_to_sniff: int | None`, `comment: str | None`, `thousands: str | None`, `dtype: IntoFields | None`, `na_values: str | list[str] | None`, `skiprows: int | None`, `quotechar: str | None`, `escapechar: str | None`, `encoding: CsvEncoding | None`, `parallel: bool | None`, `date_format: str | None`, `timestamp_format: str | None`, `sample_size: int | None`, `auto_detect: bool | int | None`, `all_varchar: bool | None`, `normalize_names: bool | None`, `null_padding: bool | None`, `names: list[str] | None`, `lineterminator: CSVLineTerminator | None`, `columns: ColumnsTypes | None`, `auto_type_candidates: list[StrIntoPyType] | None`, `max_line_size: int | None`, `ignore_errors: bool | None`, `store_rejects: bool | None`, `rejects_table: str | None`, `rejects_scan: str | None`, `rejects_limit: int | None`, `force_not_null: list[str] | None`, `buffer_size: int | None`, `decimal: str | None`, `allow_quoted_nulls: bool | None`, `filename: bool | str | None`, `hive_partitioning: bool | None`, `union_by_name: bool | None`, `hive_types: HiveTypes | None`, `hive_types_autocast: bool | None`, `strict_mode: bool | None`, `connection: Conn`) -> LazyFrame
 - `scan_parquet`
   - **Polars**: (`source: FileSource`, `n_rows: int | None`, `row_index_name: str | None`, `row_index_offset: int`, `parallel: ParallelStrategy`, `use_statistics: bool`, `hive_partitioning: bool | None`, `glob: bool`, `hidden_file_prefix: str | Sequence[str] | None`, `schema: SchemaDict | None`, `hive_schema: SchemaDict | None`, `try_parse_hive_dates: bool`, `rechunk: bool`, `low_memory: bool`, `cache: bool`, `storage_options: StorageOptionsDict | None`, `credential_provider: CredentialProviderFunction | Literal['auto'] | None`, `retries: int | None`, `include_file_paths: str | None`, `missing_columns: Literal['insert', 'raise']`, `allow_missing_columns: bool | None`, `extra_columns: Literal['ignore', 'raise']`, `cast_options: ScanCastOptions | None`, `_column_mapping: ColumnMapping | None`, `_default_values: DefaultFieldValues | None`, `_deletion_files: DeletionFiles | None`, `_table_statistics: DataFrame | None`, `_row_count: tuple[int, int] | None`) -> LazyFrame
-  - **belugas**: (`file_glob: Path | str | Iterable[str | Path]`, `binary_as_string: bool`, `file_row_number: bool`, `filename: bool`, hive_partitioning: bool, `union_by_name: bool`, `compression: ParquetCompression | None`, `connection: DuckDBPyConnection | None`) -> LazyFrame
+  - **belugas**: (`file_glob: FileGlob`, `binary_as_string: bool`, `file_row_number: bool`, `filename: bool`, hive_partitioning: bool, `union_by_name: bool`, `compression: ParquetCompression | None`, `connection: Conn`) -> LazyFrame
 - `sum`
   - **Polars**: (`*names: str`) -> Expr
   - **belugas**: (`cols: TryIter[str]`, *more_cols: str) -> Expr
@@ -1615,7 +1625,7 @@ Each summary cell is relative to Polars.
   - **Polars**: (*predicates: IntoExprColumn | Iterable[IntoExprColumn] | bool, `**constraints: Any`) -> When
   - **belugas**: (`predicates: TryIter[IntoExpr]`, *more_predicates: IntoExpr) -> When
 
-### [+] Extra Methods (belugas-only) (14)
+### [+] Extra Methods (belugas-only) (15)
 
 - `BitString`
 - `DatetimeTZ`
@@ -1630,6 +1640,7 @@ Each summary cell is relative to Polars.
 - `from_query`
 - `from_table`
 - `from_table_function`
+- `generate_series`
 - `scan_json`
 
 ## selectors
@@ -1678,12 +1689,10 @@ Each summary cell is relative to Polars.
 
 ## DataType
 
-### [x] Missing Methods (6)
+### [x] Missing Methods (5)
 
 - `base_type`
   - **Polars**: () -> type[Self]
-- `from_python`
-  - **Polars**: (py_type: PythonDataType) -> PolarsDataType
 - `is_extension`
   - **Polars**: () -> bool
 - `is_object`
@@ -1693,16 +1702,21 @@ Each summary cell is relative to Polars.
 - `to_python`
   - **Polars**: () -> PythonDataType
 
-### [!] Signature Mismatches (1)
+### [!] Signature Mismatches (2)
 
+- `from_python`
+  - **Polars**: (`py_type: PythonDataType`) -> PolarsDataType
+  - **belugas**: (`dtype: IntoPyType`) -> DataType
 - `is_`
   - **Polars**: (`other: PolarsDataType`) -> bool
   - **belugas**: (`other: T`) -> TypeIs[T]
 
-### [+] Extra Methods (belugas-only) (2)
+### [+] Extra Methods (belugas-only) (4)
 
+- `build`
 - `from_duckdb`
 - `from_sql`
+- `from_str`
 
 ## Schema
 

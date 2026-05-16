@@ -138,6 +138,8 @@ SPECIAL_CASES = Set({
     "list_sort",
     "max_by",
     "min_by",
+    # Makes more sense as a pure function
+    "generate_series",  # Otherwise we need to do `lit(x).generate_series(y)` which is a bit weird
 })
 """Function to exclude by name, either because they require special handling or because they conflict with existing names."""
 PREFIXES = Set((
