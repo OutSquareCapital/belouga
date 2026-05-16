@@ -60,10 +60,8 @@ def assert_eq(
         )
 
 
-def assert_lf_eq(polars_lf: pl.LazyFrame, bl_lf: bl.LazyFrame) -> None:
-    try:
-        _assert(polars_lf, bl_lf.collect())
-    except AssertionError as e:
+class BelugasTestError(AssertionError):
+    def __init__(self, e: AssertionError, bl_lf: bl.LazyFrame) -> None:
         sql = bl_lf.query.sql(pretty=True)
         ast = bl_lf.query.logical()
         msg = f"""
@@ -71,11 +69,19 @@ Not equal error!
 ----SQL----
 {sql}
 ----AST----
-{ast}
+{ast!r}
 ----Error----
 {e}
 """
-        raise AssertionError(msg) from None
+
+        super().__init__(msg)
+
+
+def assert_lf_eq(polars_lf: pl.LazyFrame, bl_lf: bl.LazyFrame) -> None:
+    try:
+        _assert(polars_lf, bl_lf.collect())
+    except AssertionError as e:
+        raise BelugasTestError(e, bl_lf) from e
 
 
 def _assert(
