@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Self, cast
 
 import duckdb
 from duckdb import DuckDBPyConnection, DuckDBPyRelation
-from pyochain import Dict, Iter, Option, Range, Seq, Some
+from pyochain import Dict, Iter, Null, Option, Range, Seq, Some
 
 from .._core import BelugasConversionError
 from ..datatypes import DataType
@@ -240,7 +240,7 @@ def _get_conn(connection: Option[DuckDBPyConnection]) -> DuckDBPyConnection:
     match connection:
         case Some(conn):
             return conn
-        case _:
+        case Null():
             return duckdb.default_connection()
 
 

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, NamedTuple
 
 from duckdb import DuckDBPyRelation
-from pyochain import Dict, Err, Iter, Null, Ok, Option, Result, Seq, Set, Some
+from pyochain import Dict, Err, Iter, Null, Ok, Result, Seq, Set, Some, option
 from pyochain.traits import Pipeable
 from sqlglot import exp
 
@@ -386,7 +386,7 @@ def lookup_type(inner: exp.Expr, schema: Schema) -> exp.DataType:
             return to
         case _:
             return (
-                Option(node.find(exp.Column))
+                option(node.find(exp.Column))
                 .and_then(lambda c: schema.get_item(c.output_name))
                 .unwrap_or_else(exp.DType.UNKNOWN.into_expr)
             )
@@ -449,7 +449,7 @@ def has_window_ancestor(node: exp.Expr) -> bool:
                 return True
             case exp.Distinct() | exp.Filter() | exp.IgnoreNulls() | exp.WithinGroup():
                 return (
-                    Option(ancestor.parent)
+                    option(ancestor.parent)
                     .map(_ancestor_is_window)
                     .unwrap_or(default=False)
                 )

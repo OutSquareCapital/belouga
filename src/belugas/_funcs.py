@@ -4,7 +4,7 @@ from collections.abc import Callable, Iterable
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, final
 
-from pyochain import Iter, Option
+from pyochain import Iter, option
 from sqlglot import exp
 
 from ._core import Marker, func, into_expr, into_expr_list
@@ -150,7 +150,7 @@ def fn_once(rhs: IntoExpr) -> Expr:
 
 def all(exclude: TryIter[IntoExprColumn] = None) -> Expr:
     return (
-        Option(exclude)
+        option(exclude)
         .map(lambda x: try_iter(x).map(into_expr).collect(list))
         .map(lambda exc: exp.Star(except_=exc))
         .unwrap_or_else(exp.Star)

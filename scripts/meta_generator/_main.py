@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Self
 
 import polars as pl
-from pyochain import Iter, Option, Seq
+from pyochain import Iter, Option, Seq, option
 from rich import print
 from rich.text import Text
 
@@ -44,9 +44,9 @@ class MetaFnInfo:
         return cls(
             name,
             final_name,
-            Option(description),
+            option(description),
             Iter(params).zip(py_types, strict=True).collect(),
-            Option(varargs_type),
+            option(varargs_type),
         )
 
     def build(self) -> str:

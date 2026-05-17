@@ -4,7 +4,7 @@ from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING
 
 from duckdb import DuckDBPyConnection
-from pyochain import Option
+from pyochain import option
 
 from ._frame import LazyFrame
 from ._plan import nodes
@@ -45,51 +45,51 @@ type Conn = DuckDBPyConnection | None
 
 
 def from_query(query: DuckDBPyRelation, connection: Conn = None) -> LazyFrame:
-    return _from_node(nodes.ScanInMemory(Option(connection), query))
+    return _from_node(nodes.ScanInMemory(option(connection), query))
 
 
 def from_table(table: str, connection: Conn = None) -> LazyFrame:
-    return _from_node(nodes.ScanTable(Option(connection), table))
+    return _from_node(nodes.ScanTable(option(connection), table))
 
 
 def from_table_function(function: str, connection: Conn = None) -> LazyFrame:
-    return _from_node(nodes.ScanTableFunction(Option(connection), function))
+    return _from_node(nodes.ScanTableFunction(option(connection), function))
 
 
 def from_numpy(
     arr: AnyArray, orient: Orientation = "col", connection: Conn = None
 ) -> LazyFrame:
-    return _from_node(nodes.ScanInMemory(Option(connection), arr, orient=orient))
+    return _from_node(nodes.ScanInMemory(option(connection), arr, orient=orient))
 
 
 def from_dict(
     mapping: IntoDict[str, PythonLiteral], connection: Conn = None
 ) -> LazyFrame:
-    return _from_node(nodes.ScanInMemory(Option(connection), mapping))  # pyright: ignore[reportUnknownArgumentType, reportArgumentType]
+    return _from_node(nodes.ScanInMemory(option(connection), mapping))  # pyright: ignore[reportUnknownArgumentType, reportArgumentType]
 
 
 def from_dicts(
     data: Sequence[Mapping[str, PythonLiteral]], connection: Conn = None
 ) -> LazyFrame:
-    return _from_node(nodes.ScanInMemory(Option(connection), data))
+    return _from_node(nodes.ScanInMemory(option(connection), data))
 
 
 def from_records(
     data: SeqIntoVals, orient: Orientation = "col", connection: Conn = None
 ) -> LazyFrame:
-    return _from_node(nodes.ScanInMemory(Option(connection), data, orient=orient))
+    return _from_node(nodes.ScanInMemory(option(connection), data, orient=orient))
 
 
 def from_pandas(df: pd.DataFrame, connection: Conn = None) -> LazyFrame:
-    return _from_node(nodes.ScanInMemory(Option(connection), df))
+    return _from_node(nodes.ScanInMemory(option(connection), df))
 
 
 def from_polars(df: IntoPolars, connection: Conn = None) -> LazyFrame:
-    return _from_node(nodes.ScanInMemory(Option(connection), df))
+    return _from_node(nodes.ScanInMemory(option(connection), df))
 
 
 def from_arrow(df: IntoArrow, connection: Conn = None) -> LazyFrame:
-    return _from_node(nodes.ScanInMemory(Option(connection), df))
+    return _from_node(nodes.ScanInMemory(option(connection), df))
 
 
 def scan_parquet(  # noqa: PLR0913
@@ -112,7 +112,7 @@ def scan_parquet(  # noqa: PLR0913
         union_by_name=union_by_name,
         compression=compression,
     )
-    return _from_node(nodes.ScanParquet(Option(connection), file_glob, options))
+    return _from_node(nodes.ScanParquet(option(connection), file_glob, options))
 
 
 def scan_csv(  # noqa: PLR0913
@@ -204,7 +204,7 @@ def scan_csv(  # noqa: PLR0913
         hive_types_autocast=hive_types_autocast,
         strict_mode=strict_mode,
     )
-    return _from_node(nodes.ScanCSV(Option(connection), path_or_buffer, options))
+    return _from_node(nodes.ScanCSV(option(connection), path_or_buffer, options))
 
 
 def scan_json(  # noqa: PLR0913
@@ -252,7 +252,7 @@ def scan_json(  # noqa: PLR0913
         hive_types=hive_types,
         hive_types_autocast=hive_types_autocast,
     )
-    return _from_node(nodes.ScanJson(Option(connection), path_or_buffer, options))
+    return _from_node(nodes.ScanJson(option(connection), path_or_buffer, options))
 
 
 def _from_node(scan: nodes.Scan) -> LazyFrame:

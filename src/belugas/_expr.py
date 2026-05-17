@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from functools import partial
 from typing import TYPE_CHECKING, Self, override
 
-from pyochain import NONE, Err, Iter, Null, Ok, Option, Range, Result, Set, Some
+from pyochain import NONE, Err, Iter, Null, Ok, Option, Range, Result, Set, Some, option
 from pyochain.traits import PyoCollection
 from sqlglot import exp
 
@@ -166,7 +166,7 @@ class MultiAliasMapper(AliasMapper):
             match self.alias_name:
                 case Some(current):
                     return lambda name: mapper(current(name))
-                case _:
+                case Null():
                     return mapper
 
         return self.__class__(self.resolver, Some(_get_mapper()))
@@ -660,9 +660,12 @@ class Expr(Fns):
         limit: int | None = None,
     ) -> Self:
         def _get_strat() -> Result[Expr | Self, ValueError]:
-            match (Option(value), Option(strategy), Option(limit)):
+            match (option(value), option(strategy), option(limit)):
                 case (Some(_), Some(_), _):
                     msg = "cannot specify both `value` and `strategy`"
+                    return Err(ValueError(msg))
+                case (Null(), Null(), _):
+                    msg = "must specify either a fill `value` or `strategy`"
                     return Err(ValueError(msg))
                 case (_, _, Some(lim)) if lim < 0:
                     msg = "Can't process negative `limit` value for fill_null"
@@ -684,11 +687,8 @@ class Expr(Fns):
                     return Err(ValueError(msg))
                 case (Some(val), Null(), Null()):
                     return Ok(self.coalesce(val))
-                case (_, Some(strat), Null()):
+                case (Null(), Some(strat), Null()):
                     return Ok(self.pipe(_FILL_STRATEGY[strat]))  # pyright: ignore[reportArgumentType]
-                case _:
-                    msg = "must specify either a fill `value` or `strategy`"
-                    return Err(ValueError(msg))
 
         return _get_strat().map(lambda e: self._cls(e.inner)).unwrap()
 
@@ -974,7 +974,7 @@ class Expr(Fns):
         """
         expr = self.any_value().window
         return (
-            Option(limit)
+            option(limit)
             .map(lambda lmt: expr(frame_start=0, frame_end=lmt))
             .unwrap_or_else(lambda: expr(frame_start=0))
         )
@@ -1106,26 +1106,26 @@ class Expr(Fns):
         fn_nulls_last: TryIter[bool] = False,
     ) -> Self:
         order = get_order(
-            Option(order_by), descending=descending, nulls_last=nulls_last
+            option(order_by), descending=descending, nulls_last=nulls_last
         )
         spec = make_spec(
             frame_mode,
             has_order_by=order_by is not None,
-            frame_start=Option(frame_start),
-            frame_end=Option(frame_end),
-            exclude=Option(exclude),
+            frame_start=option(frame_start),
+            frame_end=option(frame_end),
+            exclude=option(exclude),
         )
         return self._cls(
             OverBuilder(self.inner)
             .handle_nulls(ignore_nulls=ignore_nulls)
             .handle_distinct(distinct=distinct)
             .handle_fn_order_by(
-                fn_order_by=Option(fn_order_by),
+                fn_order_by=option(fn_order_by),
                 fn_descending=fn_descending,
                 fn_nulls_last=fn_nulls_last,
             )
             .handle_clauses(
-                partition_by=get_partition(Option(partition_by)),
+                partition_by=get_partition(option(partition_by)),
                 order=order,
                 spec=spec,
             )
@@ -1147,7 +1147,7 @@ class Expr(Fns):
             .map(lambda x: self.new(x, as_col=True))
         )
         return (
-            Option(order_by)
+            option(order_by)
             .map(lambda value: try_iter(value).map(lambda x: self.new(x, as_col=True)))
             .map(lambda order_exprs: expr(partition_exprs, order_exprs))
             .unwrap_or_else(lambda: expr(partition_exprs))
@@ -1178,7 +1178,7 @@ class Expr(Fns):
         """
         return self._cls(
             OverBuilder(exp.CumeDist()).build_fn(
-                fn_order_by=Option(order_by),
+                fn_order_by=option(order_by),
                 ignore_nulls=ignore_nulls,
                 fn_descending=descending,
                 fn_nulls_last=nulls_last,
@@ -1202,7 +1202,7 @@ class Expr(Fns):
         """
         return self._cls(
             OverBuilder(exp.PercentRank()).build_fn(
-                fn_order_by=Option(order_by),
+                fn_order_by=option(order_by),
                 ignore_nulls=ignore_nulls,
                 fn_descending=descending,
                 fn_nulls_last=nulls_last,
@@ -1267,7 +1267,7 @@ class Expr(Fns):
         """
         return self._cls(
             OverBuilder(exp.RowNumber()).build_fn(
-                fn_order_by=Option(order_by),
+                fn_order_by=option(order_by),
                 ignore_nulls=ignore_nulls,
                 fn_descending=descending,
                 fn_nulls_last=nulls_last,

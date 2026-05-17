@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
-from pyochain import NONE, Dict, Iter, Option, Some
+from pyochain import NONE, Dict, Iter, Null, Option, Some
 
 from ..utils import try_iter
 from . import nodes
@@ -21,7 +21,7 @@ def optimize_nodes(plan_node: nodes.Node) -> nodes.Node:
             match _flatten_pair(logical.inner, logical):
                 case Some(merged):
                     return optimize_nodes(merged)
-                case _:
+                case Null():
                     return optimized_children
         case _:
             return optimized_children
@@ -74,7 +74,7 @@ def _merge_limit_then_slice(lhs: nodes.Limit, rhs: nodes.Slice) -> NewNode:
                 lhs.inner, Some(min(rhs_length, available)), rhs.offset
             )
             return Some(merged)
-        case _:
+        case Null():
             merged = nodes.Slice(lhs.inner, Some(available), rhs.offset)
             return Some(merged)
 
@@ -94,17 +94,17 @@ def _merge_slices(lhs: nodes.Slice, rhs: nodes.Slice) -> Option[nodes.Node]:
                         offset,
                     )
                     return Some(merged_bounded_slice)
-                case _:
+                case Null():
                     merged_open_slice = nodes.Slice(
                         lhs.inner, Some(max(lhs_length - rhs.offset, 0)), offset
                     )
                     return Some(merged_open_slice)
-        case _:
+        case Null():
             match rhs.length:
                 case Some(rhs_length):
                     rhs_slice = nodes.Slice(lhs.inner, Some(rhs_length), offset=offset)
                     return Some(rhs_slice)
-                case _:
+                case Null():
                     unbounded_slice = nodes.Slice(lhs.inner, length=NONE, offset=offset)
                     return Some(unbounded_slice)
 
@@ -117,7 +117,7 @@ def _merge_slice_then_limit(lhs: nodes.Slice, rhs: nodes.Limit) -> NewNode:
         case Some(lhs_length):
             merged = nodes.Slice(lhs.inner, Some(min(lhs_length, rhs.n)), lhs.offset)
             return Some(merged)
-        case _:
+        case Null():
             merged = nodes.Slice(lhs.inner, Some(rhs.n), lhs.offset)
             return Some(merged)
 

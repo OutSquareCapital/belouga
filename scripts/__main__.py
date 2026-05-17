@@ -24,10 +24,10 @@ class _Paths:
     STUB = Path(".venv", "Lib", "site-packages", "_duckdb-stubs", "__init__.pyi")
 
 
-InputPath = Annotated[Path, typer.Option("--input-path", "-ip")]
-OutputPath = Annotated[Path, typer.Option("--output-path", "-op")]
+InputPath = Annotated[Path, typer.Option("--input-path", "-ip")]  # pyright: ignore[reportUnknownMemberType]
+OutputPath = Annotated[Path, typer.Option("--output-path", "-op")]  # pyright: ignore[reportUnknownMemberType]
 CheckArg = Annotated[
-    bool, typer.Option("--c", help="Check output without Ruff applying fixes")
+    bool, typer.Option("--c", help="Check output without Ruff applying fixes")  # pyright: ignore[reportUnknownMemberType]
 ]
 app = typer.Typer(pretty_exceptions_show_locals=True)
 
@@ -41,11 +41,11 @@ def gen_fns(
     *,
     check_only: CheckArg = False,
     profile: Annotated[
-        bool, typer.Option("--p", help="Enable profiling of the pipeline")
+        bool, typer.Option("--p", help="Enable profiling of the pipeline")  # pyright: ignore[reportUnknownMemberType]
     ] = False,
     regenerate: Annotated[
         bool,
-        typer.Option(
+        typer.Option(  # pyright: ignore[reportUnknownMemberType]
             "--r", help="Regenerate the source parquet file from DuckDB introspection"
         ),
     ] = False,
@@ -143,11 +143,11 @@ def check_sqlglot() -> None:
 @app.command()
 def bench(
     runs: Annotated[
-        int, typer.Option("--runs", "-r", help="Number of runs per benchmark")
+        int, typer.Option("--runs", "-r", help="Number of runs per benchmark")  # pyright: ignore[reportUnknownMemberType]
     ] = 250,
     names: Annotated[
         list[str] | None,
-        typer.Option(
+        typer.Option(  # pyright: ignore[reportUnknownMemberType]
             "--names",
             "-n",
             help="Names of benchmarks to run (default: all)",
@@ -156,17 +156,17 @@ def bench(
     ] = None,
 ) -> None:
     """Run the benchmarks comparing belugas and polars implementations."""
-    from pyochain import Option
+    from pyochain import option
 
     from ._benchmark import run_benchmark
 
-    run_benchmark(runs, Option(names))
+    run_benchmark(runs, option(names))
 
 
 @app.command()
 def bench_dtypes(
     runs: Annotated[
-        int, typer.Option("--runs", "-r", help="Number of runs per benchmark")
+        int, typer.Option("--runs", "-r", help="Number of runs per benchmark")  # pyright: ignore[reportUnknownMemberType]
     ] = 250,
 ) -> None:
     """Run the benchmarks comparing belugas and polars implementations."""

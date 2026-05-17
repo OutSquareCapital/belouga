@@ -21,14 +21,14 @@ wheels = [
 
 [[package]]
 name = "basedpyright"
-version = "1.39.4"
+version = "1.39.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "nodejs-wheel-binaries" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/06/b0/ab36a25bb4637c6083e88721351f96b30742b84debdea42892b0f0d08cc9/basedpyright-1.39.4.tar.gz", hash = "sha256:e604088a0a808377a91d8ea0c4ef427c1af6fb335529bbe65a055263163d9252", size = 25507140, upload-time = "2026-05-11T11:27:04.631Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bc/5d/68e9bd8a408011f820e74fdad1684cad553fce0acfd83fce0a1ec4e01d97/basedpyright-1.39.5.tar.gz", hash = "sha256:373e6999b9dc450c4af077cb76a758f5959eedf8d03f0aac144bc59227f47d33", size = 25508568, upload-time = "2026-05-17T10:56:08.126Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/dd/39/9c256405e8d2a974b9fb819bd9c8a44ca4ba0f335c8ebb8d6961cee5f0c0/basedpyright-1.39.4-py3-none-any.whl", hash = "sha256:3cefd334f101fa4125c4ced4db6ca620267b57536ba0c3f8a7ae8b13c4c11f7a", size = 12420117, upload-time = "2026-05-11T11:26:59.829Z" },
+    { url = "https://files.pythonhosted.org/packages/cb/d1/fce034d7b840470bef067543deab51a28d87d1b866a1a4e88752047ef846/basedpyright-1.39.5-py3-none-any.whl", hash = "sha256:dda95954607e3a5e409b5a3083607b69976353cd56c05fdd77e32f6be27c9898", size = 12420680, upload-time = "2026-05-17T10:56:12.685Z" },
 ]
 
 [[package]]
@@ -90,14 +90,14 @@ dev = [
 
 [[package]]
 name = "click"
-version = "8.3.3"
+version = "8.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/bb/63/f9e1ea081ce35720d8b92acde70daaedace594dc93b693c869e0d5910718/click-8.3.3.tar.gz", hash = "sha256:398329ad4837b2ff7cbe1dd166a4c0f8900c3ca3a218de04466f38f6497f18a2", size = 328061, upload-time = "2026-04-22T15:11:27.506Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/23/e4/796662cd90cf80e3a363c99db2b88e0e394b988a575f60a17e16440cd011/click-8.4.0.tar.gz", hash = "sha256:638f1338fe1235c8f4e008e4a8a254fb5c5fbdcbb40ece3c9142ebb78e792973", size = 350843, upload-time = "2026-05-17T00:47:58.425Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ae/44/c1221527f6a71a01ec6fbad7fa78f1d50dfa02217385cf0fa3eec7087d59/click-8.3.3-py3-none-any.whl", hash = "sha256:a2bf429bb3033c89fa4936ffb35d5cb471e3719e1f3c8a7c3fff0b8314305613", size = 110502, upload-time = "2026-04-22T15:11:25.044Z" },
+    { url = "https://files.pythonhosted.org/packages/ee/ae/8e92f8058baf87f6c7d86ee7e457668690195cc77efedb8d3797a06e3940/click-8.4.0-py3-none-any.whl", hash = "sha256:40c50b7c6c6adac2823d411041ec84f3f103f1b280d5e9ce0d7f998995832f81", size = 116147, upload-time = "2026-05-17T00:47:56.842Z" },
 ]
 
 [[package]]
@@ -841,23 +841,23 @@ wheels = [
 
 [[package]]
 name = "pyochain"
-version = "0.15.0"
+version = "0.17.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cytoolz" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6c/7e/536067bff3e8b68b4b8bf7469a80328030d92f968156fafa95f387c3855d/pyochain-0.15.0.tar.gz", hash = "sha256:7f988c9683f6821ccd41b01c1c2ed187a8262f6f048bb0f49c95abd10dd61963", size = 64925, upload-time = "2026-05-14T23:32:55.9Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4c/53/895fd6f1ac0f224483a4474c6f838a55cdc33d9525e75e7f0bbd284d2a14/pyochain-0.17.0.tar.gz", hash = "sha256:472ae3264ad5c38c369a7a44a34586715366a899c5ae4db438b2f9de7ac55dd4", size = 66506, upload-time = "2026-05-17T19:15:26.044Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/46/9e/3f7953b2dd877e6f4222ec8daca9d48cec81f88c9e85b5287d5f4237efb0/pyochain-0.15.0-cp313-cp313-macosx_10_12_x86_64.whl", hash = "sha256:63da2aaed9961e056288a5849e5bc087b27af17ee0c0b96bfcb61537cb7ce65e", size = 369259, upload-time = "2026-05-14T23:32:53.509Z" },
-    { url = "https://files.pythonhosted.org/packages/30/8d/c249534e9dfa9d442a9f408e74cf084d872068b0a94082643c651b3ceea3/pyochain-0.15.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:7ef65564cb2cec50421f7946a4120fd867976ecec26e86cb053afec587e0fe74", size = 354527, upload-time = "2026-05-14T23:32:51.491Z" },
-    { url = "https://files.pythonhosted.org/packages/ec/af/3464e477f0088c230a847880fe744028febada68664cc1e9cc21b7dd30eb/pyochain-0.15.0-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c6e55337220bfdc81440054785547163ae69bb39c44cf8280b0254fd0c919720", size = 382119, upload-time = "2026-05-14T23:32:46.229Z" },
-    { url = "https://files.pythonhosted.org/packages/e9/dc/394c5c3f9ba3552bbd3f46647765b22c09fb66400ac8b6a12fc2b42ce261/pyochain-0.15.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:274f847fa4cfb8adecf62fdf4d3a89e0d3e355dd7b7e649c468d1238f9767f34", size = 380556, upload-time = "2026-05-14T23:32:48.712Z" },
-    { url = "https://files.pythonhosted.org/packages/5e/e5/91ffdc970a7c7abb50ec10027f1242cbbe23b88c157ddb625b6ad3236ef6/pyochain-0.15.0-cp313-cp313-win_amd64.whl", hash = "sha256:2386c649d29f81d4c35375309f5ea307bc7794d3fbe5dc71f975ae526edbd6d3", size = 265544, upload-time = "2026-05-14T23:32:56.931Z" },
-    { url = "https://files.pythonhosted.org/packages/f4/f3/4aae91e9f95f0bb164234152a0fad5c9db15dbc8e5682ad5b9579437dd02/pyochain-0.15.0-cp314-cp314-macosx_10_12_x86_64.whl", hash = "sha256:ed199d8d073abea0d25143d9e7dced38bf9ff6d2534579cd9fa1bfd361dcb595", size = 369459, upload-time = "2026-05-14T23:32:54.551Z" },
-    { url = "https://files.pythonhosted.org/packages/37/1c/a85aed44ab6e64459b25d0cc93b180dc2c10f03a39c8a97812317981f177/pyochain-0.15.0-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:96de3e837f7d991b42313aebf9b0029063e3a5443f1dbd8be434096fa4e73118", size = 354176, upload-time = "2026-05-14T23:32:52.538Z" },
-    { url = "https://files.pythonhosted.org/packages/9c/58/822b33dbd4b41511e9438683e033eff2a0a54350b487bbd8f30ba0d4d3ca/pyochain-0.15.0-cp314-cp314-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:0fdbb4af5680cc6de533af339a43911736c118f177a3bbf6bd675c07369cfdd5", size = 381482, upload-time = "2026-05-14T23:32:47.407Z" },
-    { url = "https://files.pythonhosted.org/packages/68/5a/6df72ef844fc1cae380f661cc4b25b38e9a298616c64c74dc0fcf0532373/pyochain-0.15.0-cp314-cp314-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ead71787a2ec274194cb874d5b860fef351ad7916e47a867aa9764000120a8ef", size = 380534, upload-time = "2026-05-14T23:32:50.222Z" },
-    { url = "https://files.pythonhosted.org/packages/00/41/a8139cee15226c63cca4d7eaa7320e7c480386fa153bddfe8e404963e15f/pyochain-0.15.0-cp314-cp314-win_amd64.whl", hash = "sha256:41aaddde8057a7b9797c4bd6ecb2c7daae7c264ed4542bdd5469cba07bc254aa", size = 264934, upload-time = "2026-05-14T23:32:58.144Z" },
+    { url = "https://files.pythonhosted.org/packages/39/c3/4cacdf3ca8001240b22d1016b780279574fa0ce0c0195f79a32858f74e8e/pyochain-0.17.0-cp313-cp313-macosx_10_12_x86_64.whl", hash = "sha256:36999dc1dd83ee845915481c48a8eb8ca7e1cf16200180350f6837bb76c8b7e0", size = 375683, upload-time = "2026-05-17T19:15:23.831Z" },
+    { url = "https://files.pythonhosted.org/packages/ea/0e/8e5896e6fe8e5525a04798a7cd6eefcc5576c895fcb843235916c903e226/pyochain-0.17.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:86943116364b8ef7e968bf2fa75e3707cb1a39b048d9c4d8c874c2efe35c5d95", size = 359563, upload-time = "2026-05-17T19:15:21.019Z" },
+    { url = "https://files.pythonhosted.org/packages/f7/fa/a77c24bfa9ff141ba0941169f17a8fbf8e09b2bf282da07ec2ca7adfe0f1/pyochain-0.17.0-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:fd749eea3c7c4666753963372b049c2628d578eaff1a7c7c6d32f010441813f8", size = 388230, upload-time = "2026-05-17T19:15:14.307Z" },
+    { url = "https://files.pythonhosted.org/packages/75/fe/69da5183e36c3dbdbaf11113afa3ac5bb44e7ce8cfdaad558df475e75503/pyochain-0.17.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ec95b34855dedef615f486bd18bd3b4e3ce38e2847cbd1dc9946a60b52026868", size = 386403, upload-time = "2026-05-17T19:15:18.066Z" },
+    { url = "https://files.pythonhosted.org/packages/d8/8c/fd2e7bcfe368bbc60782c14115c4482baa3c7bd677501af8076b8449428c/pyochain-0.17.0-cp313-cp313-win_amd64.whl", hash = "sha256:3cdd000f3d5c832020488642c4e983bbeb37c91fb724864269611369044f1e7b", size = 268215, upload-time = "2026-05-17T19:15:27.373Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/29/e7ec173b396ff720a8b5750005ae692bd7d83f71550a4f548f3495216340/pyochain-0.17.0-cp314-cp314-macosx_10_12_x86_64.whl", hash = "sha256:f1349b6c457345a2ff54632d0242799424253ae307ca337b1b6be023c707e312", size = 376116, upload-time = "2026-05-17T19:15:24.885Z" },
+    { url = "https://files.pythonhosted.org/packages/1a/71/680cd53b965b2204013ebd37db7dde15ad3b809237125c68106957f1f260/pyochain-0.17.0-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:0d0a4df435b0311ed8e6822075b73edaad0daa76b6843eebb7c79582e3852ebd", size = 359037, upload-time = "2026-05-17T19:15:22.407Z" },
+    { url = "https://files.pythonhosted.org/packages/84/9a/638afad2a8b05b766937e40bd10cbb6bc10afd7bd3edcce93488cefcca13/pyochain-0.17.0-cp314-cp314-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d5689f4114a908e6f867c61135da449891321b1d4d92a3a53345ef6921fe0a35", size = 387456, upload-time = "2026-05-17T19:15:16.383Z" },
+    { url = "https://files.pythonhosted.org/packages/7d/bc/e3681b3a19650958b39428343560e728172c88bb14296d66284dc6f44148/pyochain-0.17.0-cp314-cp314-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f30f10dbb508b6221455248827f50a79a5dfc01cd2b7024bcb6e4a4c5fe7c0ee", size = 386046, upload-time = "2026-05-17T19:15:19.751Z" },
+    { url = "https://files.pythonhosted.org/packages/a1/d4/8304baf811f701a33e5ce4d1fa2a9562e53b9ea9be891fccd0cbffc5d579/pyochain-0.17.0-cp314-cp314-win_amd64.whl", hash = "sha256:13fa2e6638d118c9e0bf6176ac6c3747301acebde0ec2d44eb26a59b04e5e3c6", size = 268015, upload-time = "2026-05-17T19:15:29.057Z" },
 ]
 
 [[package]]

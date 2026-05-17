@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from enum import StrEnum, auto
 
 import duckdb
-from pyochain import Dict, Iter, Option, Seq, Set, Vec
+from pyochain import Dict, Iter, Option, Seq, Set, Vec, option
 
 import belugas as bl
 from belugas import _core as bl_core, namespaces as bl_nm  # noqa: PLC2701
@@ -45,7 +45,7 @@ def get_attr(obj: object, name: str) -> Option[object]:
     Returns:
         Option[object]: An Option containing the attribute value if it exists, or None if it does not.
     """
-    return Option(getattr(obj, name, None))
+    return option(getattr(obj, name, None))
 
 
 @dataclass(slots=True)

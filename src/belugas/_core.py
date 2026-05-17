@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from enum import StrEnum, auto
 from typing import TYPE_CHECKING, Concatenate, Self, override
 
-from pyochain import Iter, Option
+from pyochain import Iter, option
 from sqlglot import exp
 
 from ._sqlglot_patch import DUCKDB_FUNCTIONS
@@ -173,7 +173,7 @@ def into_expr_list(args: Iterable[IntoExpr], *, as_col: bool = False) -> list[ex
     """
     return (
         Iter(args)
-        .filter_map(Option)
+        .filter_map(option)
         .map(lambda x: into_expr(x, as_col=as_col))
         .collect(list)
     )

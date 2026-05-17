@@ -4,7 +4,7 @@ import inspect
 from dataclasses import dataclass, field
 from typing import Self
 
-from pyochain import NONE, Dict, Iter, Null, Option, Seq, Set, Some
+from pyochain import NONE, Dict, Iter, Null, Option, Seq, Set, Some, option
 
 from .._utils import Builtins, Pql, get_attr
 from ._parse import annotations_compatible, extract_last_name
@@ -141,7 +141,7 @@ class ComparisonInfos:
                     )
                     else Status.MATCH
                 )
-            case _:
+            case (Null(), Null()):
                 return NONE
 
     def to_status(self) -> Status:
@@ -282,9 +282,9 @@ def _get_annotation_str(annotation: object) -> Option[str]:
         case inspect.Parameter.empty | inspect.Signature.empty:
             return NONE
         case type():
-            return Option(annotation.__name__)
+            return option(annotation.__name__)
         case _:
-            return Option(extract_last_name(str(annotation)))
+            return Some(extract_last_name(str(annotation)))
 
 
 def _format_param_str(param: ParamInfo, highlight_names: Set[str]) -> str:

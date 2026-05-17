@@ -260,7 +260,7 @@ class BoundsValues(NamedTuple):
                         Side.new(Bounds.UNBOUNDED, Bounds.FOLLOWING),
                     )
                 )
-            case _:
+            case (Null(), Null()):
                 return NONE
 
     def into_spec(self, mode: FrameMode) -> exp.WindowSpec:

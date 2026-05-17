@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING
 
-from pyochain import Dict, Iter, Option, Set
+from pyochain import Dict, Iter, Set, option
 from sqlglot import exp
 
 from ..._core import Tables, into_expr
@@ -37,7 +37,7 @@ def drop_rows(
     schema: Schema, subset: TryIter[str], fn: Callable[[Expr], Expr]
 ) -> exp.Condition:
     return (
-        Option(subset)
+        option(subset)
         .map(try_iter)
         .unwrap_or_else(schema.iter)
         .map(lambda name: col(name).pipe(fn).inner)

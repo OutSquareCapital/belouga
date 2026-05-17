@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Mapping
 from typing import TYPE_CHECKING
 
-from pyochain import Dict, Iter, Seq, Some, Vec
+from pyochain import Dict, Iter, Null, Seq, Some, Vec
 from sqlglot import exp
 
 from ..._core import Marker, Tables
@@ -201,7 +201,7 @@ def select(
                         return ast, new_schema
                     ast = exp.select(*select_exprs).from_(rel, copy=False)
                     return ast, new_schema
-        case _:
+        case Null():
             new_schema: Schema = Dict.from_ref({
                 Marker.TEMP: exp.DType.NULL.into_expr()
             })

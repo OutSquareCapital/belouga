@@ -7,7 +7,7 @@ from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self, SupportsInt, overload, override
 
-from pyochain import Dict, Option, Vec
+from pyochain import Dict, Vec, option
 
 from . import datatypes as dt
 from ._core import CoreHandler, Marker
@@ -67,7 +67,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
             case LazyFrame():
                 self._inner = data._inner
             case _:
-                node = nodes.ScanInMemory(Option(connection), data, orient)
+                node = nodes.ScanInMemory(option(connection), data, orient)
                 self._inner = node
 
     @override
@@ -299,7 +299,7 @@ class LazyFrame(CoreHandler[nodes.Node]):
         Returns:
             Self: A new LazyFrame with the sliced rows.
         """
-        return self._cls(nodes.Slice(self._inner, Option(length), offset))
+        return self._cls(nodes.Slice(self._inner, option(length), offset))
 
     def tail(self, n: int = 5) -> Self:
         """Get the last n rows.
@@ -695,9 +695,9 @@ class LazyFrame(CoreHandler[nodes.Node]):
             nodes.JoinAsof(
                 self._inner,
                 other.inner,
-                Option(left_on),
-                Option(right_on),
-                Option(on),
+                option(left_on),
+                option(right_on),
+                option(on),
                 by_left,
                 by_right,
                 by,
