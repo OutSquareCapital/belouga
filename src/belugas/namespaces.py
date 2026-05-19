@@ -79,6 +79,7 @@ class Lit:
     ZERO = lit("0")
 
 
+@final
 @dataclass(slots=True)
 class ExprStringNameSpace(StringFns[Expr]):
     """String function namespace for SQL expressions."""
@@ -446,6 +447,7 @@ class ExprStringNameSpace(StringFns[Expr]):
         return self.right(n)
 
 
+@final
 @dataclass(slots=True)
 class ExprStructNameSpace(StructFns[Expr]):
     """Struct function namespace for SQL expressions."""
@@ -489,6 +491,7 @@ class ExprStructNameSpace(StructFns[Expr]):
         return self.insert(*all_exprs)
 
 
+@final
 @dataclass(slots=True)
 class ExprDateTimeNameSpace(DateTimeFns[Expr]):
     """Datetime function namespace for SQL expressions."""
@@ -692,10 +695,9 @@ class ExprDateTimeNameSpace(DateTimeFns[Expr]):
 
 
 @final
+@dataclass(slots=True)
 class ExprListNameSpace(ListFns[Expr]):
     """List function namespace for SQL expressions."""
-
-    __slots__ = ()
 
     def explode(self) -> Expr:
         """Explode lists into multiple rows.
@@ -903,10 +905,9 @@ class ExprListNameSpace(ListFns[Expr]):
 
 
 @final
+@dataclass(slots=True)
 class ExprArrayNameSpace(ArrayFns[Expr]):
     """Array function namespace for SQL expressions."""
-
-    __slots__ = ()
 
     def explode(self) -> Expr:
         """Explode array into multiple rows.
@@ -1153,6 +1154,7 @@ class ExprArrayNameSpace(ArrayFns[Expr]):
         return self.distinct()
 
 
+@final
 @dataclass(slots=True)
 class ExprNameNameSpace(NameSpaceHandler[Expr]):
     """Name operations namespace (equivalent to pl.Expr.name)."""
@@ -1235,26 +1237,31 @@ class ExprNameNameSpace(NameSpaceHandler[Expr]):
                 return expr.alias(mapper(name))
 
 
+@final
 @dataclass(slots=True)
 class ExprJsonNameSpace(JsonFns[Expr]):
     """JSON function namespace for SQL expressions."""
 
 
+@final
 @dataclass(slots=True)
 class ExprRegexNameSpace(RegexFns[Expr]):
     """Regex function namespace for SQL expressions."""
 
 
+@final
 @dataclass(slots=True)
 class ExprMapNameSpace(MapFns[Expr]):
     """Map function namespace for SQL expressions."""
 
 
+@final
 @dataclass(slots=True)
 class ExprEnumNameSpace(EnumFns[Expr]):
     """Enum function namespace for SQL expressions."""
 
 
+@final
 @dataclass(slots=True)
 class ExprGeoSpatialNameSpace(GeoSpatialFns[Expr]):
     """Geospatial function namespace for SQL expressions."""
