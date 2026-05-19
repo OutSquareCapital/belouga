@@ -14,41 +14,6 @@ Contrary to `narwhals` or [`Ibis`](https://github.com/ibis-project/ibis), `belug
 
 It's a WIP project, but lots of functionnality are already here, and the codebase is robustly tested, with more than +1000 tests covering features, edge cases and polars conformity.
 
-## Features
-
-The two main pillars of `belugas` are:
-
-- `Expr`, the base class for all expressions, created from `col`, `lit`, selectors, and others module functions, that can be combined together to build complex expressions chains.
-- `LazyFrame`, the main entry point for all data manipulation, that can be created from various data sources (arrow, python mapping/sequences, pandas dataframe, CSV, parquet, json etc...), and on which you can call all the available methods to build your query.
-
-`belugas` currently provides:
-
-- `LazyFrame::{select, filter, with_columns, join, join_asof, pivot, unpivot, sort, sink_csv, sink_parquet, ...}`
-- Aggregations contexts with `LazyFrame::group_by::{agg, all, len, ...}`
-- A **rich expressions catalog covering +700 of DuckDB's built-in functions**, with custom expressions implementations for `polars` functionnalities that `DuckDB` currently don't provide
-- `Expr` namespaces for **geospatial, json, map, regex functions, and more**
-- A `when/then/otherwise` expression builder for complex conditional logic
-- A complete family of Datatypes, including `Enums`, `List`, `Array`, `Struct`, `Map`, and `Geometry`, with the same ergonomics of the polars library
-- selectors by dtypes, by name, regex, and more, just like `polars`
-- Conversions to `LazyFrame` from python Mapping and Sequence, numpy arrays, pandas and polars dataframes, and more.
-- Various module level functions, like `unnest`, `scan_csv`, `coalesce`, `all`, and more.
-- Query introspections, with syntax highlighted SQL in your terminal with +20 color themes, sql formatting, AST inspection, query plan inspection, and more.
-- A `meta` module with all the table and metadata functions provided by `DuckDB` to inspect your database schema, list functions, and more.
-
-## How it works
-
-`belugas` compiles `LazyFrame` and `Expr` operations to SQL queries that are executed by `DuckDB`.
-
-- Each `LazyFrame` operation add a new node to the IR query graph. They are fully lazy, meaning that the arguments are just stored as is in the nodes.
-
-- Each `Expr` create a sqlglot AST node that is stored in the `Expr` object.
-
-When the query is executed by any operation that requires a result (schema inspection, dataframe conversion, etc...), the IR graph is traversed, transformed in sqlglot AST nodes who are then compiled together into a single sqlglot AST tree.
-
-This tree is then transformed into a SQL query, which is then executed by `DuckDB`.
-
-This three step process allows `belugas` to concile the difference and advantages of both dataframe API and SQL queries.
-
 ## Quick Start
 
 ### Installation
@@ -95,6 +60,29 @@ Output:
  └─────────┴───────────────┴───────────┴────────────┘
 ```
 
+## Features
+
+The two main pillars of `belugas` are:
+
+- `Expr`, the base class for all expressions, created from `col`, `lit`, selectors, and others module functions, that can be combined together to build complex expressions chains.
+- `LazyFrame`, the main entry point for all data manipulation, that can be created from various data sources (arrow, python mapping/sequences, pandas dataframe, CSV, parquet, json etc...), and on which you can call all the available methods to build your query.
+
+`belugas` currently provides:
+
+- `LazyFrame::{select, filter, with_columns, join, join_asof, pivot, unpivot, sort, sink_csv, sink_parquet, ...}`
+- Aggregations contexts with `LazyFrame::group_by::{agg, all, len, ...}`
+- A **rich expressions catalog covering +700 of DuckDB's built-in functions**, with custom expressions implementations for `polars` functionnalities that `DuckDB` currently don't provide
+- `Expr` namespaces for **geospatial, json, map, regex functions, and more**
+- A `when/then/otherwise` expression builder for complex conditional logic
+- A complete family of Datatypes, including `Enums`, `List`, `Array`, `Struct`, `Map`, and `Geometry`, with the same ergonomics of the polars library
+- selectors by dtypes, by name, regex, and more, just like `polars`
+- Conversions to `LazyFrame` from python Mapping and Sequence, numpy arrays, pandas and polars dataframes, and more.
+- Various module level functions, like `unnest`, `scan_csv`, `coalesce`, `all`, and more.
+- Query introspections, with syntax highlighted SQL in your terminal with +20 color themes, sql formatting, AST inspection, query plan inspection, and more.
+- A `meta` module with all the table and metadata functions provided by `DuckDB` to inspect your database schema, list functions, and more.
+
+### Query inspection
+
 ### Inspect the generated SQL query with syntax highlighting and  pretty formatting
 
 ```python
@@ -130,6 +118,20 @@ query.show_graph()
 This allows you to inspect data sources, and visualize the query as a tree of operations.
 
 ![alt text](docs/tree.png)
+
+## How it works
+
+`belugas` compiles `LazyFrame` and `Expr` operations to SQL queries that are executed by `DuckDB`.
+
+- Each `LazyFrame` operation add a new node to the IR query graph. They are fully lazy, meaning that the arguments are just stored as is in the nodes.
+
+- Each `Expr` create a sqlglot AST node that is stored in the `Expr` object.
+
+When the query is executed by any operation that requires a result (schema inspection, dataframe conversion, etc...), the IR graph is traversed, transformed in sqlglot AST nodes who are then compiled together into a single sqlglot AST tree.
+
+This tree is then transformed into a SQL query, which is then executed by `DuckDB`.
+
+This three step process allows `belugas` to concile the difference and advantages of both dataframe API and SQL queries.
 
 ## Dependencies
 
