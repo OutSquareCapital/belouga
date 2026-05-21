@@ -118,7 +118,7 @@ def _compute_results(table: Table, n: int) -> None:
         )
     return (
         results
-        .sort(key=lambda r: r.speedup, reverse=True)
+        .sort_by(lambda r: r.speedup, reverse=True)
         .rev()
         .for_each(lambda r: _add_to_table(r, table))
     )

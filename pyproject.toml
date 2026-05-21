@@ -1,5 +1,5 @@
 [project]
-    dependencies    = ["duckdb>=1.5.3", "pyochain>=0.21.0", "sqlglot[c]>=30.7.0"]
+    dependencies    = ["duckdb>=1.5.3", "pyochain>=0.22.0", "sqlglot[c]>=30.7.0"]
     description     = "Polars syntax for SQL"
     name            = "belugas"
     readme          = "README.md"
