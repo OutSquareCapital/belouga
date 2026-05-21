@@ -88,7 +88,7 @@ class MethodInfo:
         Returns:
             str: The formatted signature string.
         """
-        highlights = highlight_names.unwrap_or_else(Set[str].new)
+        highlights = highlight_names.unwrap_or_else(lambda: Set[str](()))
         params_str = (
             self.params
             .iter()
@@ -120,7 +120,7 @@ class ComparisonInfos:
 
     polars: Option[MethodInfo] = field(default=NONE)
     belugas_info: Option[MethodInfo] = field(default=NONE)
-    ignored_params: Set[str] = field(default_factory=Set[str].new)
+    ignored_params: Set[str] = field(default_factory=lambda: Set[str](()))
 
     def has_reference(self) -> bool:
         return self.polars.is_some()
@@ -178,7 +178,7 @@ def ignored_params_for(class_name: Pql, method_name: str) -> Set[str]:
         IGNORED_PARAMS
         .get_item(class_name)
         .and_then(lambda method_map: method_map.get_item(method_name))
-        .unwrap_or_else(Set.new)
+        .unwrap_or_else(lambda: Set(()))
     )
 
 
@@ -244,14 +244,12 @@ def _build_method_info(attr: object, name: str) -> Option[MethodInfo]:
         case property() as prop:
             match prop.fget:
                 case None:
-                    return Some(
-                        MethodInfo(name, Seq[ParamInfo].new(), NONE, is_property=True)
-                    )
+                    return Some(MethodInfo(name, Seq(()), NONE, is_property=True))
                 case getter:
                     return Some(
                         MethodInfo(
                             name,
-                            Seq[ParamInfo].new(),
+                            Seq(()),
                             _get_annotation_str(
                                 inspect.signature(getter).return_annotation  # pyright: ignore[reportAny]
                             ),
@@ -339,7 +337,7 @@ def _without_ignored_params(mapping: MapInfo, ignored: Set[str]) -> MapInfo:
         .filter_star(lambda k, _v: not ignored.contains(k))
         .map_star(lambda _name, param: param)
         .fold(
-            Dict[str, ParamInfo].new(),
+            Dict[str, ParamInfo](()),
             lambda acc, param: acc.inspect(_get_fn, param),
         )
     )

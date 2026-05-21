@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, NamedTuple
 
 from duckdb import DuckDBPyRelation
 from pyochain import Dict, Err, Iter, Null, Ok, Result, Seq, Set, Some, option
-from pyochain.traits import Pipeable
+from pyochain.abc import Pipeable
 from sqlglot import exp
 
 from belugas.typing import (
@@ -127,7 +127,7 @@ def _compile_tree(  # noqa: PLR0915
 ) -> Result[CompiledPlan, CompilationError]:
     from . import ops
 
-    empty = Dict[str, DuckDBPyRelation].new()
+    empty = Dict[str, DuckDBPyRelation](())
 
     match node:
         case nodes.GroupBy():

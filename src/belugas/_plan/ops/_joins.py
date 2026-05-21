@@ -12,7 +12,7 @@ from ..._funcs import col
 from ...utils import try_seq
 
 if TYPE_CHECKING:
-    from pyochain.traits import PyoCollection
+    from pyochain.abc import PyoCollection
 
     from ...typing import AsofJoinStrategy, JoinStrategy, Schema, TryIter
 type OptSeq = Option[Seq[str]]
@@ -320,7 +320,7 @@ class JoinKeys[T: Seq[str] | str](NamedTuple):
                 msg = "`by_left` and `by_right` must have the same length."
                 return Err(ValueError(msg))
             case (Null(), Null(), Null()):
-                empty = Seq[str].new()
+                empty = Seq[str](())
                 return Ok(JoinKeys(empty, empty))
             case (Null(), _, _):
                 msg = "Can not specify only `by_left` or `by_right`, you need to specify both."

@@ -11,7 +11,7 @@ from ..._funcs import col, lit, unnest
 from .._resolve import resolve_all
 
 if TYPE_CHECKING:
-    from pyochain.traits import PyoIterable
+    from pyochain.abc import PyoIterable
 
     from ..._expr import Expr
     from ...typing import IntoExprColumn, Schema, TryIter

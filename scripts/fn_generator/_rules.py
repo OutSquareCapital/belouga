@@ -162,8 +162,8 @@ class NamespaceSpec:
     doc: str
     prefixes: Seq[str]
     strip_prefixes: Seq[str]
-    categories: Seq[Categories] = field(default_factory=Seq[Categories].new)
-    explicit_names: Seq[str] = field(default_factory=Seq[str].new)
+    categories: Seq[Categories] = field(default_factory=lambda: Seq[Categories](()))
+    explicit_names: Seq[str] = field(default_factory=lambda: Seq[str](()))
 
 
 NAMESPACE_SPECS = Seq((

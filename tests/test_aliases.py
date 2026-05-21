@@ -1,6 +1,6 @@
 import polars as pl
 import pytest
-from pyochain.traits import PyoIterable
+from pyochain.abc import PyoIterable
 
 import belugas as bl
 

@@ -47,7 +47,7 @@ def try_iter[T](val: TryIter[T]) -> Iter[T]:
     """
     match val:
         case None:
-            return Iter[T].new()
+            return Iter(())
         case str() | bytes() | bytearray() | exp.Expr():
             return Iter[T].once(val)  # pyright: ignore[reportReturnType]
         case Iterable():

@@ -156,7 +156,7 @@ def _run_all(
     return (
         Iter(tracker)
         .map_star(_run_bench)
-        .sort(key=operator.itemgetter(1))
+        .sort_by(operator.itemgetter(1))
         .iter()
         .for_each_star(_process_benchmark)
     )

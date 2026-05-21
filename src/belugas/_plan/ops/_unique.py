@@ -44,7 +44,7 @@ def unique(
                 _distinct_on(
                     ast,
                     subset_names,
-                    order_cols.unwrap_or_else(Seq[str].new),
+                    order_cols.unwrap_or_else(lambda: Seq[str](())),
                     descending=False,
                     nulls_last=False,
                 )

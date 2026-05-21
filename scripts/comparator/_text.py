@@ -73,7 +73,7 @@ class ClassComparison:
     polars_cls: object
     belugas_cls: object
     name: Pql
-    ignored_names: Set[str] = field(default_factory=Set[str].new)
+    ignored_names: Set[str] = field(default_factory=lambda: Set[str](()))
 
     def to_report(self) -> ComparisonReport:
         """Compare two classes and return comparison results.
@@ -94,7 +94,7 @@ class ClassComparison:
                     self.polars_cls, self.belugas_cls, name, self.name
                 )
             )
-            .sort(key=lambda r: r.method_name),
+            .sort_by(lambda r: r.method_name),
         )
 
     def _get_public_methods(self, cls: object) -> Set[str]:

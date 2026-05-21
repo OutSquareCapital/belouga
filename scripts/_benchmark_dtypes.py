@@ -87,7 +87,7 @@ def _init_table(n: int) -> Table:
 
 
 def _compute_results(table: Table, n: int) -> None:
-    results = Vec[BenchResult].new()
+    results = Vec[BenchResult](())
 
     def _bench(fn: Callable[[DuckDBPyType], object], dtype: DuckDBPyType) -> float:
         def _once() -> float:

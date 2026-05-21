@@ -38,7 +38,7 @@ def group_by_all(
     return (
         resolve_all(schema, exprs, more_exprs, named_exprs)
         .iter()
-        .fold((Vec[exp.Expr].new(), Dict[str, exp.DataType].new()), _acc)
+        .fold((Vec(()), Dict(())), _acc)
     )
 
 
@@ -82,7 +82,7 @@ def agg(  # noqa: PLR0913, PLR0917
         .items()
         .iter()
         .fold_star(
-            (Dict[str, exp.DataType].new(), Dict[str, exp.DataType].new()),
+            (Dict(()), Dict(())),
             lambda acc, name, dtype: _split_by_key(key_names, acc, name, dtype),
         )
     )

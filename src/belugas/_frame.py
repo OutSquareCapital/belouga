@@ -28,7 +28,7 @@ if TYPE_CHECKING:
         ParquetFieldsOptions,
     )
     from duckdb import DuckDBPyConnection
-    from pyochain.traits import PyoKeysView, PyoValuesView
+    from pyochain import PyoKeysView, PyoValuesView
 
     from ._groupby import LazyGroupBy
     from ._show import QueryTree

@@ -5,7 +5,7 @@ from typing import Any, NamedTuple, override
 import polars as pl
 from polars.testing import assert_frame_equal
 from pyochain import Iter, Seq
-from pyochain.traits import PyoIterable
+from pyochain.abc import PyoIterable
 
 import belugas as bl
 

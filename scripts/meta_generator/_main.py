@@ -69,7 +69,7 @@ def {self.final_name}({self._signature()}) -> LazyFrame:
             .chain(
                 self.varargs_type.map(
                     lambda t: Iter.once(f"*args: {t}")
-                ).unwrap_or_else(Iter.new)
+                ).unwrap_or_else(lambda: Iter(()))
             )
             .join(", ")
         )
@@ -89,7 +89,7 @@ def {self.final_name}({self._signature()}) -> LazyFrame:
             .chain(
                 self.varargs_type.map(
                     lambda t: Iter.once(f"        *args ({t}): Variable arguments")
-                ).unwrap_or_else(Iter.new)
+                ).unwrap_or_else(lambda: Iter(()))
             )
             .collect()
             .then(lambda docs: f"\n\n    Args:\n{docs.join(chr(10))}")
@@ -103,7 +103,7 @@ def {self.final_name}({self._signature()}) -> LazyFrame:
             .map_star(lambda n, _: n)
             .chain(
                 self.varargs_type.map(lambda _: Iter.once("*args")).unwrap_or_else(
-                    Iter.new
+                    lambda: Iter(())
                 )
             )
             .collect()

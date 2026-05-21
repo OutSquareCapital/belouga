@@ -241,7 +241,7 @@ def _union_members(reference: ast.expr) -> Iter[ast.expr]:
 
 
 def _make_generic_canonicalizer() -> Callable[[ast.expr], ast.expr]:
-    mapping = Dict[str, str].new()
+    mapping = Dict[str, str](())
 
     def _canonicalize(node: ast.expr) -> ast.expr:
         match node:

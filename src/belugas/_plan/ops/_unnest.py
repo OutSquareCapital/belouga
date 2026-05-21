@@ -42,8 +42,8 @@ def unnest(
 
     targets = try_iter(columns).chain(more_columns).collect(Set)
 
-    exprs = Vec[exp.Expr].new()
-    new_schema = Dict[str, exp.DataType].new()
+    exprs = Vec[exp.Expr](())
+    new_schema = Dict[str, exp.DataType](())
 
     schema.items().iter().for_each_star(_project)
     return exprs.iter(), new_schema

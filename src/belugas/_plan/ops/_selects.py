@@ -63,7 +63,7 @@ def with_columns(
     new_schema = _with_columns_schema(schema, projections)
     if can_inline_select(src_ast) and not has_windowed:
         replaced = list[exp.Expr]()
-        added = Vec[exp.Expr].new()
+        added = Vec[exp.Expr](())
         (
             updates
             .items()

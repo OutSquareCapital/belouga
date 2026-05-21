@@ -7,7 +7,7 @@ from functools import partial
 from typing import TYPE_CHECKING, Self, override
 
 from pyochain import NONE, Err, Iter, Null, Ok, Option, Range, Result, Set, Some, option
-from pyochain.traits import PyoCollection
+from pyochain.abc import PyoCollection
 from sqlglot import exp
 
 from . import datatypes as dt
