@@ -4,6 +4,31 @@ from typing import NamedTuple, Self
 
 from pyochain import Iter
 
+SCAN_DOC = """All nodes that represent logical scan sources.
+
+The `Scan` union is generated from all public `BaseNode` subclasses with names starting with `Scan`.
+"""
+
+NODE_DOC = """All nodes that can be part of the logical plan.
+
+Each node represents a logical operation to be performed on the data, such as filtering, joining, or aggregating.
+
+They just hold the input arguments for the operation, and are used to build the logical plan before it's compiled into executable code.
+
+Note:
+    - `Node` is a type alias for the union of all public `Node` subclasses.
+    - `BaseNode` is the base class for all nodes, but should not be used directly.
+
+    We do this because Python does not have built-in support for Enums with associated data like Rust does.
+
+    Using dataclasses for each node allows us to easily store the necessary information for each operation,
+
+    while still being able to treat them as a unified type when building the plan, relying on the type checker to ensure exhaustiveness when matching on them.
+"""
+THEME_DOC = (
+    """Themes available for SQL syntax highlighting in the `sql_query` method."""
+)
+
 
 def generate_themes(caller: Path) -> tuple[int, Path]:
     from pygments.styles._mapping import (  # pyright: ignore[reportMissingTypeStubs]  # noqa: PLC2701
@@ -18,11 +43,14 @@ def generate_themes(caller: Path) -> tuple[int, Path]:
     )
     content = f"Themes = Literal[{content}]"
 
-    doc = """Themes available for SQL syntax highlighting in the `sql_query` method."""
-
     return (
         _build_content(
-            dest, caller, "# theme marker START", "# theme marker END", content, doc
+            dest,
+            caller,
+            "# theme marker START",
+            "# theme marker END",
+            content,
+            THEME_DOC,
         ),
         dest,
     )
@@ -45,43 +73,17 @@ def generate_nodes(caller: Path) -> tuple[int, Path]:
 
         return cls.__name__
 
-    public_nodes = (
+    scan_content, node_content = (
         all_subclasses(node_module.BaseNode)
         .filter(lambda cls: not cls.__name__.startswith("_"))
         .map(_render_type_name)
         .unique()
         .sort()
+        .iter()
+        .partition(lambda name: name.startswith("Scan"))
     )
-    scan_content = (
-        public_nodes.iter().filter(lambda name: name.startswith("Scan")).join(" | ")
-    )
-    node_content = (
-        public_nodes.iter().filter(lambda name: not name.startswith("Scan")).join(" | ")
-    )
-    scan_content = f"type Scan = ({scan_content})"
-    node_content = f"Node = ({node_content})"
-
-    scan_doc = """All nodes that represent logical scan sources.
-
-The `Scan` union is generated from all public `BaseNode` subclasses with names starting with `Scan`.
-    """
-
-    node_doc = """All nodes that can be part of the logical plan.
-
-Each node represents a logical operation to be performed on the data, such as filtering, joining, or aggregating.
-
-They just hold the input arguments for the operation, and are used to build the logical plan before it's compiled into executable code.
-
-Note:
-    - `Node` is a type alias for the union of all public `Node` subclasses.
-    - `BaseNode` is the base class for all nodes, but should not be used directly.
-
-    We do this because Python does not have built-in support for Enums with associated data like Rust does.
-
-    Using dataclasses for each node allows us to easily store the necessary information for each operation,
-
-    while still being able to treat them as a unified type when building the plan, relying on the type checker to ensure exhaustiveness when matching on them.
-    """
+    scan_content = f"type Scan = ({scan_content.join(' | ')})"
+    node_content = f"Node = ({node_content.join(' | ')})"
 
     _ = _build_content(
         dest,
@@ -89,7 +91,7 @@ Note:
         "# plan scan marker START",
         "# plan scan marker END",
         scan_content,
-        scan_doc,
+        SCAN_DOC,
     )
 
     return (
@@ -99,7 +101,7 @@ Note:
             "# plan node marker START",
             "# plan node marker END",
             node_content,
-            node_doc,
+            NODE_DOC,
         ),
         dest,
     )

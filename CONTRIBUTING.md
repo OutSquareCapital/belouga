@@ -137,9 +137,10 @@ If one of them needs to change, update the generator logic in `scripts/` and reg
 
 Scripts are dev-time tooling, not part of the public API.
 
-- `scripts/fn_generator/` generates the DuckDB function wrappers
-- `scripts/meta_generator/` generates the DuckDB meta helpers
-- `scripts/comparator/` produces `API_COVERAGE.md`.
+- [The function generator](scripts/fn_generator/) generates the DuckDB function wrappers.
+- [The meta generator](scripts/meta_generator/) generates the DuckDB meta helpers
+- [The comparator](scripts/comparator/) produces `API_COVERAGE.md`.
+- [The literals generator](scripts/literal_generator/) create typing literals for internal and public API.
 
 The remaining top-level script modules support metadata extraction, sqlglot coverage checks, and SQL theme generation.
 
