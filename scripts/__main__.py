@@ -68,7 +68,7 @@ def gen_fns(
 @app.command()
 def gen_themes() -> None:
     """Generate a `Literal` of all available styles for pretty-printing of the `LazyFrame.sql_query` method."""
-    from ._theme_generator import generate_themes
+    from ._literal_generator import generate_themes
 
     res, path = generate_themes(_Paths.SELF)
     _run_ruff(check_only=False, dest=path)
@@ -81,7 +81,7 @@ def gen_themes() -> None:
 @app.command()
 def gen_nodes() -> None:
     """Generate a `Type` of all available styles for pretty-printing of the `LazyFrame.sql_query` method."""
-    from ._theme_generator import generate_nodes
+    from ._literal_generator import generate_nodes
 
     res, path = generate_nodes(_Paths.SELF)
     _run_ruff(check_only=False, dest=path)
