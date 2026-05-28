@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import TYPE_CHECKING, NamedTuple
 
 from pyochain import Dict, Iter
@@ -11,6 +10,8 @@ from ..._funcs import col, lit, unnest
 from .._resolve import resolve_all
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from pyochain.abc import PyoIterable
 
     from ..._expr import Expr

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import statistics
 import time
-from collections.abc import Callable
 from typing import TYPE_CHECKING, NamedTuple
 
 import duckdb
@@ -15,6 +14,8 @@ from rich.table import Table
 import belugas as bl
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from duckdb.sqltypes import DuckDBPyType
 
 

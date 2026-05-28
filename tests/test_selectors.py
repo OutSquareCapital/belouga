@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from datetime import timedelta
+from typing import TYPE_CHECKING
 
 import polars as pl
 import polars.selectors as cs_pl
@@ -13,6 +13,9 @@ from belugas import selectors as cs
 
 from ._data import sample_bl, sample_lf
 from ._utils import assert_eq, assert_lf_eq, into_ids
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def test_with_columns() -> None:

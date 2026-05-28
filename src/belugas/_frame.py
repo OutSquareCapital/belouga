@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import operator as op
-from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from functools import partial
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self, SupportsInt, overload, override
 
 from pyochain import Dict, Vec, option
@@ -17,6 +15,9 @@ from ._plan import compile_plan, nodes, scans
 from .utils import try_iter
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Mapping
+    from pathlib import Path
+
     import polars as pl
     from _duckdb import ExplainType
     from _duckdb._enums import (  # pyright: ignore[reportMissingModuleSource]

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -12,6 +11,8 @@ from ._funcs import reduce
 from .utils import try_iter
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from .typing import IntoExpr, TryIter
 
 

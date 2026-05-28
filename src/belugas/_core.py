@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from enum import StrEnum, auto
 from typing import TYPE_CHECKING, Concatenate, Self, override
@@ -11,6 +10,8 @@ from sqlglot import exp
 from ._sqlglot_patch import DUCKDB_FUNCTIONS
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
+
     from .typing import IntoExpr
 
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import polars as pl
 from polars.exceptions import ComputeError
@@ -13,6 +13,9 @@ from rich.text import Text
 from ._query import run_qry
 from ._schemas import TableSchema
 from ._sections import FunctionInfo, build_file
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def run_pipeline(

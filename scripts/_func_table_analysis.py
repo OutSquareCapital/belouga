@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import polars as pl
 from pyochain import Iter
@@ -12,6 +11,9 @@ from rich.table import Table
 
 from .fn_generator._query import _filters  # pyright: ignore[reportPrivateUsage]
 from .fn_generator._schemas import DuckCols
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 CONSOLE = Console()
 

@@ -7,8 +7,7 @@ metadata about the DuckDB instance (tables, columns, functions, etc.).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
 import polars as pl
 from pyochain import Iter, Option, Seq, option
@@ -19,6 +18,9 @@ from ..fn_generator._dtypes import DuckDbTypes, FuncTypes
 from ..fn_generator._main import _try_scan  # pyright: ignore[reportPrivateUsage]
 from ..fn_generator._query import _to_param_names  # pyright: ignore[reportPrivateUsage]
 from ..fn_generator._rules import CONVERTER
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @dataclass(slots=True)

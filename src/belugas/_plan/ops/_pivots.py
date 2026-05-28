@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING
 
 from pyochain import Dict, Err, Iter, Null, Ok, Result, Seq, Some
@@ -12,6 +11,8 @@ from ..._funcs import col
 from ...utils import try_iter, try_seq
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
+
     from ...typing import PivotAgg, PythonLiteral, Schema, TryIter
 
 PIVOT_AGG: dict[PivotAgg, Callable[[Expr], Expr]] = {

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from pyochain import Seq, option
 
 from .._utils import CollectionsABC, DateTime, From, Pql, Typing
 from ._rules import NAMESPACE_SPECS, NamespaceSpec
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @dataclass(slots=True)

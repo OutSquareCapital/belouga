@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING
 
 from pyochain import Dict, Iter, Set, option
@@ -11,6 +10,8 @@ from ..._funcs import col
 from ...utils import try_iter
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
+
     from ..._expr import Expr
     from ...typing import IntoExpr, IntoExprColumn, Schema, TryIter
 

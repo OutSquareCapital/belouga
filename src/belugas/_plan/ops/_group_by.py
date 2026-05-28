@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING
 
 from pyochain import Dict, Iter, Seq, Set, Vec
@@ -12,6 +11,8 @@ from ..._funcs import col
 from .._resolve import ResolvedExpr, lookup_type, resolve_all
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
+
     from ...typing import GroupByClause, IntoExpr, Schema, TryIter
 
 

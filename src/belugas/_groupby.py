@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -12,6 +11,8 @@ from ._funcs import len
 from ._plan import nodes
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from .typing import IntoExpr, TryIter
 
 

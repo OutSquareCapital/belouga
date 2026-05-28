@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING
 
 from duckdb import DuckDBPyConnection
@@ -11,6 +10,8 @@ from ._plan import nodes
 from .typing import CSVOptions, JsonOptions, ParquetOptions
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
+
     import pandas as pd
     from _duckdb._enums import (  # pyright: ignore[reportMissingModuleSource]
         CSVLineTerminator,

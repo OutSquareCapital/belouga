@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
-from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, final
 
 from pyochain import Iter, option
@@ -12,6 +10,9 @@ from ._expr import Expr
 from .utils import try_iter
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
+    from datetime import datetime, timedelta
+
     from .typing import IntoExpr, IntoExprColumn, PythonLiteral, TryIter
 
 

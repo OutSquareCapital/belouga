@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 import re
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from pyochain import NONE, Dict, Iter, Option, Seq, Some
@@ -11,6 +10,8 @@ from .._utils import Builtins, CollectionsABC, Pql, Pyochain, Typing
 from ._rules import CONTAINER_SUPERTYPES, TYPE_SUPERTYPES, ContainerType
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from pyochain.abc import PyoIterable
 
 GENERIC_SYMBOL_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]*$")

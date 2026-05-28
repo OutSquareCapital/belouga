@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from functools import partial
+from typing import TYPE_CHECKING
 
 import polars as pl
 import pytest
@@ -13,6 +13,9 @@ import belugas as bl
 from belugas._groupby import LazyGroupBy  # noqa: PLC2701
 
 from ._utils import into_ids
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 bl_salary = bl.col("salary")
 pl_salary = pl.col("salary")
