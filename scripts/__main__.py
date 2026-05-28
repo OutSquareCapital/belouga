@@ -3,14 +3,18 @@
 Run with: `uv run -m scripts`
 """
 
-from collections.abc import Iterable
+from __future__ import annotations
+
 from functools import partial
 from pathlib import Path
-from typing import Annotated, final
+from typing import TYPE_CHECKING, Annotated, final
 
 import typer
 from rich.console import Console
 from rich.text import Text
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 @final

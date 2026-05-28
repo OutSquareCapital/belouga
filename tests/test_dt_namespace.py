@@ -1,4 +1,6 @@
-from collections.abc import Callable
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import polars as pl
 import pytest
@@ -8,6 +10,9 @@ import belugas as bl
 import belugas.typing as t
 
 from ._utils import assert_eq, into_ids
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 dt = "dt"
 bl_dt = bl.col(dt).dt

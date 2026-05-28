@@ -1,10 +1,15 @@
-from collections.abc import Callable
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import pytest
 from pyochain import Iter, Seq
 
 import belugas as bl
 from belugas import meta
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def _get_fn(name: str) -> Callable[..., bl.LazyFrame]:

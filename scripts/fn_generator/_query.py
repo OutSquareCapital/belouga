@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import re
-from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 import polars as pl
 from pyochain import Iter
@@ -18,6 +20,9 @@ from ._rules import (
 )
 from ._schemas import DuckCols, ParamLens, ParamLists, Params, PyCols
 from ._str_builder import EMPTY_STR, format_kwords
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 def run_qry(lf: pl.LazyFrame) -> pl.LazyFrame:
